@@ -61,8 +61,8 @@ const centroid = (pts: Pt[]): Pt => [pts.reduce((a, p) => a + p[0], 0) / pts.len
 
 /** 페이지 안쪽(바깥 여백 안) 네모 */
 export function contentBox(height: number, style: FrameStyle): TaggedPoly {
-  const m = style.margin;
-  return { pts: [[m, m], [PAGE_W - m, m], [PAGE_W - m, height - m], [m, height - m]], tags: ['outer', 'outer', 'outer', 'outer'] };
+  const m = style.margin, t = m + (style.padTop ?? 0), r = PAGE_W - m - (style.padRight ?? 0);
+  return { pts: [[m, t], [r, t], [r, height - m], [m, height - m]], tags: ['outer', 'outer', 'outer', 'outer'] };
 }
 
 /** 나무를 따라 내려가며 잎(컷)마다 칸 모양, 선마다 그 칸 안의 선분을 구한다 */

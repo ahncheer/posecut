@@ -46,6 +46,9 @@ export interface FrameStyle {
   /** 페이지 바깥 여백 */
   margin: number;
   border: { width: number; color: string };
+  /** (계산용) 페이지 제목 자리로 위·오른쪽에 더 비우는 칸. 저장하지 않고 pageStyle()이 채운다 */
+  padTop?: number;
+  padRight?: number;
 }
 
 /** 페이지 안 컷 위치. 페이지 단위(가로 PAGE_W 기준) */
@@ -78,8 +81,22 @@ export interface Cut {
   cast?: SlotId[];
 }
 
+/** 페이지 제목 자리: 위 왼쪽·가운데·오른쪽, 위 색 띠, 오른쪽 세로(4컷 만화식), 첫 컷 안 */
+export type TitlePos = 'top-left' | 'top-center' | 'top-right' | 'band' | 'side' | 'in-cut';
+export interface PageTitle {
+  text: string;
+  pos: TitlePos;
+  /** 글꼴 이름 (TITLE_FONTS) */
+  font: string;
+  /** 글자 크기 (페이지 단위, 가로 360 기준) */
+  size: number;
+  color: string;
+}
+
 export interface Page {
   id: string;
+  /** 페이지 제목 (없으면 제목 없음) */
+  title?: PageTitle;
   /** 이 페이지의 컷 틀 (페이지마다 다를 수 있다). 예전 원고에는 없어서 선택 항목 */
   template?: TemplateId;
   /** 직접 그린 틀: 선으로 칸을 나눈 나무 (template이 'custom'일 때) */

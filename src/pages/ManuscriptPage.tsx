@@ -9,7 +9,9 @@ import { useManuscript } from '../storage/useManuscript';
 import { addPage, changePageTemplate, clearCut, findCut, pasteScene, previousCut, removePage, scenesLostByTemplate } from '../scene/manuscript';
 import { PageTemplateDialog } from '../components/PageTemplateDialog';
 import { TemplatePicker } from '../components/TemplatePicker';
-import type { FrameStyle, Page, TemplateId } from '../scene/types';
+import type { FrameStyle, Page, PageTitle, TemplateId, TitlePos } from '../scene/types';
+import { applyTitle, DEFAULT_TITLE, pageStyle, TITLE_FONTS, TITLE_POS, TITLE_SIZES } from '../scene/title';
+import { Info } from '../components/Info';
 import { templateLabel, templateOf } from '../scene/layout';
 import { applySplit } from '../scene/split';
 import { CutDrawDialog } from '../components/CutDrawDialog';
@@ -146,7 +148,7 @@ export function ManuscriptPage() {
           </details>
 
           <details className="panel fold" aria-label="틀 변경">
-            <summary><h2>틀 변경</h2><span className="fold-sum">{m.format === 'page' ? `${pageIndex + 1}페이지 · ${templateLabel(templateOf(page, m.template))}` : '웹툰 세로'}</span></summary>
+            <summary><h2>틀 변경 · 제목</h2><span className="fold-sum">{m.format === 'page' ? `${pageIndex + 1}페이지 · ${templateLabel(templateOf(page, m.template))}${page.title ? ' · 제목 있음' : ''}` : '웹툰 세로'}</span></summary>
             {m.format === 'page' ? (
               <TemplateChanger
                 key={`${page.id}/${templateOf(page, m.template)}`}
@@ -165,6 +167,19 @@ export function ManuscriptPage() {
               />
             ) : (
               <p className="sub">웹툰은 틀 대신 왼쪽 "+ 컷 추가"로 아래에 컷을 더해요.</p>
+            )}
+            {m.format === 'page' && (
+              <TitleEditor
+                key={`${page.id}/${JSON.stringify(page.title ?? null)}`}
+                pageIndex={pageIndex}
+                pageCount={m.pages.length}
+                title={page.title}
+                onApply={async (title, pages) => {
+                  await update(x => applyTitle(x, pages, pageIndex, title));
+                  const where = pages.length === m.pages.length && pages.length > 1 ? '모든 페이지' : pages.map(i => i + 1).join(', ') + '페이지';
+                  say(title ? `${where}에 제목을 넣었어요.` : `${where}에서 제목을 뺐어요.`);
+                }}
+              />
             )}
           </details>
         </aside>
@@ -195,13 +210,13 @@ export function ManuscriptPage() {
           open
           page={m.pages[drawFor]}
           fallback={m.template}
-          style={m.style}
+          style={pageStyle(m.style, m.pages[drawFor])}
           ratio={m.pageRatio}
           title={`${drawFor + 1}페이지 컷 직접 그리기`}
           onClose={() => setDrawFor(null)}
           onApply={async root => {
             const i = drawFor;
-            await update(x => ({ ...x, pages: x.pages.map((p, j) => (j === i ? applySplit(p, root, x.style, x.pageRatio) ?? p : p)) }));
+            await update(x => ({ ...x, pages: x.pages.map((p, j) => (j === i ? applySplit(p, root, pageStyle(x.style, p), x.pageRatio) ?? p : p)) }));
             setDrawFor(null);
             setSelected(null);
             say(`${i + 1}페이지 컷을 직접 그린 틀로 바꿨어요.`);
@@ -261,6 +276,75 @@ function TemplateChanger({ pageNumber, current, style, ratio, lostFor, onApply, 
         onClick={() => { if (!lost || confirm(`장면 ${lost}개가 사라져요. 바꿀까요?`)) onApply(value); }}
       >
         {lost ? `장면 ${lost}개 지우고 ${pageNumber}페이지에 적용` : `${pageNumber}페이지에 적용`}
+      </button>
+    </div>
+  );
+}
+
+/** 틀 변경 아래 "제목 넣기": 위치·글꼴·크기를 고르고 이 페이지/모든 페이지/고른 페이지에 적용 */
+function TitleEditor({ pageIndex, pageCount, title, onApply }: {
+  pageIndex: number; pageCount: number; title: PageTitle | undefined;
+  onApply: (title: PageTitle | null, pages: number[]) => void;
+}) {
+  const [on, setOn] = useState(!!title);
+  const [t, setT] = useState<PageTitle>(title ?? DEFAULT_TITLE);
+  const [scope, setScope] = useState<'this' | 'all' | 'pick'>('this');
+  const [picked, setPicked] = useState<number[]>([pageIndex]);
+  const set = (patch: Partial<PageTitle>) => setT(v => ({ ...v, ...patch }));
+  const pages = scope === 'this' ? [pageIndex] : scope === 'all' ? Array.from({ length: pageCount }, (_, i) => i) : picked;
+  const target = scope === 'all' ? '모든 페이지' : pages.length ? `${pages.map(i => i + 1).join(', ')}페이지` : '페이지를 골라 주세요';
+  const reserves = on && t.pos !== 'in-cut';
+  const changed = on !== !!title || (on && JSON.stringify(t) !== JSON.stringify(title)) || scope !== 'this';
+  return (
+    <div className="titleedit">
+      <label className="check">
+        <input type="checkbox" checked={on} onChange={e => setOn(e.target.checked)} />
+        제목 넣기 <Info text="페이지 위(또는 오른쪽)에 제목을 써요. 제목 자리만큼 컷이 조금 줄어들고, 장면은 그대로 남아요." />
+      </label>
+      {on && (
+        <div className="titlefields">
+          <label>제목
+            <input type="text" value={t.text} maxLength={40} placeholder="예: 오늘의 간식" onChange={e => set({ text: e.target.value })} />
+          </label>
+          <label>위치
+            <select value={t.pos} onChange={e => set({ pos: e.target.value as TitlePos })}>
+              {TITLE_POS.map(([k, n, d]) => <option key={k} value={k} title={d}>{n}</option>)}
+            </select>
+          </label>
+          <label>글꼴
+            <select value={t.font} onChange={e => set({ font: e.target.value })} style={{ fontFamily: `'${t.font}'` }}>
+              {TITLE_FONTS.map(([f, n]) => <option key={f} value={f} style={{ fontFamily: `'${f}'` }}>{n}</option>)}
+            </select>
+          </label>
+          <label>크기
+            <select value={t.size} onChange={e => set({ size: Number(e.target.value) })}>
+              {TITLE_SIZES.map(([v, n]) => <option key={v} value={v}>{n}</option>)}
+            </select>
+          </label>
+          <label>{t.pos === 'band' ? '띠 색' : '글자 색'}
+            <input type="color" value={t.color} onChange={e => set({ color: e.target.value })} />
+          </label>
+          <p className="sect-note">{TITLE_POS.find(x => x[0] === t.pos)?.[2]}</p>
+        </div>
+      )}
+      <label className="titlescope">적용할 페이지
+        <select value={scope} onChange={e => { const v = e.target.value as typeof scope; setScope(v); if (v === 'pick' && !picked.length) setPicked([pageIndex]); }}>
+          <option value="this">이 페이지만</option>
+          <option value="all">모든 페이지</option>
+          <option value="pick">페이지 고르기</option>
+        </select>
+      </label>
+      {scope === 'pick' && (
+        <div className="chips" role="group" aria-label="제목을 넣을 페이지">
+          {Array.from({ length: pageCount }, (_, i) => (
+            <button key={i} type="button" className="chip" aria-pressed={picked.includes(i)} onClick={() => setPicked(v => (v.includes(i) ? v.filter(x => x !== i) : [...v, i].sort((a, b) => a - b)))}>{i + 1}</button>
+          ))}
+        </div>
+      )}
+      {on && scope !== 'this' && <p className="sect-note">다른 페이지에 이미 쓴 제목 글자는 그대로 두고, 위치·글꼴·크기·색만 맞춰요. 제목 글자가 없는 페이지에는 같은 제목이 들어가요.</p>}
+      {reserves && !title && <p className="sect-note">제목 자리만큼 컷 높이가 조금 줄어요.</p>}
+      <button type="button" className="btn small primary" disabled={!changed || !pages.length} onClick={() => onApply(on ? { ...t, text: t.text.trim() } : null, pages)}>
+        {on ? `${target}에 적용` : `${target}에서 제목 빼기`}
       </button>
     </div>
   );

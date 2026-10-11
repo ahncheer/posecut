@@ -1,8 +1,9 @@
 // 원고 안의 컷을 찾고 바꾸는 순수 함수들. 원본을 바꾸지 않고 새 원고를 돌려준다.
-import type { Character, Cut, EngineScene, Format, FrameStyle, Manuscript, SlotId, TemplateId, Work } from './types';
+import type { Character, Cut, EngineScene, Format, FrameStyle, Manuscript, Page, SlotId, TemplateId, Work } from './types';
 import { DEFAULT_IN_CUT, MAX_IN_CUT } from './types';
 import { appendWebtoonCut, makePage, retemplatePage, templateOf } from './layout';
 import { applySplit, cloneSplit, splitFromTemplate } from './split';
+import { pageStyle, setTitleOnPage } from './title';
 import { newId } from './id';
 
 export interface CutRef { pageIndex: number; cutIndex: number }
@@ -116,22 +117,27 @@ export function addPage(m: Manuscript, template?: TemplateId): Manuscript {
   if (m.format === 'webtoon') return { ...m, pages: m.pages.map((p, i) => (i === m.pages.length - 1 ? appendWebtoonCut(p, m.style) : p)) };
   const last = m.pages[m.pages.length - 1];
   const t = template ?? (last ? templateOf(last, m.template) : m.template);
+  let page: Page;
   if (t === 'custom') {
     // 직접 그린 틀: 마지막 직접 그린 페이지와 같은 모양 (없으면 기본 4컷 모양에서 시작)
     const src = [...m.pages].reverse().find(p => p.split);
-    const blank = makePage(m.format, 'four', m.style, m.pageRatio);
-    const split = src?.split ? cloneSplit(src.split) : splitFromTemplate('four', m.style, m.pageRatio, blank.cuts.map(c => c.id));
-    const page = applySplit(blank, split, m.style, m.pageRatio) ?? blank;
-    return { ...m, pages: [...m.pages, page] };
+    const srcStyle = pageStyle(m.style, src);
+    const blank = { ...makePage(m.format, 'four', srcStyle, m.pageRatio), ...(src?.title ? { title: src.title } : {}) };
+    const split = src?.split ? cloneSplit(src.split) : splitFromTemplate('four', srcStyle, m.pageRatio, blank.cuts.map(c => c.id));
+    page = applySplit(blank, split, srcStyle, m.pageRatio) ?? blank;
+  } else {
+    page = { ...makePage(m.format, t, m.style, m.pageRatio) };
   }
-  return { ...m, pages: [...m.pages, makePage(m.format, t, m.style, m.pageRatio)] };
+  // 제목은 바로 앞 페이지 설정을 이어받는다 (글자는 비워 둠)
+  page = setTitleOnPage(page, last?.title ? { ...last.title, text: '' } : undefined, m);
+  return { ...m, pages: [...m.pages, page] };
 }
 
 /** 페이지 틀 바꾸기 (페이지 만화). 장면은 앞에서부터 옮기고 남는 수를 돌려준다 */
 export function changePageTemplate(m: Manuscript, pageIndex: number, template: TemplateId): { manuscript: Manuscript; lost: number } {
   const page = m.pages[pageIndex];
   if (!page || m.format !== 'page') return { manuscript: m, lost: 0 };
-  const r = retemplatePage(page, template, m.style, m.pageRatio);
+  const r = retemplatePage(page, template, pageStyle(m.style, page), m.pageRatio);
   return { manuscript: { ...m, pages: m.pages.map((p, i) => (i === pageIndex ? r.page : p)) }, lost: r.lost };
 }
 

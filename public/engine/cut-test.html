@@ -138,6 +138,14 @@ dialog.pose-edit::backdrop { background: rgba(0, 0, 0, .55); }
 .pose-stage img { display: block; max-width: 100%; max-height: 70vh; }
 .pose-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.memrow { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; }
+.memlabel { font-size: 13px; color: var(--muted, #666); margin-right: auto; display: inline-flex; align-items: center; gap: 4px; }
+.memslot { position: relative; overflow: hidden; width: 40px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 17px; cursor: pointer; }
+.memslot.filled { border: 2px solid var(--accent); color: var(--accent); background: var(--accent-soft); }
+.memslot::after { content: ''; position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--accent); }
+.memslot.holding::after { width: 100%; transition: width .8s linear; }
+.memslot.saved { animation: memflash .5s; }
+@keyframes memflash { 0% { transform: scale(1.15); } 100% { transform: none; } }
 .chip { min-height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
 .chip[aria-pressed="true"] { border: 2px solid var(--accent); background: var(--accent-soft); color: var(--accent); padding: 0 11px; font-weight: 500; }
 .chip[disabled] { opacity: .45; cursor: default; }
@@ -235,6 +243,10 @@ dialog.popup .bg-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1
 .btile:hover { border-color: var(--muted); }
 .btile[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent); font-weight: 600; }
 .bubacts { padding: 10px 0 4px; border-top: 1px solid var(--line); }
+.grouped-tiles .tilegroup { grid-column: 1 / -1; margin: 6px 0 0; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.grouped-tiles .tilegroup:first-child { margin-top: 0; }
+.tfxctl { display: grid; gap: 8px; padding: 10px; border-radius: 8px; background: var(--bg); }
+.tfxctl .subhead { margin: 0; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 .danger-ghost { color: var(--danger); }
 .frame .cutshape { position: absolute; inset: 0; width: 100%; height: 100%; }
 .frame.shaped { outline-style: dashed; outline-width: 1px; }
@@ -476,6 +488,8 @@ body.embed .top { flex-wrap: nowrap; }
           <summary><h2>만화 (흑백 톤)</h2><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="VRoid 촬영의 '코믹'과 같은 방식이에요. 다 그린 화면(배경 포함)을 밝기에 따라 흰색 · 스크린톤 · 검정으로 나눠 흑백 만화 원고처럼 만들어요."></span></summary>
           <div class="foldbody">
             <label class="switch"><input type="checkbox" id="comicOn"><span class="track" aria-hidden="true"></span>만화 효과 켜기</label>
+            <div class="memrow"><span class="memlabel">내 설정 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="자동차 시트 메모리처럼 써요. 빈 번호를 누르면 지금 설정을 저장, 저장된 번호를 누르면 불러와요. 덮어쓰려면 번호를 꾹(0.8초) 누르세요. 마지막으로 쓴 설정은 새 컷에도 그대로 이어져요."></span></span>
+              <button type="button" class="memslot" data-slot="0" aria-label="내 설정 1">①</button><button type="button" class="memslot" data-slot="1" aria-label="내 설정 2">②</button></div>
             <div class="field"><label for="comicColor">색 남기기 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="0이면 완전 흑백, 올릴수록 원래 색이 남아요. (VRoid: Color Ratio)"></span></label><input id="comicColor" type="range" min="0" max="100" step="1"><output for="comicColor" id="comicColoro"></output></div>
             <div class="field"><label for="comicMin">검정 기준 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="이보다 어두운 곳은 새까맣게 칠해요. (VRoid: Min Threshold)"></span></label><input id="comicMin" type="range" min="0" max="100" step="1"><output for="comicMin" id="comicMino"></output></div>
             <div class="field"><label for="comicMax">흰색 기준 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="이보다 밝은 곳은 하얗게 비워요. 그 사이는 스크린톤이 돼요. (VRoid: Max Threshold)"></span></label><input id="comicMax" type="range" min="0" max="100" step="1"><output for="comicMax" id="comicMaxo"></output></div>
@@ -536,12 +550,12 @@ body.embed .top { flex-wrap: nowrap; }
           <details class="fold" id="foldBubShape" open>
             <summary><h2>말풍선 모양</h2><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="컷에서 말풍선을 끌면 옮겨지고, 오른쪽 아래 네모로 크기를, 주황 점으로 꼬리 끝을 바꿔요. 두 번 누르면 글을 고칠 수 있어요. Delete 키로 지워요."></span></summary>
             <div class="foldbody">
-              <div class="btiles" id="bubShapes"></div>
+              <div class="btiles grouped-tiles" id="bubShapes"></div>
               <label class="check" id="bubTailRow"><input type="checkbox" id="bubTail" checked>꼬리 달기 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="꼬리를 빼면 컷 밖에서 들리는 말이나 내레이션처럼 보여요."></span></label>
             </div>
           </details>
           <details class="fold" id="foldBubTheme">
-            <summary><h2>테마</h2><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="말풍선 바탕·테두리·장식과 어울리는 글꼴을 한 번에 바꿔요. 글자 효과에서 '테마에 맞추기'를 끄면 글자는 따로 꾸밀 수 있어요."></span></summary>
+            <summary><h2>말풍선 색</h2><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="말풍선 바탕·테두리·장식과 어울리는 글꼴을 한 번에 바꿔요. 글꼴 칸에서 '말풍선 색에 맞추기'를 끄면 글자는 따로 꾸밀 수 있어요."></span></summary>
             <div class="foldbody">
               <div class="btiles" id="bubThemes"></div>
               <div class="field" id="bubBgRow" hidden><label for="bubBg">바탕색</label><input id="bubBg" type="color" value="#bfe3ff" class="colorin"><span></span></div>
@@ -554,10 +568,26 @@ body.embed .top { flex-wrap: nowrap; }
               <textarea id="bubText" class="txt" rows="3" placeholder="대사를 입력하세요"></textarea>
             </div>
           </details>
-          <details class="fold" id="foldBubFx">
-            <summary><h2>텍스트 효과</h2></summary>
+          <details class="fold" id="foldBubTfx" open>
+            <summary><h2>테마 (글씨 효과)</h2><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="CapCut·Canva의 글씨 효과처럼 글자에 그림자·빛·외곽선·네온·입체 등을 입혀요. 아래 '효과 조절'에서 색·세기·방향을 바꿀 수 있어요."></span></summary>
             <div class="foldbody">
-              <label class="check"><input type="checkbox" id="bubMatch" checked>테마에 맞추기 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="켜 두면 테마에 어울리는 글꼴·색으로 자동으로 바뀌어요. 아래에서 하나라도 바꾸면 꺼져요."></span></label>
+              <div class="btiles" id="bubTfx"></div>
+              <div class="tfxctl" id="tfxCtl">
+                <p class="subhead">효과 조절</p>
+                <div class="field" data-p="color"><label for="tfxColor">효과 색</label><input id="tfxColor" type="color" value="#000000" class="colorin"><span></span></div>
+                <div class="field" data-p="color2"><label for="tfxColor2">둘째 색</label><input id="tfxColor2" type="color" value="#ffffff" class="colorin"><span></span></div>
+                <div class="field" data-p="amt"><label for="tfxAmt">굵기·세기</label><input id="tfxAmt" type="range" min="0" max="100" step="1"><output for="tfxAmt" id="tfxAmto"></output></div>
+                <div class="field" data-p="dist"><label for="tfxDist">거리</label><input id="tfxDist" type="range" min="0" max="100" step="1"><output for="tfxDist" id="tfxDisto"></output></div>
+                <div class="field" data-p="angle"><label for="tfxAngle">방향</label><input id="tfxAngle" type="range" min="0" max="360" step="5"><output for="tfxAngle" id="tfxAngleo"></output></div>
+                <div class="field" data-p="blur"><label for="tfxBlur">흐림</label><input id="tfxBlur" type="range" min="0" max="100" step="1"><output for="tfxBlur" id="tfxBluro"></output></div>
+                <div class="field" data-p="alpha"><label for="tfxAlpha">진하기</label><input id="tfxAlpha" type="range" min="0" max="100" step="1"><output for="tfxAlpha" id="tfxAlphao"></output></div>
+              </div>
+            </div>
+          </details>
+          <details class="fold" id="foldBubFx">
+            <summary><h2>글꼴</h2></summary>
+            <div class="foldbody">
+              <label class="check"><input type="checkbox" id="bubMatch" checked>말풍선 색에 맞추기 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="켜 두면 말풍선 색에 어울리는 글꼴·글자색으로 자동으로 바뀌어요. 아래에서 하나라도 바꾸면 꺼져요."></span></label>
               <label class="sub" for="bubFont">글꼴</label>
               <select id="bubFont"></select>
               <div class="field"><label for="bubSize">크기</label><input id="bubSize" type="range" min="20" max="140" step="1"><output for="bubSize" id="bubSizeo"></output></div>
@@ -566,7 +596,6 @@ body.embed .top { flex-wrap: nowrap; }
                 <button class="chip" id="bubItalic" type="button" aria-pressed="false" style="font-style: italic">기울임</button>
               </div>
               <div class="field"><label for="bubColor">글자색</label><input id="bubColor" type="color" value="#1d1f22" class="colorin"><span></span></div>
-              <div class="field"><label class="check" style="font-size: 13px"><input type="checkbox" id="bubOutline">테두리</label><input id="bubOutlineColor" type="color" value="#ffffff" class="colorin" aria-label="글자 테두리 색"><span></span></div>
             </div>
           </details>
           <div class="btnrow bubacts">
@@ -2391,6 +2420,7 @@ const lookSyncers = [
     look[g][k] = v;
     if (g === 'bloom' && !look.bloom.on) { look.bloom.on = true; $('bloomOn').checked = true; }
     if (g === 'comic' && !look.comic.on) { look.comic.on = true; $('comicOn').checked = true; }
+    if (g === 'comic') rememberComic();
     if (id === 'lineOutline' || id === 'celHard') applyLookToSlots();
   }, false);
 });
@@ -2400,7 +2430,35 @@ function syncLookUI() {
   if ($('bloomColor').value.toLowerCase() !== look.bloom.color.toLowerCase()) $('bloomColor').value = look.bloom.color;
 }
 $('bloomOn').addEventListener('change', e => { look.bloom.on = e.target.checked; });
-$('comicOn').addEventListener('change', e => { look.comic.on = e.target.checked; });
+$('comicOn').addEventListener('change', e => { look.comic.on = e.target.checked; rememberComic(); });
+// 만화: 마지막 설정 기억 + 내 설정 ① ②
+const COMIC_KEYS = Object.keys(LOOK_DEFAULT.comic);
+const pickComic = (o) => { const r = {}; COMIC_KEYS.forEach(k => { if (o && typeof o[k] === typeof LOOK_DEFAULT.comic[k]) r[k] = o[k]; }); return r; };
+let comicLastTimer = 0;
+function rememberComic() { clearTimeout(comicLastTimer); comicLastTimer = setTimeout(() => store.set('rough.comicLast', JSON.stringify(look.comic)), 300); }
+function readComicLast() { try { return pickComic(JSON.parse(store.get('rough.comicLast', 'null'))); } catch (e) { return {}; } }
+function readComicMem() { try { const a = JSON.parse(store.get('rough.comicMem', '[]')); return [0, 1].map(i => (a && a[i] ? pickComic(a[i]) : null)); } catch (e) { return [null, null]; } }
+function paintComicMem() { const m = readComicMem(); document.querySelectorAll('.memslot').forEach(b => { const f = !!m[b.dataset.slot]; b.classList.toggle('filled', f); b.dataset.tip = f ? '누르면 불러오기 · 꾹 누르면 지금 설정으로 덮어쓰기' : '누르면 지금 설정을 저장'; }); }
+function saveComicMem(i) {
+  const m = readComicMem(); m[i] = { ...look.comic, on: true };
+  store.set('rough.comicMem', JSON.stringify(m)); paintComicMem();
+  const b = document.querySelector(`.memslot[data-slot="${i}"]`); b.classList.remove('saved'); void b.offsetWidth; b.classList.add('saved');
+  say(`만화 설정을 ${'①②'[i]}에 저장했어요.`);
+}
+function loadComicMem(i) {
+  const m = readComicMem()[i]; if (!m) return;
+  Object.assign(look.comic, m); syncLookUI(); rememberComic(); notifyChange(); pushHistory();
+  say(`${'①②'[i]}에 저장한 만화 설정을 불러왔어요.`);
+}
+document.querySelectorAll('.memslot').forEach(b => {
+  const i = Number(b.dataset.slot); let t = 0, held = false;
+  const cancel = () => { clearTimeout(t); b.classList.remove('holding'); };
+  b.addEventListener('pointerdown', e => { if (e.button) return; held = false; b.classList.add('holding'); t = setTimeout(() => { held = true; b.classList.remove('holding'); saveComicMem(i); }, 800); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, cancel));
+  b.addEventListener('click', e => { if (held) { held = false; return; } if (e.shiftKey || !readComicMem()[i]) saveComicMem(i); else loadComicMem(i); });
+  b.addEventListener('keydown', e => { if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); saveComicMem(i); } });
+});
+paintComicMem();
 $('lineOnly').addEventListener('change', e => { look.line.only = e.target.checked; });
 $('bloomColor').addEventListener('input', e => { look.bloom.color = e.target.value; if (!look.bloom.on) { look.bloom.on = true; $('bloomOn').checked = true; } });
 syncLookUI();
@@ -2703,15 +2761,25 @@ function syncUI() {
 //  - 화면: 컷 틀 위 캔버스에 그림 / 저장 이미지·작은 그림: 같은 함수로 그려 넣음
 //  - 모양(shape) × 테마(theme) × 글자 효과. 몸을 끌면 이동, 오른쪽 아래 네모로 크기, 동그라미로 꼬리
 // =====================================================================
-const BUB_SHAPES = [
-  ['oval', '일반'], ['round', '둥근 네모'], ['box', '설명 상자'], ['thought', '생각'], ['shout', '외침'],
-  ['whisper', '속삭임'], ['wavy', '떨림'], ['electric', '전화·기계'], ['scary', '무서움'], ['double', '독백(이중)'],
+// 묶음별 말풍선 모양 (일본·한국 만화 말풍선 분류 참고)
+const BUB_SHAPE_GROUPS = [
+  ['기본', [['oval', '일반'], ['round', '둥근 네모'], ['angled', '각진'], ['box', '설명 상자'], ['whisper', '속삭임'], ['wavy', '떨림'], ['double', '독백(이중)'], ['none', '글자만']]],
+  ['외침·감정', [['shout', '외침'], ['saw', '톱니'], ['blackBurst', '검은 폭발'], ['scary', '무서움'], ['electric', '전화·기계'], ['cutoff', '말 끊김']]],
+  ['마음의 소리', [['thought', '생각'], ['dotBubble', '생각(매끈)'], ['flash', '플래시'], ['uniflash', '우니 플래시'], ['swirl', '소용돌이'], ['darkFlash', '검은 플래시'], ['softGlow', '몽글 빛'], ['whiteFlash', '흰 섬광']]],
+  ['특수', [['hexTech', '육각(SF)'], ['hexFrame', '육각 틀']]],
 ];
+const BUB_SHAPES = BUB_SHAPE_GROUPS.flatMap(([, list]) => list);
 const BUB_SHAPE_TIP = {
-  oval: '보통 대사', round: '차분한 대사, 문자·메신저 느낌', box: '내레이션·장소·시간 설명 (꼬리 없음)', thought: '속으로 하는 생각 — 꼬리가 작은 동그라미',
-  shout: '소리치기·놀람 — 뾰족뾰족', whisper: '작은 목소리·속삭임 — 점선', wavy: '떨리는 목소리·겁먹음', electric: '전화·TV·라디오·기계 목소리 — 번개 꼬리',
-  scary: '괴물·저주·소름 돋는 목소리 — 거칠고 흘러내림', double: '마음속 독백·텔레파시 — 테두리 두 겹',
+  oval: '보통 대사', round: '차분한 대사, 문자·메신저 느낌', angled: '딱딱한 말투·안내 방송·기계적인 대사', box: '내레이션·장소·시간 설명 (꼬리 없음)',
+  whisper: '작은 목소리·속삭임·멀리서 들리는 말 — 점선', wavy: '떨리는 목소리·동요·약한 목소리', double: '마음속 독백·텔레파시 — 테두리 두 겹', none: '테두리 없이 글자만 (가벼운 혼잣말·효과음)',
+  shout: '소리치기·놀람 — 뾰족뾰족', saw: '고르게 뾰족한 톱니 — 강한 외침·충격', blackBurst: '검게 칠한 폭발 — 분노·절규 (글자는 흰색)', scary: '괴물·저주·소름 돋는 목소리 — 거칠고 흘러내림',
+  electric: '전화·TV·라디오·기계 목소리 — 번개 꼬리', cutoff: '한쪽이 잘린 말풍선 — 말이 끊기거나 가로막힘',
+  thought: '속으로 하는 생각 — 구름 모양, 작은 동그라미 꼬리', dotBubble: '부드러운 속마음 — 매끈한 몸에 동그라미 꼬리', flash: '집중선으로 둘러싼 마음의 소리 — 중요한 깨달음·긴장',
+  uniflash: '날카로운 가시 집중선(성게) — 격한 속마음·갈등', swirl: '휘몰아치는 집중선 — 혼란·두근거림', darkFlash: '검고 촘촘한 가시 — 불안·공포·어두운 속마음',
+  softGlow: '테두리 없이 은은한 빛 — 몽글몽글한 회상·설렘', whiteFlash: '하얀 가시 섬광 — 번뜩이는 깨달음·충격',
+  hexTech: 'SF·홀로그램·AI 목소리 — 두 겹 육각형', hexFrame: '모서리가 교차하는 육각 틀 — 시스템 메시지·특수 효과',
 };
+const DARK_SHAPES = new Set(['blackBurst', 'darkFlash']);
 const BUB_THEMES = {
   basic:   { name: '일반', fill: '#FFFFFF', stroke: '#1D1F22', sw: 2.2, text: '#1D1F22', font: 'Noto Sans KR' },
   horror:  { name: '공포', fill: '#141414', stroke: '#000000', sw: 2.4, text: '#F2F2F2', font: 'East Sea Dokdo', deco: 'drip', glow: '#B3001B' },
@@ -2753,13 +2821,15 @@ function newBubble() {
     text: '대사를 입력하세요', x: 0.3 + (n % 3) * 0.2, y: 0.24 + (n % 2) * 0.1, w: 0.34, h: 0.24,
     tailOn: true, tail: { x: 0.36 + (n % 3) * 0.2, y: 0.55 },
     match: true, font: 'Noto Sans KR', size: 52, bold: false, italic: false, color: '#1D1F22', outline: false, outlineColor: '#FFFFFF', bg: '#BFE3FF',
+    fx: { type: 'none' },
   };
 }
 /** 테마에 맞추기를 켰으면 테마 값, 아니면 직접 고른 값 */
 function bubTextStyle(b) {
   const th = BUB_THEMES[b.theme] || BUB_THEMES.basic;
   if (!b.match) return { font: b.font, bold: b.bold, italic: b.italic, color: b.color, outline: b.outline ? b.outlineColor : null, glow: null };
-  const color = th.text === 'auto' ? (hexLum(b.bg) > 0.55 ? '#1D1F22' : '#FFFFFF') : th.text;
+  let color = th.text === 'auto' ? (hexLum(b.bg) > 0.55 ? '#1D1F22' : '#FFFFFF') : th.text;
+  if (DARK_SHAPES.has(b.shape) && hexLum(color) < 0.5) color = '#FFFFFF';
   return { font: th.font, bold: !!th.bold || b.bold, italic: b.italic, color, outline: th.outline || null, glow: th.glow || null };
 }
 
@@ -2779,8 +2849,8 @@ function smoothTo(p, pts) {
 function bubblePaths(b, W, H) {
   const cx = b.x * W, cy = b.y * H, rx = (b.w * W) / 2, ry = (b.h * H) / 2, m = Math.min(rx, ry);
   const R = bubRng(bubHash(b.id));
-  const body = new Path2D(), tail = new Path2D(), inner = new Path2D();
-  let dash = null, tailKind = 'curve', hasInner = false;
+  const body = new Path2D(), tail = new Path2D(), inner = new Path2D(), rays = new Path2D(), spikes = new Path2D();
+  let dash = null, tailKind = 'curve', hasInner = false, innerAlpha = 1, noStroke = false, noBody = false, dark = false, glow = null, raysW = 0;
   switch (b.shape) {
     case 'round': body.roundRect(cx - rx, cy - ry, rx * 2, ry * 2, m * 0.5); break;
     case 'box': body.rect(cx - rx, cy - ry, rx * 2, ry * 2); break;
@@ -2804,6 +2874,57 @@ function bubblePaths(b, W, H) {
     case 'electric': polyTo(body, ellipsePts(cx, cy, rx, ry, 46, (i) => (i % 2 ? 0.93 : 1.03))); tailKind = 'bolt'; break;
     case 'scary': smoothTo(body, ellipsePts(cx, cy, rx, ry, 26, () => 0.88 + R() * 0.2)); tailKind = 'spike'; break;
     case 'double': body.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); inner.ellipse(cx, cy, rx * 0.86, ry * 0.84, 0, 0, Math.PI * 2); hasInner = true; break;
+    case 'angled': { const k = m * 0.38; polyTo(body, [[cx - rx + k, cy - ry], [cx + rx - k, cy - ry], [cx + rx, cy - ry + k], [cx + rx, cy + ry - k], [cx + rx - k, cy + ry], [cx - rx + k, cy + ry], [cx - rx, cy + ry - k], [cx - rx, cy - ry + k]]); tailKind = 'spike'; break; }
+    case 'none': noBody = true; break;
+    case 'saw': polyTo(body, ellipsePts(cx, cy, rx, ry, 44, (i) => (i % 2 ? 0.9 : 1.07))); tailKind = 'spike'; break;
+    case 'blackBurst': {
+      const n = 13 + Math.floor(R() * 4), pts = [];
+      for (let i = 0; i < n * 2; i++) { const a = (i / (n * 2)) * Math.PI * 2 + (R() - 0.5) * 0.15; const k = i % 2 ? 0.74 + R() * 0.08 : 1.08 + R() * 0.25; pts.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]); }
+      polyTo(body, pts); dark = true; tailKind = 'spike'; break;
+    }
+    case 'cutoff': { const a0 = -Math.PI / 4, cut = 0.42; body.moveTo(cx, cy); body.ellipse(cx, cy, rx, ry, 0, a0 + cut, a0 - cut + Math.PI * 2); body.closePath(); break; }
+    case 'dotBubble': body.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); tailKind = 'dots'; break;
+    case 'flash': {
+      body.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); noStroke = true; raysW = 0.42;
+      for (let i = 0; i < 120; i++) { const a = (i / 120) * Math.PI * 2 + (R() - 0.5) * 0.03, r0 = 1.02, r1 = 1.14 + R() * 0.34; rays.moveTo(cx + Math.cos(a) * rx * r0, cy + Math.sin(a) * ry * r0); rays.lineTo(cx + Math.cos(a) * rx * r1, cy + Math.sin(a) * ry * r1); }
+      break;
+    }
+    case 'uniflash': case 'darkFlash': {
+      body.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); noStroke = true;
+      const n = b.shape === 'darkFlash' ? 110 : 80;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + (R() - 0.5) * 0.05, w = 0.016 + R() * 0.012, r1 = (b.shape === 'darkFlash' ? 1.12 : 1.18) + R() * 0.42;
+        spikes.moveTo(cx + Math.cos(a - w) * rx * 0.98, cy + Math.sin(a - w) * ry * 0.98); spikes.lineTo(cx + Math.cos(a) * rx * r1, cy + Math.sin(a) * ry * r1); spikes.lineTo(cx + Math.cos(a + w) * rx * 0.98, cy + Math.sin(a + w) * ry * 0.98); spikes.closePath();
+      }
+      if (b.shape === 'darkFlash') dark = true;
+      break;
+    }
+    case 'swirl': {
+      body.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); noStroke = true; raysW = 0.6;
+      for (let i = 0; i < 64; i++) {
+        const a = (i / 64) * Math.PI * 2 + R() * 0.05, r1 = 1.2 + R() * 0.3, pt = (aa, r) => [cx + Math.cos(aa) * rx * r, cy + Math.sin(aa) * ry * r];
+        const p0 = pt(a, 1.01), c1 = pt(a + 0.2, (1 + r1) / 2), p1 = pt(a + 0.34, r1);
+        rays.moveTo(p0[0], p0[1]); rays.quadraticCurveTo(c1[0], c1[1], p1[0], p1[1]);
+      }
+      break;
+    }
+    case 'softGlow': body.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); noStroke = true; glow = 'rgba(40,40,40,.28)'; break;
+    case 'whiteFlash': {
+      const n = 38, pts = [];
+      for (let i = 0; i < n * 2; i++) { const a = (i / (n * 2)) * Math.PI * 2; const k = i % 2 ? 0.86 + R() * 0.05 : 1.08 + R() * 0.38; pts.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]); }
+      polyTo(body, pts); noStroke = true; glow = 'rgba(30,30,30,.35)'; break;
+    }
+    case 'hexTech': case 'hexFrame': {
+      const hex = (dx, dy, k) => [0, 1, 2, 3, 4, 5].map(i => { const a = (i / 6) * Math.PI * 2; return [cx + dx + Math.cos(a) * rx * k, cy + dy + Math.sin(a) * ry * k]; });
+      polyTo(body, hex(0, 0, 1)); tailKind = 'spike';
+      if (b.shape === 'hexTech') { polyTo(inner, hex(m * 0.07, -m * 0.07, 1)); hasInner = true; innerAlpha = 0.45; }
+      else {
+        const pts = hex(0, 0, 1), ext = m * 0.16; raysW = 0.7;
+        pts.forEach((p, i) => { const q = pts[(i + 1) % 6], dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy) || 1; rays.moveTo(p[0] - (dx / L) * ext, p[1] - (dy / L) * ext); rays.lineTo(q[0] + (dx / L) * ext, q[1] + (dy / L) * ext); });
+        noStroke = true;
+      }
+      break;
+    }
     default: body.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
   }
   // 흘러내림 (무서움 모양 또는 공포 테마)
@@ -2816,7 +2937,7 @@ function bubblePaths(b, W, H) {
     });
   }
   // 꼬리
-  if (b.tailOn && b.shape !== 'box' && b.tail) {
+  if (b.tailOn && b.shape !== 'box' && b.shape !== 'none' && b.tail) {
     const tx = b.tail.x * W, ty = b.tail.y * H;
     const a = Math.atan2((ty - cy) / ry, (tx - cx) / rx);
     const B = [cx + Math.cos(a) * rx * 0.78, cy + Math.sin(a) * ry * 0.78];
@@ -2846,9 +2967,11 @@ function bubblePaths(b, W, H) {
       }
     }
   }
-  return { body, tail, inner, hasInner, dash, cx, cy, rx, ry, m };
+  return { body, tail, inner, hasInner, innerAlpha, rays, raysW, spikes, noStroke, noBody, dark, glow, dash, cx, cy, rx, ry, m };
 }
-const TEXT_BOX = { oval: [0.7, 0.62], round: [0.84, 0.74], box: [0.9, 0.82], thought: [0.62, 0.56], shout: [0.6, 0.52], whisper: [0.7, 0.62], wavy: [0.68, 0.6], electric: [0.68, 0.6], scary: [0.66, 0.56], double: [0.62, 0.56] };
+const TEXT_BOX = { oval: [0.7, 0.62], round: [0.84, 0.74], box: [0.9, 0.82], thought: [0.62, 0.56], shout: [0.6, 0.52], whisper: [0.7, 0.62], wavy: [0.68, 0.6], electric: [0.68, 0.6], scary: [0.66, 0.56], double: [0.62, 0.56],
+  angled: [0.84, 0.74], none: [0.96, 0.9], saw: [0.66, 0.58], blackBurst: [0.56, 0.48], cutoff: [0.64, 0.58], dotBubble: [0.7, 0.62], flash: [0.72, 0.64], uniflash: [0.7, 0.62],
+  swirl: [0.7, 0.62], darkFlash: [0.7, 0.62], softGlow: [0.74, 0.66], whiteFlash: [0.6, 0.52], hexTech: [0.74, 0.62], hexFrame: [0.72, 0.6] };
 function wrapLines(ctx, text, maxW) {
   const out = [];
   for (const para of String(text).split('\n')) {
@@ -2901,15 +3024,22 @@ function drawBubble(ctx, b, W, H) {
   let fill = th.fill;
   if (fill === 'bg') fill = b.bg;
   if (Array.isArray(fill)) { const g = ctx.createLinearGradient(0, P.cy - P.ry, 0, P.cy + P.ry); g.addColorStop(0, fill[0]); g.addColorStop(1, fill[1]); fill = g; }
-  const stroke = th.stroke === 'bgDark' ? darkerHex(b.bg) : th.stroke;
-  if (th.shadow && fill) { ctx.save(); ctx.translate(4 * s, 4 * s); ctx.fillStyle = th.shadow; ctx.fill(P.tail); ctx.fill(P.body); ctx.restore(); }
-  if (stroke) {
-    ctx.lineJoin = 'round'; ctx.lineWidth = th.sw * s * 2; ctx.strokeStyle = stroke;
-    if (P.dash) ctx.setLineDash(P.dash.map(v => v));
-    ctx.stroke(P.tail); ctx.stroke(P.body); ctx.setLineDash([]);
+  let stroke = th.stroke === 'bgDark' ? darkerHex(b.bg) : th.stroke;
+  if (P.dark && fill) { fill = '#141414'; stroke = '#000000'; }
+  const lineCol = stroke || '#1D1F22';
+  if (!P.noBody) {
+    if (th.shadow && fill) { ctx.save(); ctx.translate(4 * s, 4 * s); ctx.fillStyle = th.shadow; ctx.fill(P.tail); ctx.fill(P.body); ctx.restore(); }
+    if (P.glow && fill) { ctx.save(); ctx.shadowColor = P.glow; ctx.shadowBlur = P.m * 0.45; ctx.fillStyle = fill; ctx.fill(P.body); ctx.restore(); }
+    if (fill) { ctx.fillStyle = P.dark ? fill : lineCol; ctx.fill(P.spikes); }
+    if (P.raysW) { ctx.save(); ctx.lineCap = 'round'; ctx.lineWidth = Math.max(0.6, th.sw * s * P.raysW); ctx.strokeStyle = lineCol; ctx.stroke(P.rays); ctx.restore(); }
+    if (stroke) {
+      ctx.lineJoin = 'round'; ctx.lineWidth = th.sw * s * 2; ctx.strokeStyle = stroke;
+      if (P.dash) ctx.setLineDash(P.dash.map(v => v));
+      ctx.stroke(P.tail); if (!P.noStroke) ctx.stroke(P.body); ctx.setLineDash([]);
+    }
+    if (fill) { ctx.fillStyle = fill; ctx.fill(P.tail); ctx.fill(P.body); }
+    if (P.hasInner && stroke) { ctx.save(); ctx.globalAlpha = P.innerAlpha; ctx.lineWidth = th.sw * s * 0.9; ctx.strokeStyle = stroke; ctx.stroke(P.inner); ctx.restore(); }
   }
-  if (fill) { ctx.fillStyle = fill; ctx.fill(P.tail); ctx.fill(P.body); }
-  if (P.hasInner && stroke) { ctx.lineWidth = th.sw * s * 0.9; ctx.strokeStyle = stroke; ctx.stroke(P.inner); }
   if (th.deco && th.deco !== 'drip') drawDeco(ctx, th.deco, P, s, bubRng(bubHash(b.id) + 7));
   // 글자
   const st = bubTextStyle(b);
@@ -2919,13 +3049,85 @@ function drawBubble(ctx, b, W, H) {
   const [fw, fh] = TEXT_BOX[b.shape] || TEXT_BOX.oval;
   const lines = wrapLines(ctx, b.text || '', P.rx * 2 * fw);
   const lh = px * 1.28, y0 = P.cy - ((lines.length - 1) * lh) / 2;
-  lines.forEach((ln, i) => {
-    const y = y0 + i * lh;
-    if (st.outline) { ctx.lineWidth = px * 0.2; ctx.strokeStyle = st.outline; ctx.lineJoin = 'round'; ctx.strokeText(ln, P.cx, y); }
-    if (st.glow) { ctx.shadowColor = st.glow; ctx.shadowBlur = px * 0.5; }
-    ctx.fillStyle = st.color; ctx.fillText(ln, P.cx, y);
-    ctx.shadowBlur = 0;
-  });
+  drawFxText(ctx, lines, P.cx, y0, lh, px, st, b.fx);
+  ctx.restore();
+}
+// ---------- 글씨 효과 (CapCut·Canva의 글씨 효과처럼) ----------
+const TEXT_FX = [['none', '없음'], ['shadow', '그림자'], ['glow', '빛남'], ['echo', '에코'], ['outline', '외곽선'], ['hollow', '속 빈'], ['background', '배경'],
+  ['splice', '스플라이스'], ['glitch', '글리치'], ['neon', '네온'], ['extrude', '입체(3D)'], ['gradient', '그라데이션'], ['sticker', '스티커']];
+const TEXT_FX_TIP = {
+  none: '효과 없이 글자만', shadow: '글자 아래에 그림자 — 방향·거리·흐림 조절', glow: '글자 둘레가 은은하게 빛남', echo: '같은 글자가 뒤로 여러 겹 겹쳐 보임',
+  outline: '글자 테두리 — 그림 위에서도 잘 읽힘', hollow: '속이 빈 테두리 글자', background: '글자 뒤에 색 띠 (형광펜·자막 느낌)', splice: '속 빈 글자 + 어긋난 색 그림자',
+  glitch: '두 색이 어긋난 화면 오류 느낌', neon: '네온사인처럼 빛나는 선', extrude: '두께가 있는 입체 글자', gradient: '두 색이 섞인 글자', sticker: '두꺼운 흰 테두리 + 그림자, 스티커처럼',
+};
+const TFX_DEFAULT = {
+  none: {}, shadow: { color: '#000000', dist: 30, angle: 135, blur: 35, alpha: 55 }, glow: { color: '#FFD43B', amt: 60, blur: 60 },
+  echo: { color: '#FF6B9A', dist: 22, angle: 135, alpha: 60 }, outline: { color: '#FFFFFF', amt: 45 }, hollow: { amt: 25 },
+  background: { color: '#FFE066', amt: 35, alpha: 90 }, splice: { color: '#FF6B9A', amt: 25, dist: 28, angle: 135 },
+  glitch: { color: '#00E5FF', color2: '#FF2BD6', dist: 22, angle: 0 }, neon: { color: '#39FF14', amt: 55, blur: 60 },
+  extrude: { color: '#2B2B2B', dist: 40, angle: 135 }, gradient: { color: '#FF6B9A', color2: '#6B8CFF', angle: 90 }, sticker: { color: '#FFFFFF', amt: 60, blur: 25 },
+};
+const TFX_PARAMS = {
+  none: [], shadow: ['color', 'dist', 'angle', 'blur', 'alpha'], glow: ['color', 'amt', 'blur'], echo: ['color', 'dist', 'angle', 'alpha'], outline: ['color', 'amt'],
+  hollow: ['amt'], background: ['color', 'amt', 'alpha'], splice: ['color', 'amt', 'dist', 'angle'], glitch: ['color', 'color2', 'dist', 'angle'],
+  neon: ['color', 'amt', 'blur'], extrude: ['color', 'dist', 'angle'], gradient: ['color', 'color2', 'angle'], sticker: ['color', 'amt', 'blur'],
+};
+function hexA(hex, a) { const c = new THREE.Color(hex); return `rgba(${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)},${a})`; }
+function drawFxText(ctx, lines, cx, y0, lh, px, st, fxIn) {
+  const fx = { type: 'none', ...(fxIn || {}) };
+  const t = fx.type, pick = (k, d) => (fx[k] ?? TFX_DEFAULT[t]?.[k] ?? d);
+  const T = (px * pick('amt', 40)) / 100 * 0.3, D = (px * pick('dist', 30)) / 100 * 0.45, ang = THREE.MathUtils.degToRad(pick('angle', 135));
+  const dx = Math.cos(ang) * D, dy = Math.sin(ang) * D, BL = (px * pick('blur', 30)) / 100 * 0.8, AL = pick('alpha', 100) / 100, col = pick('color', '#000000'), col2 = pick('color2', '#FFFFFF');
+  const each = (fn) => lines.forEach((ln, i) => fn(ln, cx, y0 + i * lh));
+  ctx.lineJoin = 'round';
+  const baseOutline = () => { if (st.outline && t !== 'hollow' && t !== 'outline' && t !== 'sticker') { ctx.lineWidth = px * 0.2; ctx.strokeStyle = st.outline; each((l, x, y) => ctx.strokeText(l, x, y)); } };
+  const baseFill = (style) => { ctx.save(); if (st.glow) { ctx.shadowColor = st.glow; ctx.shadowBlur = px * 0.5; } ctx.fillStyle = style || st.color; each((l, x, y) => ctx.fillText(l, x, y)); ctx.restore(); };
+  ctx.save();
+  switch (t) {
+    case 'shadow':
+      baseOutline(); ctx.save(); ctx.shadowColor = hexA(col, AL); ctx.shadowBlur = BL; ctx.shadowOffsetX = dx; ctx.shadowOffsetY = dy; ctx.fillStyle = st.color; each((l, x, y) => ctx.fillText(l, x, y)); ctx.restore(); break;
+    case 'glow':
+      ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = BL + T * 2; ctx.fillStyle = st.color; for (let k = 0; k < 2; k++) each((l, x, y) => ctx.fillText(l, x, y)); ctx.restore(); baseOutline(); baseFill(); break;
+    case 'echo':
+      [3, 2, 1].forEach(k => { ctx.globalAlpha = AL * (0.3 + 0.2 * (3 - k)); ctx.fillStyle = col; each((l, x, y) => ctx.fillText(l, x + dx * k * 0.6, y + dy * k * 0.6)); });
+      ctx.globalAlpha = 1; baseOutline(); baseFill(); break;
+    case 'outline':
+      ctx.lineWidth = Math.max(1, T * 2); ctx.strokeStyle = col; each((l, x, y) => ctx.strokeText(l, x, y)); baseFill(); break;
+    case 'hollow':
+      ctx.lineWidth = Math.max(1, T * 0.4 + px * 0.03); ctx.strokeStyle = st.color; each((l, x, y) => ctx.strokeText(l, x, y)); break;
+    case 'background': {
+      const wMax = Math.max(...lines.map(l => ctx.measureText(l).width)), pad = px * (0.15 + pick('amt', 35) / 100 * 0.5);
+      const h = lines.length * lh, x0 = cx - wMax / 2 - pad, yTop = y0 - lh / 2 - pad * 0.4;
+      ctx.fillStyle = hexA(col, AL); ctx.beginPath(); ctx.roundRect(x0, yTop, wMax + pad * 2, h + pad * 0.8, px * 0.3); ctx.fill();
+      baseOutline(); baseFill(); break;
+    }
+    case 'splice':
+      ctx.fillStyle = col; each((l, x, y) => ctx.fillText(l, x + dx, y + dy));
+      ctx.lineWidth = Math.max(1, T * 0.8 + px * 0.04); ctx.strokeStyle = st.color; each((l, x, y) => ctx.strokeText(l, x, y)); break;
+    case 'glitch':
+      ctx.globalAlpha = 0.9; ctx.fillStyle = col; each((l, x, y) => ctx.fillText(l, x - dx, y - dy)); ctx.fillStyle = col2; each((l, x, y) => ctx.fillText(l, x + dx, y + dy));
+      ctx.globalAlpha = 1; baseFill(); break;
+    case 'neon':
+      ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = BL + T; ctx.lineWidth = Math.max(1, T * 0.8); ctx.strokeStyle = col;
+      for (let k = 0; k < 2; k++) each((l, x, y) => ctx.strokeText(l, x, y)); ctx.restore();
+      ctx.fillStyle = hexA('#FFFFFF', 0.92); each((l, x, y) => ctx.fillText(l, x, y)); break;
+    case 'extrude': {
+      const steps = Math.max(2, Math.round(D / 0.8)); ctx.fillStyle = col;
+      for (let k = steps; k >= 1; k--) each((l, x, y) => ctx.fillText(l, x + (dx * k) / steps, y + (dy * k) / steps));
+      baseOutline(); baseFill(); break;
+    }
+    case 'gradient': {
+      const wMax = Math.max(...lines.map(l => ctx.measureText(l).width)) / 2 + 1, hh = (lines.length * lh) / 2;
+      const gx = Math.cos(ang) * wMax, gy = Math.sin(ang) * hh, yc = y0 + ((lines.length - 1) * lh) / 2;
+      const g = ctx.createLinearGradient(cx - gx, yc - gy, cx + gx, yc + gy); g.addColorStop(0, col); g.addColorStop(1, col2);
+      baseOutline(); baseFill(g); break;
+    }
+    case 'sticker':
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = BL; ctx.shadowOffsetY = px * 0.05; ctx.lineWidth = Math.max(2, T * 2.6); ctx.strokeStyle = col;
+      each((l, x, y) => ctx.strokeText(l, x, y)); ctx.restore(); baseFill(); break;
+    default:
+      baseOutline(); baseFill();
+  }
   ctx.restore();
 }
 /** 저장 이미지·작은 그림에 말풍선 넣기 */
@@ -3035,16 +3237,30 @@ function tilePreview(canvas, shape, theme, bgColor) {
   drawBubble(g, { id: 'tile' + shape + theme, shape, theme, text: theme === 'textonly' ? '쾅!' : '', x: 0.46, y: 0.42, w: 0.72, h: 0.6, tailOn: true, tail: { x: 0.78, y: 0.95 }, match: true, size: 300, bg: bgColor || '#BFE3FF', bold: false, italic: false }, w, h);
 }
 function buildTiles(el, items, kind) {
-  el.replaceChildren(...items.map(([k, label]) => {
+  if (kind === 'shape') {
+    el.replaceChildren();
+    BUB_SHAPE_GROUPS.forEach(([g, list]) => {
+      const h = document.createElement('p'); h.className = 'tilegroup'; h.textContent = g; el.append(h);
+      list.forEach(([k, label]) => el.append(makeTile(k, label, kind)));
+    });
+    return;
+  }
+  el.replaceChildren(...items.map(([k, label]) => makeTile(k, label, kind)));
+}
+function makeTile(k, label, kind) {
+  {
     const btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'btile'; btn.dataset.key = k; btn.setAttribute('aria-pressed', 'false');
     btn.dataset.tip = kind === 'shape' ? BUB_SHAPE_TIP[k] : BUB_THEME_TIP[k];
     const cv = document.createElement('canvas'); cv.setAttribute('aria-hidden', 'true');
     const sp = document.createElement('span'); sp.textContent = label;
     btn.append(cv, sp);
-    btn.addEventListener('click', () => changeBub(b => { if (kind === 'shape') b.shape = k; else b.theme = k; }));
+    btn.addEventListener('click', () => changeBub(b => {
+      if (kind === 'shape') { b.shape = k; if (['flash', 'uniflash', 'swirl', 'darkFlash', 'softGlow', 'whiteFlash', 'none'].includes(k)) b.tailOn = false; }
+      else b.theme = k;
+    }));
     return btn;
-  }));
+  }
 }
 buildTiles($('bubShapes'), BUB_SHAPES, 'shape');
 buildTiles($('bubThemes'), Object.entries(BUB_THEMES).map(([k, t]) => [k, t.name]), 'theme');
@@ -3065,9 +3281,25 @@ $('bubBold').addEventListener('click', () => changeBub(b => { unmatch(b); b.bold
 $('bubItalic').addEventListener('click', () => changeBub(b => { unmatch(b); b.italic = !b.italic; }));
 $('bubColor').addEventListener('input', e => changeBub(b => { unmatch(b); b.color = e.target.value; }, false));
 $('bubColor').addEventListener('change', () => { pushHistory(); notifyChange(); });
-$('bubOutline').addEventListener('change', e => changeBub(b => { unmatch(b); b.outline = e.target.checked; }));
-$('bubOutlineColor').addEventListener('input', e => changeBub(b => { unmatch(b); b.outline = true; b.outlineColor = e.target.value; }, false));
-$('bubOutlineColor').addEventListener('change', () => { pushHistory(); notifyChange(); });
+// 글씨 효과 고르기 + 효과 조절
+$('bubTfx').replaceChildren(...TEXT_FX.map(([k, label]) => {
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'btile'; btn.dataset.key = k; btn.setAttribute('aria-pressed', 'false'); btn.dataset.tip = TEXT_FX_TIP[k];
+  const cv = document.createElement('canvas'); cv.setAttribute('aria-hidden', 'true');
+  const sp = document.createElement('span'); sp.textContent = label;
+  btn.append(cv, sp);
+  btn.addEventListener('click', () => changeBub(b => { b.fx = { type: k, ...TFX_DEFAULT[k] }; }));
+  return btn;
+}));
+const tfxSyncers = [['tfxAmt', 'amt'], ['tfxDist', 'dist'], ['tfxAngle', 'angle'], ['tfxBlur', 'blur'], ['tfxAlpha', 'alpha']].map(([id, k]) => {
+  RESET_TO[id] = () => { const b = curBub(); return (b && TFX_DEFAULT[(b.fx || {}).type || 'none'][k]) ?? 0; };
+  return bindRange(id, () => { const b = curBub(); const fx = (b && b.fx) || {}; return fx[k] ?? TFX_DEFAULT[fx.type || 'none'][k] ?? 0; },
+    v => { const b = curBub(); if (b) { b.fx = { type: 'none', ...(b.fx || {}), [k]: v }; drawBubbleLayer(); } });
+});
+[['tfxColor', 'color'], ['tfxColor2', 'color2']].forEach(([id, k]) => {
+  $(id).addEventListener('input', e => changeBub(b => { b.fx = { type: 'none', ...(b.fx || {}), [k]: e.target.value }; }, false));
+  $(id).addEventListener('change', () => { pushHistory(); notifyChange(); });
+});
 $('bubFront').addEventListener('click', () => changeBub(b => { bubbles = bubbles.filter(x => x !== b).concat([b]); }));
 $('bubDup').addEventListener('click', () => { const b = curBub(); if (!b) return; const c = { ...JSON.parse(JSON.stringify(b)), id: Math.random().toString(36).slice(2, 10), x: b.x + 0.05, y: b.y + 0.05, tail: { x: b.tail.x + 0.05, y: b.tail.y + 0.05 } }; bubbles.push(c); selBub = c.id; drawBubbleLayer(); renderBubUI(); pushHistory(); notifyChange(); });
 $('bubDel').addEventListener('click', () => { if (selBub) removeBubble(selBub); });
@@ -3100,13 +3332,27 @@ function renderBubUI() {
   $('bubFont').value = st.font;
   $('bubBold').setAttribute('aria-pressed', String(!!st.bold)); $('bubItalic').setAttribute('aria-pressed', String(!!st.italic));
   if ($('bubColor').value.toLowerCase() !== st.color.toLowerCase()) $('bubColor').value = st.color;
-  $('bubOutline').checked = !!st.outline; if (st.outline && $('bubOutlineColor').value.toLowerCase() !== st.outline.toLowerCase()) $('bubOutlineColor').value = st.outline;
   bubSizeSync();
+  const fx = { type: 'none', ...(b.fx || {}) };
+  $('bubTfx').querySelectorAll('.btile').forEach(t => t.setAttribute('aria-pressed', String(t.dataset.key === fx.type)));
+  const params = TFX_PARAMS[fx.type] || [];
+  $('tfxCtl').hidden = !params.length;
+  $('tfxCtl').querySelectorAll('[data-p]').forEach(f => { f.hidden = !params.includes(f.dataset.p); });
+  ['color', 'color2'].forEach((k, i) => { const v = fx[k] ?? TFX_DEFAULT[fx.type][k]; const el = $(i ? 'tfxColor2' : 'tfxColor'); if (v && el.value.toLowerCase() !== v.toLowerCase()) el.value = v; });
+  tfxSyncers.forEach(f => f());
   // 배경색 테마 칸은 고른 색으로 미리보기
   const ct = $('bubThemes').querySelector('[data-key="color"] canvas'); if (ct) tilePreview(ct, 'oval', 'color', b.bg);
 }
+function fxTilePreview(canvas, type) {
+  const dpr = 2, w = 64, h = 44; canvas.width = w * dpr; canvas.height = h * dpr;
+  const g = canvas.getContext('2d'); g.scale(dpr, dpr);
+  g.fillStyle = '#F1F0EA'; g.fillRect(0, 0, w, h);
+  g.font = `700 20px "Black Han Sans", "Noto Sans KR", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  drawFxText(g, ['가나'], w / 2, h / 2, 24, 20, { font: 'Black Han Sans', bold: true, color: type === 'neon' ? '#FFFFFF' : '#1D1F22', outline: null, glow: null }, { type, ...TFX_DEFAULT[type] });
+}
 function paintTiles() {
   $('bubShapes').querySelectorAll('.btile').forEach(t => tilePreview(t.querySelector('canvas'), t.dataset.key, 'basic'));
+  $('bubTfx').querySelectorAll('.btile').forEach(t => fxTilePreview(t.querySelector('canvas'), t.dataset.key));
   $('bubThemes').querySelectorAll('.btile').forEach(t => tilePreview(t.querySelector('canvas'), 'oval', t.dataset.key, curBub() ? curBub().bg : null));
 }
 paintTiles();
@@ -4282,6 +4528,7 @@ if (EMBED) {
       const savedArr = scene && Array.isArray(scene.slots) ? scene.slots : [];
       const saved = savedArr.filter(Boolean).length;
       if (scene) importScene(scene);
+      else { Object.assign(look.comic, readComicLast()); syncLookUI(); }
       // 저장된 장면에 없던 인물(새로 들어온 사람)은 기존 인물 오른쪽에 겹치지 않게
       if (saved > 0) {
         const kept = slots.filter((_, i) => savedArr[i]);

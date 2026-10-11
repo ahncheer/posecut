@@ -42,7 +42,8 @@ function rows(area: Rect, gutter: number, weights: number[], cols: number[]): Re
 export function pageLayout(template: TemplateId, style: FrameStyle, ratio: [number, number]): { height: number; rects: Rect[] } {
   const height = pageHeightFor(ratio);
   const m = style.margin;
-  const area = { x: m, y: m, w: PAGE_W - 2 * m, h: height - 2 * m };
+  const pt = style.padTop ?? 0, pr = style.padRight ?? 0;
+  const area = { x: m, y: m + pt, w: PAGE_W - 2 * m - pr, h: height - 2 * m - pt };
   const g = style.gutter;
   const rects =
     template === 'custom' ? rows(area, g, [1], [1]) // 직접 그린 틀은 split.ts가 계산 (여기선 한 칸)
