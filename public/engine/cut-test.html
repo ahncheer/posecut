@@ -1,0 +1,2912 @@
+<title>러프 도구 컷 테스트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: drafting desk — cast list left, the cut on paper in the middle, adjustment panel right; stacks on phones */
+:root {
+  --bg: #F3F3EF;
+  --surface: #FFFFFF;
+  --line: #DAD9D2;
+  --ink: #1D1F22;
+  --muted: #5B5E62;
+  --accent: #2F5FBF;        /* non-photo-blue leaning pencil blue */
+  --accent-ink: #FFFFFF;
+  --accent-soft: #E4ECFA;
+  --paper: #F8F7F2;         /* the drawing surface stays paper in both themes */
+  --danger: #B3261E;
+  --font-ui: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17191C; --surface: #202327; --line: #363A40; --ink: #ECEDEE; --muted: #A4A8AE;
+    --accent: #7FA6F0; --accent-ink: #0E1726; --accent-soft: #24324B; --danger: #F2938C; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17191C; --surface: #202327; --line: #363A40; --ink: #ECEDEE; --muted: #A4A8AE;
+  --accent: #7FA6F0; --accent-ink: #0E1726; --accent-soft: #24324B; --danger: #F2938C; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 14px; line-height: 1.5; }
+.app { max-width: 1440px; margin: 0 auto; padding-inline: 16px; padding-block: 12px 24px; display: grid; gap: 12px; }
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.brand { font-weight: 700; font-size: 16px; }
+.brand small { font-weight: 500; color: var(--muted); font-size: 13px; margin-left: 6px; }
+.spacer { flex: 1; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn:focus-visible, .chip:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 500; }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+.btn.small { min-height: 32px; padding: 0 10px; font-size: 13px; }
+.btn[disabled] { opacity: .5; cursor: default; }
+.status { min-height: 20px; font-size: 13px; color: var(--muted); }
+.work { display: grid; grid-template-columns: 240px minmax(0, 1fr) 310px; gap: 12px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+.panel h2 { margin: 0; font-size: 13px; font-weight: 500; color: var(--muted); }
+.cast-row { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.cast-row[aria-pressed="true"] { border: 2px solid var(--accent); padding: 7px; }
+.avatar { width: 32px; height: 32px; flex: none; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; background: var(--accent-soft); color: var(--accent); }
+.cast-row .meta { min-width: 0; display: grid; }
+.cast-row .meta span:last-child { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.field { display: grid; grid-template-columns: 64px minmax(0, 1fr) 62px; align-items: center; gap: 8px; font-size: 13px; }
+.field output { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12px; text-align: right; color: var(--muted); }
+.field .num { width: 100%; min-height: 32px; padding: 0 4px 0 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12px; text-align: right; }
+.field .num:hover { border-color: var(--muted); }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.eyepads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.eyepads figure { margin: 0; display: grid; gap: 4px; }
+.eyepads figcaption { font-size: 12px; color: var(--muted); text-align: center; }
+.eyepad { position: relative; aspect-ratio: 1; border: 1px solid var(--line); border-radius: 6px; background: linear-gradient(var(--line), var(--line)) center / 1px 100% no-repeat, linear-gradient(var(--line), var(--line)) center / 100% 1px no-repeat, var(--surface); cursor: crosshair; touch-action: none; -webkit-user-select: none; user-select: none; }
+.eyepad[aria-disabled="true"] { opacity: .5; }
+.eyepad .dot { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; border: 2px solid var(--accent); border-radius: 50%; background: var(--surface); transform: translate(-50%, -50%); pointer-events: none; }
+.stage { display: grid; gap: 10px; min-width: 0; }
+.viewport { position: relative; height: clamp(360px, 64vh, 700px); border-radius: 12px; overflow: hidden; background: var(--paper); border: 1px solid var(--line); touch-action: none; }
+.viewport canvas { display: block; width: 100%; height: 100%; }
+.viewport, body.dragging { -webkit-user-select: none; user-select: none; }
+.frame { position: absolute; outline: 2px solid #1D1F22; box-shadow: 0 0 0 9999px rgba(29, 31, 34, 0.3); pointer-events: none; }
+.frame span { position: absolute; top: 6px; left: 8px; font-size: 12px; padding: 1px 6px; border-radius: 4px; background: #FFFFFF; color: #1D1F22; }
+.hud { position: absolute; display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+.hud .pill { background: #FFFFFF; color: #1D1F22; border: 1px solid #DAD9D2; border-radius: 6px; padding: 4px 8px; }
+.hud.tl { top: 10px; left: 10px; }
+.gizmo-bar { align-items: center; }
+.gbtn { min-height: 32px; padding: 0 10px; border: 1px solid #DAD9D2; border-radius: 6px; background: #FFFFFF; color: #1D1F22; font: inherit; font-size: 12px; cursor: pointer; }
+.gbtn[aria-pressed="true"] { border-color: #2F5FBF; background: #E4ECFA; color: #1F4499; font-weight: 600; }
+.gbtn[hidden] { display: none; }
+.tip { position: absolute; pointer-events: none; transform: translate(12px, -50%); background: rgba(29, 31, 34, .88); color: #FFFFFF; font-size: 12px; line-height: 1.4; padding: 4px 8px; border-radius: 6px; white-space: nowrap; }
+[hidden] { display: none !important; }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(248, 247, 242, .85); color: #1D1F22; font-size: 14px; }
+.drop { position: absolute; inset: 8px; border: 2px dashed #2F5FBF; border-radius: 10px; display: grid; place-items: center; background: rgba(228, 236, 250, .85); color: #1D1F22; font-weight: 500; }
+.tabs { display: grid; grid-template-columns: 1fr 1px 1fr; gap: 0; border-bottom: 1px solid var(--line); }
+.txt { width: 100%; min-height: 36px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; resize: vertical; }
+.colorin { width: 100%; min-height: 32px; padding: 0 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.ai-key, .ai-card { position: relative; display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+.ai-card h3 { margin: 0; font-size: 14px; font-weight: 600; flex: 1; }
+.ai-head { display: flex; align-items: center; gap: 8px; }
+.ai-key summary { cursor: pointer; font-size: 13px; color: var(--accent); }
+.badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.badge.free { background: #E3F2E6; color: #1E6B33; }
+.badge.cost { background: #FBEFD9; color: #7A4A06; }
+.lock { position: absolute; inset: 0; border-radius: 10px; background: rgba(128, 128, 128, .5); display: grid; place-content: center; justify-items: center; gap: 8px; text-align: center; }
+.lock span { padding: 6px 12px; border-radius: 8px; background: rgba(29, 31, 34, .82); color: #FFFFFF; font-weight: 600; font-size: 13px; line-height: 1.5; }
+.lock small { font-weight: 400; font-size: 12px; color: #D9DADC; }
+.ai-card.unlocked .lock { display: none; }
+.bg-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.bg-grid button { padding: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--surface); cursor: pointer; aspect-ratio: 4 / 3; }
+.cast-row { display: grid; grid-template-columns: 28px 1fr 1fr; gap: 6px; align-items: center; }
+#castRows { display: grid; gap: 6px; }
+.bg-grid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+dialog.pose-edit { border: 0; border-radius: 12px; padding: 14px; max-width: min(92vw, 900px); background: var(--surface); color: var(--ink); }
+dialog.pose-edit::backdrop { background: rgba(0, 0, 0, .55); }
+.pose-stage { position: relative; display: inline-block; max-width: 100%; }
+.pose-stage img { display: block; max-width: 100%; max-height: 70vh; }
+.pose-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+.tabgroup { display: grid; }
+.tabgroup > span { font-size: 12px; color: var(--muted); padding: 0 4px; }
+.tabgroup.mine > span { color: var(--accent); }
+.tabgroup > div { display: flex; }
+.tab { flex: 1; min-height: 40px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); font: inherit; cursor: pointer; }
+.tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+.tabs .sep { background: var(--line); margin: 6px 0 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { min-height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+.chip[aria-pressed="true"] { border: 2px solid var(--accent); background: var(--accent-soft); color: var(--accent); padding: 0 11px; font-weight: 500; }
+.chip[disabled] { opacity: .45; cursor: default; }
+select { width: 100%; min-height: 40px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; font: inherit; background: var(--surface); color: var(--ink); }
+.sub { font-size: 12px; color: var(--muted); margin: 0; }
+.strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.strip figure { margin: 0; flex: none; display: grid; gap: 4px; }
+.strip button { padding: 0; border: 1px solid var(--line); border-radius: 6px; background: #FFFFFF; cursor: pointer; }
+.strip img { display: block; height: 72px; width: auto; max-width: none; border-radius: 5px; }
+.strip figcaption { font-size: 12px; color: var(--muted); font-family: var(--font-num); }
+.empty { font-size: 13px; color: var(--muted); }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 1080px) {
+  .work { grid-template-columns: minmax(0, 1fr); }
+  .stage { order: -1; }
+}
+/* 앱 안에서 열릴 때: 모델·컷 비율은 앱(작품 설정·컷 틀)이 정하므로 숨긴다 */
+body.embed .brand, body.embed .top label[for="file"], body.embed #addB, body.embed #swap, body.embed #removeB,
+body.embed #ratio, body.embed #ratioTitle, body.embed #empty { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app">
+  <header class="top">
+    <span class="brand">러프 도구<small>컷 만들기 테스트</small></span>
+    <span class="spacer"></span>
+    <button class="btn" id="undo" type="button" aria-label="되돌리기 (Ctrl+Z)" title="Ctrl+Z">↶ 되돌리기</button>
+    <button class="btn" id="redo" type="button" aria-label="다시 하기 (Ctrl+Y)" title="Ctrl+Y 또는 Ctrl+Shift+Z">↷ 다시 하기</button>
+    <label class="btn" for="file">VRM 불러오기</label>
+    <input id="file" class="vh" type="file" accept=".vrm">
+    <button class="btn primary" id="capture" type="button">이 컷 이미지로 저장</button>
+  </header>
+  <p class="status" id="status" role="status" aria-live="polite">VRoid에서 내보낸 .vrm 파일을 불러와 시작해 주세요.</p>
+
+  <div class="work">
+    <aside class="panel" aria-label="등장인물">
+      <h2>이 컷의 등장인물</h2>
+      <div id="cast" style="display: grid; gap: 8px"></div>
+      <button class="btn small" id="addB" type="button">+ B 넣기 (VRM 선택)</button>
+      <div style="display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px">
+        <h2 id="selName">A 배치</h2>
+        <button class="btn small" id="swap" type="button">모델 교체 (포즈 유지)</button>
+        <div class="field"><label for="posX">좌우</label><input id="posX" type="range" min="-150" max="150" step="1"><output for="posX" id="posXo"></output></div>
+        <div class="field"><label for="posZ">앞뒤</label><input id="posZ" type="range" min="-150" max="150" step="1"><output for="posZ" id="posZo"></output></div>
+        <div class="field"><label for="rotY">몸 방향</label><input id="rotY" type="range" min="-180" max="180" step="1"><output for="rotY" id="rotYo"></output></div>
+        <div class="field"><label for="presence">존재감</label><input id="presence" type="range" min="10" max="100" step="1"><output for="presence" id="presenceo"></output></div>
+        <button class="btn small ghost" id="removeB" type="button" hidden>B 빼기</button>
+      </div>
+      <p class="sub">VRM 파일을 화면 가운데로 끌어다 놓아도 선택한 인물의 모델이 바뀌어요.</p>
+    </aside>
+
+    <section class="stage" aria-label="컷 화면">
+      <div class="viewport" id="viewport">
+        <div class="frame" id="frame"><span id="frameLabel">컷 9:4.2</span></div>
+        <div class="hud tl gizmo-bar" id="gizmoBar" hidden>
+          <span class="pill" id="gizmoName">A · 오른손</span>
+          <button class="gbtn" id="gzMove" type="button" aria-pressed="true">축 이동</button>
+          <button class="gbtn" id="gzRotate" type="button" aria-pressed="false">회전</button>
+          <button class="gbtn" id="gzClose" type="button" aria-label="축 닫기 (Esc)">닫기</button>
+        </div>
+        <div class="tip" id="tip" hidden></div>
+        <div class="loading" id="loading" hidden>모델 불러오는 중…</div>
+        <div class="loading" id="empty" style="background: rgba(248, 247, 242, .92)">
+          <div style="display: grid; gap: 12px; justify-items: center; text-align: center; padding: 16px; max-width: 360px">
+            <strong style="font-size: 16px">A 자리에 넣을 VRM 모델을 골라주세요</strong>
+            <span style="font-size: 13px; color: #5B5E62">VRoid Studio나 VRoid Hub에서 받은 .vrm 파일(예: 사쿠라다 후미리야)을 고르거나 이 칸에 끌어다 놓으세요.</span>
+            <label class="btn primary" for="file" style="background: #2F5FBF; border-color: #2F5FBF; color: #FFFFFF">VRM 파일 고르기</label>
+          </div>
+        </div>
+        <div class="drop" id="drop" hidden>여기에 놓으면 선택한 인물의 모델이 바뀌어요</div>
+      </div>
+      <div class="panel">
+        <h2>저장한 컷</h2>
+        <div class="strip" id="strip"><p class="empty" id="stripEmpty">아직 저장한 컷이 없어요. 위의 "이 컷 이미지로 저장"을 눌러보세요.</p></div>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="편집">
+      <div class="tabs" role="tablist">
+        <div class="tabgroup mine"><span id="tabOwner">A에게 적용</span><div>
+          <button class="tab" role="tab" id="t-pose" aria-selected="true" aria-controls="p-pose">포즈</button>
+          <button class="tab" role="tab" id="t-face" aria-selected="false" aria-controls="p-face">표정</button>
+        </div></div>
+        <div class="sep" aria-hidden="true"></div>
+        <div class="tabgroup"><span>컷 전체</span><div>
+          <button class="tab" role="tab" id="t-cam" aria-selected="false" aria-controls="p-cam">카메라</button>
+          <button class="tab" role="tab" id="t-ai" aria-selected="false" aria-controls="p-ai">AI 도움</button>
+        </div></div>
+      </div>
+
+      <section id="p-pose" role="tabpanel" aria-labelledby="t-pose" style="display: grid; gap: 10px">
+        <h2>포즈 프리셋</h2>
+        <div class="chips" id="presets"></div>
+        <h2>관절 돌리기</h2>
+        <label class="vh" for="bone">관절 선택</label>
+        <select id="bone"></select>
+        <div class="field"><label for="rx">앞뒤</label><input id="rx" type="range" min="-180" max="180" step="1"><output for="rx" id="rxo"></output></div>
+        <div class="field"><label for="ry">돌리기</label><input id="ry" type="range" min="-180" max="180" step="1"><output for="ry" id="ryo"></output></div>
+        <div class="field"><label for="rz">옆으로</label><input id="rz" type="range" min="-180" max="180" step="1"><output for="rz" id="rzo"></output></div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <button class="btn small" id="resetBone" type="button">이 관절 초기화</button>
+          <button class="btn small" id="resetPose" type="button">전체 초기화</button>
+        </div>
+        <p class="sub">왼쪽·오른쪽은 캐릭터 기준이에요. 화면에서 손·발·팔꿈치·무릎·머리 점을 끌면 자세가 바뀌고, 엉덩이 점을 끌면 바닥 위에서 위치가 옮겨져요. 팔꿈치·무릎은 사람처럼 한쪽으로만 굽고, 손발이 닿지 않으면 상체가 기울다가 몸 전체가 끌려와요.</p>
+        <h2>손가락</h2>
+        <div class="chips" id="handSide"></div>
+        <div class="chips" id="handPresets"></div>
+        <div class="field"><label for="fThumb">엄지</label><input id="fThumb" type="range" min="0" max="100" step="1"><output for="fThumb" id="fThumbo"></output></div>
+        <div class="field"><label for="fIndex">검지</label><input id="fIndex" type="range" min="0" max="100" step="1"><output for="fIndex" id="fIndexo"></output></div>
+        <div class="field"><label for="fMiddle">중지</label><input id="fMiddle" type="range" min="0" max="100" step="1"><output for="fMiddle" id="fMiddleo"></output></div>
+        <div class="field"><label for="fRing">약지</label><input id="fRing" type="range" min="0" max="100" step="1"><output for="fRing" id="fRingo"></output></div>
+        <div class="field"><label for="fLittle">새끼</label><input id="fLittle" type="range" min="0" max="100" step="1"><output for="fLittle" id="fLittleo"></output></div>
+        <div class="field"><label for="fSpread">벌리기</label><input id="fSpread" type="range" min="0" max="100" step="1"><output for="fSpread" id="fSpreado"></output></div>
+        <p class="sub" id="fingerNote">0은 쭉 편 상태, 100은 끝까지 굽힌 상태예요. 손 점을 누르면 그쪽 손이 선택돼요.</p>
+      </section>
+
+      <section id="p-face" role="tabpanel" aria-labelledby="t-face" hidden style="display: grid; gap: 10px">
+        <h2>감정</h2>
+        <div class="chips" id="emotions"></div>
+        <div class="field"><label for="emoW">세기</label><input id="emoW" type="range" min="0" max="100" step="1"><output for="emoW" id="emoWo"></output></div>
+        <div style="display: flex; align-items: center; gap: 8px"><h2 style="flex: 1">입 모양</h2><button class="chip" id="talk" type="button" aria-pressed="false">말하기 ▶</button></div>
+        <div class="chips" id="mouths"></div>
+        <p class="sub">말하기를 켰다가 끄면 그 순간의 입모양이 남아요.</p>
+        <div class="field"><label for="blink">눈 감기</label><input id="blink" type="range" min="0" max="100" step="1"><output for="blink" id="blinko"></output></div>
+        <h2>고개</h2>
+        <div class="field"><label for="hx">숙이기</label><input id="hx" type="range" min="-45" max="45" step="1"><output for="hx" id="hxo"></output></div>
+        <div class="field"><label for="hy">좌우</label><input id="hy" type="range" min="-70" max="70" step="1"><output for="hy" id="hyo"></output></div>
+        <div class="field"><label for="hz">기울기</label><input id="hz" type="range" min="-40" max="40" step="1"><output for="hz" id="hzo"></output></div>
+        <h2>눈 움직임</h2>
+        <label class="check"><input type="checkbox" id="autoBlink">눈 깜빡이기 <span class="sub">(저장 이미지엔 안 들어가요)</span></label>
+        <label class="check"><input type="checkbox" id="lookCam">카메라 바라보기</label>
+        <label class="check"><input type="checkbox" id="lookOther">상대 바라보기</label>
+        <div class="eyepads">
+          <figure><div class="eyepad" id="padR" tabindex="0" role="slider" aria-label="화면 왼쪽에 보이는 눈의 방향 (방향키로 조절)" aria-valuetext="가운데"><span class="dot"></span></div><figcaption>왼쪽에 보이는 눈</figcaption></figure>
+          <figure><div class="eyepad" id="padL" tabindex="0" role="slider" aria-label="화면 오른쪽에 보이는 눈의 방향 (방향키로 조절)" aria-valuetext="가운데"><span class="dot"></span></div><figcaption>오른쪽에 보이는 눈</figcaption></figure>
+        </div>
+        <label class="check"><input type="checkbox" id="eyeLink">두 눈 같이 움직이기</label>
+        <p class="sub">점을 끌어 눈동자 방향을 정해요. 캐릭터를 정면에서 본 방향 그대로예요. 두 번 누르면 가운데로 돌아가요. 칸을 누르면 바라보기는 자동으로 꺼져요.</p>
+      </section>
+
+      <section id="p-cam" role="tabpanel" aria-labelledby="t-cam" hidden style="display: grid; gap: 10px">
+        <h2 id="ratioTitle">컷 비율</h2>
+        <label class="vh" for="ratio">컷 비율</label>
+        <select id="ratio">
+          <option value="9:4.2">9:4.2 · 기본 4컷의 한 칸</option>
+          <option value="1:1">1:1 · 정사각</option>
+          <option value="4:3">4:3 · 가로</option>
+          <option value="3:4">3:4 · 세로</option>
+          <option value="9:19">9:19 · 페이지 한 장</option>
+        </select>
+        <h2>샷</h2>
+        <div class="chips" id="shots"></div>
+        <div class="field"><label for="fov">화각</label><input id="fov" type="range" min="12" max="70" step="1"><output for="fov" id="fovo"></output></div>
+        <h2>카메라 조작</h2>
+        <div class="field"><label for="sens">민감도</label><input id="sens" type="range" min="5" max="100" step="1"><output for="sens" id="senso"></output></div>
+        <p class="sub">왼쪽 드래그: 회전 · 오른쪽 또는 휠 버튼 드래그: 이동 · 휠: 확대. 마우스를 멈추면 화면도 바로 멈춰요.</p>
+        <h2>앤티앨리어싱</h2>
+        <label class="vh" for="aa">앤티앨리어싱 (계단 현상 줄이기)</label>
+        <select id="aa">
+          <option value="1">보통</option>
+          <option value="1.5">높음 · 선이 더 매끈해요</option>
+          <option value="2">아주 높음 · 컴퓨터에 따라 느릴 수 있어요</option>
+        </select>
+        <p class="sub">외곽선과 머리카락 가장자리의 계단 현상을 줄여요. 저장하는 이미지에도 같은 단계가 적용돼요.</p>
+        <h2>전체 조명 (필터)</h2>
+        <div class="chips" id="filterPresets"></div>
+        <div class="field"><label for="filterColor">색</label><input id="filterColor" type="color" value="#ffffff" style="width: 100%; min-height: 32px; padding: 0 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface)"><span></span></div>
+        <div class="field"><label for="filterAmt">세기</label><input id="filterAmt" type="range" min="0" max="100" step="1"><output for="filterAmt" id="filterAmto"></output></div>
+        <p class="sub">컷 전체에 색을 입혀요(배경 포함). 저장하는 이미지에도 들어가요.</p>
+        <h2>보기</h2>
+        <label class="check"><input type="checkbox" id="showJoints" checked>관절 점 보기 (저장 이미지엔 안 나와요)</label>
+        <label class="check"><input type="checkbox" id="showGrid" checked>바닥 격자</label>
+        <label class="check"><input type="checkbox" id="transparent">배경 투명으로 저장</label>
+      </section>
+
+      <section id="p-ai" role="tabpanel" aria-labelledby="t-ai" hidden style="display: grid; gap: 12px">
+        <div class="ai-key">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <h2 style="flex: 1">AI 연결</h2>
+            <span class="badge" id="keyBadge">키 없음</span>
+          </div>
+          <p class="sub" id="keyState">API 키 없이도 "무료" 표시 기능은 모두 쓸 수 있어요.</p>
+          <details id="keyBox">
+            <summary>API 키 등록·관리</summary>
+            <div style="display: grid; gap: 8px; margin-top: 8px">
+              <label class="sub" for="apiKey">Google AI Studio에서 받은 Gemini API 키</label>
+              <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="AIza로 시작하는 키를 붙여넣기" class="txt">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                <button class="btn small" id="keySave" type="button">이 컴퓨터에 저장</button>
+                <button class="btn small ghost" id="keyClear" type="button">키 지우기</button>
+              </div>
+              <div class="field"><label for="aiLimit">월 한도</label><input id="aiLimit" type="range" min="0" max="10000" step="100"><output for="aiLimit" id="aiLimito"></output></div>
+              <p class="sub" id="aiUsage">이번 달 사용: 0원 (0회)</p>
+              <p class="sub">키는 이 컴퓨터의 크롬 안에만 저장돼요. 파일·서버에는 남지 않고, 다른 컴퓨터나 브라우저에서는 다시 등록해야 해요. 한도(원)를 넘으면 키를 쓰는 기능이 멈춰요. 금액은 1달러 = 1,400원으로 계산한 예상치예요.</p>
+            </div>
+          </details>
+        </div>
+
+        <div class="ai-card">
+          <div class="ai-head"><h3>사진·그림으로 포즈</h3><span class="badge free">무료</span></div>
+          <p class="sub">사진이나 그림을 넣으면 사람 관절을 찾아 선택한 인물에 같은 자세를 적용해요. 적용 전에 점을 끌어 고칠 수 있어요. 사진은 컴퓨터 밖으로 나가지 않아요.</p>
+          <label class="btn small" for="photoFile">사진·그림 고르기</label>
+          <input id="photoFile" class="vh" type="file" accept="image/*">
+        </div>
+
+        <div class="ai-card">
+          <div class="ai-head"><h3>비슷한 포즈 레퍼런스 찾기</h3><span class="badge free">무료</span></div>
+          <p class="sub">장면을 적으면 캐릭터 설정을 붙여 검색하고, 새 탭에 사진을 띄워요. 사진 속 자세가 지금 화면 속 인물 자세와 비슷한 순으로 정렬돼요.</p>
+          <p class="sub" style="margin-bottom: -2px">캐릭터 설정 (검색어에 쓰여요)</p>
+          <div id="castRows"></div>
+          <label class="vh" for="refText">장면 설명</label>
+          <textarea id="refText" class="txt" rows="2" placeholder="예: A가 B 손목을 잡아 끌고 간다"></textarea>
+          <button class="btn small primary" id="refRun" type="button">새 탭에서 찾기</button>
+          <p class="sub" id="refNote" role="status"></p>
+        </div>
+
+        <div class="ai-card">
+          <div class="ai-head"><h3>말로 자세·장면 바꾸기</h3><span class="badge free">무료</span></div>
+          <label class="vh" for="cmdText">명령</label>
+          <textarea id="cmdText" class="txt" rows="2" placeholder="A 오른팔 조금 올리고 고개 왼쪽으로"></textarea>
+          <div class="chips" id="cmdExamples"></div>
+          <label class="check"><input type="checkbox" id="cmdUseAI" disabled><span>AI로 해석 (자유로운 문장도 이해 · 1회 약 0.3원 · 키 필요)</span></label>
+          <button class="btn small primary" id="cmdRun" type="button">적용</button>
+          <p class="sub" id="cmdResult" role="status"></p>
+        </div>
+
+        <div class="ai-card">
+          <div class="ai-head"><h3>카메라 앵글 제안</h3><span class="badge free">무료</span></div>
+          <label class="vh" for="moodText">장면 분위기</label>
+          <input id="moodText" class="txt" placeholder="예: 위압감 있게, 쓸쓸하게, 긴장된 고백">
+          <button class="btn small" id="moodRun" type="button">제안 받기</button>
+          <div class="chips" id="moodOut"></div>
+        </div>
+
+        <div class="ai-card">
+          <div class="ai-head"><h3>만화 효과 배경</h3><span class="badge free">무료</span></div>
+          <div class="chips" id="fxChips"></div>
+          <div class="field"><label for="fxColor">색</label><input id="fxColor" type="color" value="#1d1f22" class="colorin"><span></span></div>
+          <button class="btn small" id="fxRecommend" type="button">표정에 맞게 추천</button>
+          <p class="sub" id="fxNote"></p>
+        </div>
+
+        <div class="ai-card">
+          <div class="ai-head"><h3>세계관 배경 찾기</h3><span class="badge free">무료</span></div>
+          <p class="sub">CC 라이선스 이미지 모음(Openverse)에서 찾아요. 한국어 장소 단어는 영어로 바꿔 검색해요.</p>
+          <label class="vh" for="worldText">검색어 또는 세계관 설명</label>
+          <input id="worldText" class="txt" placeholder="예: 비 오는 밤 골목, 교실, 카페">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap">
+            <button class="btn small" id="worldSearch" type="button">검색</button>
+            <button class="btn small" id="worldAI" type="button" disabled title="API 키 필요">세계관 설명으로 검색어 만들기 · 약 0.2원</button>
+          </div>
+          <div class="bg-grid" id="worldResults"></div>
+          <p class="sub" id="worldCredit"></p>
+        </div>
+
+        <div class="ai-card keyed">
+          <div class="ai-head"><h3>구도 맞춤 배경 생성</h3><span class="badge cost">1장 약 55원</span></div>
+          <p class="sub">지금 카메라 구도(높이·각도·원근)에 맞는 배경 그림을 만들어요. 인물은 그리지 않아요.</p>
+          <label class="vh" for="genText">배경 설명</label>
+          <input id="genText" class="txt" placeholder="예: 해 질 녘 학교 옥상, 만화풍 선화">
+          <button class="btn small primary" id="genRun" type="button">배경 만들기</button>
+          <p class="sub" id="genResult" role="status"></p>
+          <div class="lock"><span>API 키 등록 후 사용 가능</span><button class="btn small" type="button" data-open-key>키 등록하기</button></div>
+        </div>
+
+        <div class="ai-card keyed">
+          <div class="ai-head"><h3>콘티 → 컷 나누기</h3><span class="badge cost">1회 약 0.5원</span></div>
+          <p class="sub">시나리오 글을 넣으면 컷을 나누고 컷마다 등장인물·샷을 제안해요. 여러 컷을 다루는 원고 화면용 기능이라 이 테스트(컷 하나)에서는 목록만 보여드려요.</p>
+          <div class="lock"><span>API 키 등록 후 사용 가능<br><small>원고 화면에서 제공 예정</small></span><button class="btn small" type="button" data-open-key>키 등록하기</button></div>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<dialog class="pose-edit" id="poseDlg" aria-labelledby="poseDlgTitle">
+  <div style="display: grid; gap: 10px">
+    <h3 id="poseDlgTitle" style="margin: 0; font-size: 16px">찾은 관절 확인</h3>
+    <p class="sub">점이 어긋났으면 끌어서 맞춰 주세요. 파란 점은 사진 속 사람의 왼쪽, 주황 점은 오른쪽이에요.</p>
+    <div class="pose-stage"><img id="poseImg" alt="고른 사진"><svg id="poseSvg" aria-label="관절 점 (끌어서 수정)"></svg></div>
+    <label class="check"><input type="checkbox" id="poseMirror">좌우 반전해서 적용</label>
+    <div style="display: flex; gap: 8px; justify-content: flex-end">
+      <button class="btn" id="poseCancel" type="button">취소</button>
+      <button class="btn primary" id="poseApply" type="button">A에게 적용</button>
+    </div>
+  </div>
+</dialog>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+  "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.4.2/lib/three-vrm.module.min.js"
+} }
+</script>
+<script type="module">
+// =====================================================================
+// 러프 도구 · 컷 만들기 테스트 — 코드 목차 (각 구역은 "// ----------" 제목으로 시작)
+//  1. 기본 설정: 상수, 저장소(store), 관절·프리셋 표
+//  2. three setup: 렌더러·카메라·조명 / 배경 / 앤티앨리어싱 / 전체 조명(필터)
+//  3. state: 인물 슬롯, 되돌리기·다시 하기 / 손가락 / 모델 불러오기
+//  4. 포즈·표정 적용: applyPose, 존재감, 시선(눈 패드), 자동 깜빡임
+//  5. 관절 점: 점 그리기·고르기 / 끌기(IK) / 사람 관절 범위 / 축 기즈모
+//  6. 화면: layout, 카메라 샷, 저장(renderCut·capture)
+//  7. 오른쪽 탭 UI: 포즈·표정·카메라 / 눈 패드 / 인물 목록 / syncUI
+//  8. loop: 매 화면 갱신
+//  9. AI 도움: 키·비용, 만화 효과 배경, 카메라 제안, 한국어 명령, Openverse, 배경 생성, 사진→포즈
+// 10. 테스트용 훅(?debug), start
+// 좌표 약속: 포즈 값은 "캐릭터 왼쪽 기준 도(°)". 오른쪽은 y·z 부호가 반대. VRM0 모델은 x·z를 뒤집어 적용.
+// =====================================================================
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+
+const $ = (id) => document.getElementById(id);
+const statusEl = $('status');
+const say = (t) => { statusEl.textContent = t; };
+const round1 = (v) => Math.round(v * 10) / 10;
+const round2 = (v) => Math.round(v * 100) / 100;
+// 브라우저 저장소(이 컴퓨터의 크롬 안). 시크릿 창 등에서 못 쓰면 조용히 기본값을 씀
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { /* 저장소를 못 쓰는 환경 */ } },
+};
+
+const D = THREE.MathUtils.degToRad;
+const POS_LIMIT = 150;      // 인물 위치 좌우·앞뒤 범위(cm)
+const DRAG_START_PX = 4;    // 이만큼 움직여야 '클릭'이 아니라 '끌기'로 봄
+const REACH_TOL = 0.015;    // 손발이 목표에 이만큼(m) 안이면 닿은 것으로 봄
+const clampPos = (v) => Math.max(-POS_LIMIT, Math.min(POS_LIMIT, v));
+
+const BONES = [
+  ['hips', '엉덩이(몸 전체)'], ['spine', '허리'], ['chest', '가슴'], ['neck', '목'], ['head', '머리'],
+  ['leftShoulder', '왼쪽 어깨'], ['leftUpperArm', '왼팔 위'], ['leftLowerArm', '왼팔 아래'], ['leftHand', '왼손'],
+  ['rightShoulder', '오른쪽 어깨'], ['rightUpperArm', '오른팔 위'], ['rightLowerArm', '오른팔 아래'], ['rightHand', '오른손'],
+  ['leftUpperLeg', '왼다리 위'], ['leftLowerLeg', '왼다리 아래'], ['leftFoot', '왼발'],
+  ['rightUpperLeg', '오른다리 위'], ['rightLowerLeg', '오른다리 아래'], ['rightFoot', '오른발'],
+];
+const BONE_NAME = Object.fromEntries(BONES);
+const MARKER_BONES = BONES.map(b => b[0]).filter(b => !b.endsWith('Shoulder'));
+
+const ARMS_DOWN = { leftUpperArm: { x: 0, y: 0, z: -72 }, rightUpperArm: { x: 0, y: 0, z: 72 }, leftLowerArm: { x: 0, y: 0, z: -6 }, rightLowerArm: { x: 0, y: 0, z: 6 } };
+const PRESETS = [
+  ['T자', {}],
+  ['차렷', { ...ARMS_DOWN }],
+  ['손 흔들기', { leftUpperArm: { x: 0, y: 0, z: -72 }, leftLowerArm: { x: 0, y: 0, z: -6 }, rightUpperArm: { x: 0, y: 0, z: -20 }, rightLowerArm: { x: 0, y: 0, z: -80 }, rightHand: { x: 0, y: 0, z: -10 }, head: { x: 0, y: 0, z: 6 } }],
+  ['만세', { leftUpperArm: { x: 0, y: 0, z: 70 }, rightUpperArm: { x: 0, y: 0, z: -70 }, head: { x: -8, y: 0, z: 0 } }],
+  ['걷기', { leftUpperArm: { x: 18, y: 0, z: -72 }, rightUpperArm: { x: -18, y: 0, z: 72 }, leftLowerArm: { x: 0, y: 0, z: -8 }, rightLowerArm: { x: 0, y: 0, z: 8 }, leftUpperLeg: { x: -24, y: 0, z: 0 }, leftLowerLeg: { x: 6, y: 0, z: 0 }, rightUpperLeg: { x: 18, y: 0, z: 0 }, rightLowerLeg: { x: 30, y: 0, z: 0 }, spine: { x: 0, y: 4, z: 0 } }],
+  ['고개 숙이기', { ...ARMS_DOWN, neck: { x: 10, y: 0, z: 0 }, head: { x: 20, y: 0, z: 0 } }],
+];
+const EMOTIONS = [['neutral', '기본'], ['happy', '기쁨'], ['angry', '화남'], ['sad', '슬픔'], ['relaxed', '편안'], ['surprised', '놀람']];
+const MOUTHS = [['none', '없음'], ['aa', '아'], ['ih', '이'], ['ou', '우'], ['ee', '에'], ['oh', '오']];
+const MOUTH_KEYS = ['aa', 'ih', 'ou', 'ee', 'oh'];
+const SHOTS = [['full', '전신'], ['bust', '바스트'], ['close', '클로즈업'], ['low', '로우앵글'], ['high', '하이앵글']];
+
+// ---------- three setup: 렌더러·카메라·조명 ----------
+const viewport = $('viewport');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+viewport.prepend(renderer.domElement);
+const PAPER = new THREE.Color('#F8F7F2');
+const scene = new THREE.Scene();
+scene.background = PAPER;
+const overlay = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, 1, 0.05, 50);
+camera.position.set(0, 1.35, 2.2);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1.25, 0);
+controls.enableDamping = false; // 관성 없음: 마우스가 멈추면 화면도 즉시 멈춤
+// 왼쪽 드래그: 회전 · 가운데(휠) 버튼 드래그: 화면 이동 · 오른쪽 드래그: 화면 이동 · 휠: 확대
+controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.PAN };
+renderer.domElement.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); }); // 휠 클릭 자동 스크롤 막기
+let sens = 35;
+{ const v = Number(store.get('rough.camSens', '')); if (v >= 5 && v <= 100) sens = v; }
+function applySens() {
+  controls.rotateSpeed = sens / 100;
+  controls.panSpeed = sens / 100;
+  controls.zoomSpeed = 0.25 + sens / 100 * 0.75;
+  store.set('rough.camSens', String(sens));
+}
+applySens();
+
+// ---------- 배경 (종이 / 만화 효과 / 이미지) ----------
+let bgSpec = null; // null | { kind: 'fx', type, color } | { kind: 'image', img }
+let bgTex = null;
+const currentBackground = () => bgTex || PAPER;
+function rebuildBackground() {
+  if (bgTex) { bgTex.dispose(); bgTex = null; }
+  if (bgSpec) {
+    const w = 1280, h = Math.max(1, Math.round(w * viewport.clientHeight / Math.max(1, viewport.clientWidth)));
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const g = cv.getContext('2d');
+    if (bgSpec.kind === 'fx') drawEffect(g, w, h, bgSpec.type, bgSpec.color);
+    else drawCover(g, w, h, bgSpec.img);
+    bgTex = new THREE.CanvasTexture(cv);
+    bgTex.colorSpace = THREE.SRGBColorSpace;
+  }
+  scene.background = currentBackground();
+}
+function setBackground(spec) { bgSpec = spec; rebuildBackground(); }
+function seededRandom(seed) {
+  return () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function lighten(hex, k) { return '#' + new THREE.Color(hex).lerp(new THREE.Color('#ffffff'), k).getHexString(); }
+function drawEffect(g, w, h, type, color) {
+  const R = seededRandom(7), cx = w / 2, cy = h / 2, far = Math.hypot(w, h);
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+  if (type === 'focus') {
+    const inner = Math.min(w, h) * 0.32;
+    g.fillStyle = color;
+    for (let i = 0; i < 200; i++) {
+      const a = R() * Math.PI * 2, half = 0.002 + R() * 0.011, r0 = inner * (0.85 + R() * 0.7);
+      g.beginPath();
+      g.moveTo(cx + Math.cos(a - half) * far, cy + Math.sin(a - half) * far);
+      g.lineTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+      g.lineTo(cx + Math.cos(a + half) * far, cy + Math.sin(a + half) * far);
+      g.closePath(); g.fill();
+    }
+  } else if (type === 'speed') {
+    g.fillStyle = color;
+    for (let i = 0; i < 170; i++) {
+      const y = R() * h, len = w * (0.25 + R() * 0.65), th = 0.6 + R() * 3.2, fromLeft = R() < 0.5;
+      g.globalAlpha = 0.35 + R() * 0.6;
+      g.fillRect(fromLeft ? -10 : w - len + 10, y, len, th);
+    }
+    g.globalAlpha = 1;
+  } else if (type === 'sparkle') {
+    const grd = g.createLinearGradient(0, 0, 0, h);
+    grd.addColorStop(0, lighten(color, 0.55)); grd.addColorStop(1, lighten(color, 0.9));
+    g.fillStyle = grd; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 40; i++) {
+      const x = R() * w, y = R() * h, r = 10 + R() * 50;
+      g.globalAlpha = 0.12 + R() * 0.2; g.fillStyle = '#ffffff';
+      g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    }
+    g.globalAlpha = 1; g.fillStyle = '#ffffff';
+    for (let i = 0; i < 26; i++) {
+      const x = R() * w, y = R() * h, s = 6 + R() * 16;
+      g.beginPath();
+      g.moveTo(x, y - s); g.quadraticCurveTo(x, y, x + s, y); g.quadraticCurveTo(x, y, x, y + s);
+      g.quadraticCurveTo(x, y, x - s, y); g.quadraticCurveTo(x, y, x, y - s); g.fill();
+    }
+  } else if (type === 'gradient') {
+    const grd = g.createLinearGradient(0, 0, 0, h);
+    grd.addColorStop(0, color); grd.addColorStop(1, lighten(color, 0.92));
+    g.fillStyle = grd; g.fillRect(0, 0, w, h);
+  } else if (type === 'tone') {
+    g.fillStyle = color;
+    const step = 14;
+    for (let y = step / 2; y < h; y += step) {
+      const r = Math.max(0, (y / h) * step * 0.45);
+      for (let x = ((y / step) % 2) * step / 2; x < w; x += step) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+    }
+  } else if (type === 'solid') {
+    g.fillStyle = color; g.fillRect(0, 0, w, h);
+  }
+}
+function drawCover(g, w, h, img) {
+  const s = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+  const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
+  g.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+}
+function loadImage(src, cors) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    if (cors) img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('이미지를 불러오지 못했어요.'));
+    img.src = src;
+  });
+}
+
+// ---------- 앤티앨리어싱: 기본 MSAA + 화면을 더 촘촘하게 그려서 줄이기 ----------
+const BASE_RATIO = Math.min(window.devicePixelRatio || 1, 2);
+let aaLevel = 1;
+{ const v = Number(store.get('rough.aa', '')); if ([1, 1.5, 2].includes(v)) aaLevel = v; }
+function applyAA() {
+  renderer.setPixelRatio(Math.min(BASE_RATIO * aaLevel, 4));
+  store.set('rough.aa', String(aaLevel));
+}
+applyAA();
+
+// ---------- 전체 조명(필터): 화면 전체에 색을 곱해서 입힘 ----------
+const FILTER_PRESETS = [
+  ['none', '없음', '#ffffff', 0],
+  ['sunset', '노을', '#ff9a5c', 45],
+  ['night', '밤', '#5b74b8', 55],
+  ['sepia', '회상', '#c9a27a', 50],
+  ['fluor', '형광등', '#d6ecff', 30],
+  ['cloudy', '흐린 날', '#b9bdc2', 35],
+  ['horror', '공포', '#8fb58a', 50],
+];
+const filter = { preset: 'none', color: '#ffffff', amt: 0 };
+const filterScene = new THREE.Scene();
+const filterCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const filterMat = new THREE.MeshBasicMaterial({
+  color: 0xffffff, depthTest: false, depthWrite: false, toneMapped: false,
+  blending: THREE.CustomBlending, blendEquation: THREE.AddEquation,
+  blendSrc: THREE.ZeroFactor, blendDst: THREE.SrcColorFactor,       // 결과 = 화면색 × 필터색 (곱하기)
+  blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,   // 투명 배경은 그대로
+});
+filterScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), filterMat));
+const WHITE = new THREE.Color(0xffffff), _filterTint = new THREE.Color();
+function renderFilter() {
+  if (filter.amt <= 0) return;
+  filterMat.color.copy(WHITE).lerp(_filterTint.set(filter.color), filter.amt / 100);
+  const ac = renderer.autoClear;
+  renderer.autoClear = false;
+  renderer.render(filterScene, filterCam);
+  renderer.autoClear = ac;
+}
+const sun = new THREE.DirectionalLight(0xffffff, Math.PI);
+sun.position.set(1, 1.5, 2);
+scene.add(sun, new THREE.HemisphereLight(0xffffff, 0xd8d6cf, 0.6));
+const grid = new THREE.GridHelper(6, 24, 0xb9b7ae, 0xd9d7cf);
+scene.add(grid);
+
+const loader = new GLTFLoader();
+loader.register((parser) => new VRMLoaderPlugin(parser));
+
+// ---------- state: 인물 슬롯 ----------
+const blankExpr = () => ({ emotion: 'neutral', weight: 100, mouth: {}, blink: 0 });
+const slots = [];
+let sel = 0;
+let bone = 'rightUpperArm';
+let handSel = 'right';
+let talking = false;
+let talkT = 0;
+let frameRect = { x: 0, y: 0, w: 1, h: 1 };
+let cutRatio = [9, 4.2];
+const history = [];
+
+// ---------- 손가락 ----------
+// 손가락마다 굽힘 0~100, 벌리기 0~100. 값으로 저장되어 모델을 바꿔도 같은 손 모양이 나와요.
+const FINGERS = [['thumb', '엄지'], ['index', '검지'], ['middle', '중지'], ['ring', '약지'], ['little', '새끼']];
+const HAND_PRESETS = [
+  ['펴기',     { thumb: 0,  index: 0,   middle: 0,   ring: 0,   little: 0,   spread: 35 }],
+  ['편안',     { thumb: 20, index: 22,  middle: 28,  ring: 32,  little: 36,  spread: 15 }],
+  ['주먹',     { thumb: 75, index: 100, middle: 100, ring: 100, little: 100, spread: 0 }],
+  ['가리키기', { thumb: 70, index: 0,   middle: 100, ring: 100, little: 100, spread: 0 }],
+  ['브이',     { thumb: 70, index: 0,   middle: 0,   ring: 100, little: 100, spread: 60 }],
+  ['엄지척',   { thumb: 0,  index: 100, middle: 100, ring: 100, little: 100, spread: 0 }],
+  ['쥐기',     { thumb: 45, index: 55,  middle: 60,  ring: 62,  little: 65,  spread: 10 }],
+];
+const relaxedHand = () => ({ ...HAND_PRESETS[1][1] });
+// 왼손 기준 회전(도). 오른손은 좌우 대칭(y, z 부호 반대).
+function fingerRotations(hand) {
+  const out = {};
+  const c = (k) => hand[k] / 100, sp = hand.spread / 100;
+  const SPREAD = { index: -14, middle: -3, ring: 6, little: 16 };
+  for (const f of ['index', 'middle', 'ring', 'little']) {
+    const cap = f[0].toUpperCase() + f.slice(1);
+    out[cap + 'Proximal'] = { x: 0, y: SPREAD[f] * sp * (1 - 0.6 * c(f)), z: -85 * c(f) };
+    out[cap + 'Intermediate'] = { x: 0, y: 0, z: -100 * c(f) };
+    out[cap + 'Distal'] = { x: 0, y: 0, z: -70 * c(f) };
+  }
+  const t = c('thumb');
+  out.ThumbMetacarpal = { x: 0, y: 28 * t - 10 * sp, z: -8 * t };
+  out.ThumbProximal = { x: 0, y: 40 * t, z: -18 * t };
+  out.ThumbDistal = { x: 0, y: 55 * t, z: -10 * t };
+  return out;
+}
+function applyFingers(slot) {
+  const vrm = slot.vrm; if (!vrm || !slot.hands) return;
+  for (const side of ['left', 'right']) {
+    const m = side === 'left' ? 1 : -1;
+    for (const [part, r] of Object.entries(fingerRotations(slot.hands[side]))) {
+      const node = vrm.humanoid.getNormalizedBoneNode(side + part);
+      if (node) poseToNode(slot, node, { x: r.x, y: r.y * m, z: r.z * m });
+    }
+  }
+}
+
+function makeSlot(letter, x) {
+  return { letter, x, z: 0, rot: 0, presence: 100, vrm: null, file: '', pose: JSON.parse(JSON.stringify(ARMS_DOWN)), hands: { left: relaxedHand(), right: relaxedHand() }, expr: blankExpr(), look: 'camera',
+    eyes: { r: { x: 0, y: 0 }, l: { x: 0, y: 0 }, link: true }, autoBlink: true, blinkNext: 2 + Math.random() * 3, blinkT: -1, markers: [] };
+}
+const snapshot = () => JSON.stringify(slots.map(s => ({ x: s.x, z: s.z, rot: s.rot, presence: s.presence, pose: s.pose, hands: s.hands, expr: s.expr, look: s.look, eyes: s.eyes, autoBlink: s.autoBlink })));
+// 되돌리기 / 다시 하기: history 맨 위가 지금 상태, future는 되돌린 상태들
+const future = [];
+function pushHistory() {
+  const snap = snapshot();
+  if (history[history.length - 1] === snap) return;
+  history.push(snap); if (history.length > 80) history.shift();
+  future.length = 0;
+  syncUndoButtons();
+}
+function restoreSnap(json) {
+  JSON.parse(json).forEach((p, i) => { if (slots[i]) Object.assign(slots[i], JSON.parse(JSON.stringify(p))); });
+  slots.forEach(applyAll);
+  syncUI();
+  if (typeof refreshGizmo === 'function') refreshGizmo();
+}
+function undo() {
+  if (history.length < 2) { say('더 되돌릴 내용이 없어요.'); return; }
+  future.push(history.pop());
+  restoreSnap(history[history.length - 1]);
+  syncUndoButtons();
+  say('되돌렸어요.');
+}
+function redo() {
+  if (!future.length) { say('다시 할 내용이 없어요.'); return; }
+  const s = future.pop();
+  history.push(s);
+  restoreSnap(s);
+  syncUndoButtons();
+  say('다시 했어요.');
+}
+function syncUndoButtons() {
+  const u = document.getElementById('undo'), r = document.getElementById('redo');
+  if (u) u.disabled = history.length < 2;
+  if (r) r.disabled = future.length === 0;
+}
+
+// ---------- 모델 불러오기 ----------
+async function loadInto(slot, source, label) {
+  $('loading').hidden = false;
+  $('loading').textContent = `${label} 불러오는 중…`;
+  let url = source, revoke = false;
+  if (source instanceof File) { url = URL.createObjectURL(source); revoke = true; }
+  try {
+    const gltf = await loader.loadAsync(url);
+    const vrm = gltf.userData.vrm;
+    if (!vrm) throw new Error('not vrm');
+    VRMUtils.removeUnnecessaryVertices(gltf.scene);
+    if (VRMUtils.combineSkeletons) VRMUtils.combineSkeletons(gltf.scene); else if (VRMUtils.removeUnnecessaryJoints) VRMUtils.removeUnnecessaryJoints(gltf.scene);
+    VRMUtils.rotateVRM0(vrm);
+    vrm.scene.userData.baseRotY = vrm.scene.rotation.y;
+    vrm.scene.traverse(o => { o.frustumCulled = false; });
+    if (slot.vrm) { scene.remove(slot.vrm.scene); VRMUtils.deepDispose(slot.vrm.scene); }
+    slot.vrm = vrm;
+    slot.file = label;
+    scene.add(vrm.scene);
+    buildMarkers(slot);
+    applyAll(slot);
+    syncUI();
+    return true;
+  } catch (e) {
+    console.error(e);
+    say(`${label}을(를) 불러오지 못했어요. VRoid에서 내보낸 .vrm 파일인지 확인해 주세요.`);
+    return false;
+  } finally {
+    if (revoke) URL.revokeObjectURL(url);
+    $('loading').hidden = true;
+  }
+}
+
+const isVRM0 = (vrm) => vrm.meta && vrm.meta.metaVersion === '0';
+function applyPose(slot) {
+  const vrm = slot.vrm; if (!vrm) return;
+  vrm.humanoid.resetNormalizedPose();
+  const flip = isVRM0(vrm) ? -1 : 1;
+  for (const [name, r] of Object.entries(slot.pose)) {
+    const node = vrm.humanoid.getNormalizedBoneNode(name);
+    if (node) node.rotation.set(D(r.x) * flip, D(r.y), D(r.z) * flip);
+  }
+  applyFingers(slot);
+}
+function applyPlacement(slot) {
+  const vrm = slot.vrm; if (!vrm) return;
+  vrm.scene.position.set(slot.x / 100, 0, slot.z / 100);
+  vrm.scene.rotation.y = (vrm.scene.userData.baseRotY || 0) + D(slot.rot);
+}
+// 존재감: 투명하게 만들지 않고, 색을 회색 쪽으로 바래게 + 외곽선을 가늘고 옅게 (공기원근법 느낌)
+const DIM_GREY = new THREE.Color('#C6C5BE');
+const DIM_LINE = new THREE.Color(0.72, 0.72, 0.70);
+const BLACK = new THREE.Color(0, 0, 0);
+function applyPresence(slot) {
+  const vrm = slot.vrm; if (!vrm) return;
+  const a = slot.presence / 100, k = 1 - a;
+  vrm.scene.traverse(o => {
+    if (!o.isMesh) return;
+    (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
+      const u = m.userData;
+      if (!u.orig) u.orig = {
+        color: m.color ? m.color.clone() : null,
+        shade: m.shadeColorFactor ? m.shadeColorFactor.clone() : null,
+        emissive: m.emissive ? m.emissive.clone() : null,
+        emissiveIntensity: 'emissiveIntensity' in m ? m.emissiveIntensity : 1,
+        emissiveMap: m.emissiveMap || null,
+        outline: m.outlineColorFactor ? m.outlineColorFactor.clone() : null,
+        outlineW: 'outlineWidthFactor' in m ? m.outlineWidthFactor : null,
+        rim: m.parametricRimColorFactor ? m.parametricRimColorFactor.clone() : null,
+        matcap: m.matcapFactor ? m.matcapFactor.clone() : null,
+      };
+      const O = u.orig;
+      if (m.isMToonMaterial) {
+        // 원래 색은 a만큼 남기고, 남은 만큼 회색을 더해서 회색 쪽으로 섞는다
+        if (O.color) m.color.copy(O.color).multiplyScalar(a);
+        if (O.shade) m.shadeColorFactor.copy(O.shade).multiplyScalar(a);
+        if (O.rim) m.parametricRimColorFactor.copy(O.rim).multiplyScalar(a);
+        if (O.matcap) m.matcapFactor.copy(O.matcap).multiplyScalar(a);
+        if (O.emissive) {
+          m.emissive.copy(O.emissive).multiplyScalar(O.emissiveIntensity * a).add(BLACK.clone().lerp(DIM_GREY, k));
+          m.emissiveIntensity = 1;
+          const wantMap = k > 0.001 ? null : O.emissiveMap;
+          if (m.emissiveMap !== wantMap) { m.emissiveMap = wantMap; m.needsUpdate = true; }
+        }
+        if (O.outline) m.outlineColorFactor.copy(O.outline).lerp(DIM_LINE, k);
+        if (O.outlineW !== null) m.outlineWidthFactor = O.outlineW * (1 - 0.6 * k);
+      } else if (O.color) {
+        m.color.copy(O.color).lerp(DIM_GREY, k);
+      }
+    });
+  });
+}
+function applyLook(slot) {
+  const vrm = slot.vrm; if (!vrm || !vrm.lookAt) return;
+  const other = slots.find(s => s !== slot && s.vrm);
+  if (slot.look === 'camera') vrm.lookAt.target = camera;
+  else if (slot.look === 'other' && other) vrm.lookAt.target = other.vrm.humanoid.getRawBoneNode('head');
+  else { vrm.lookAt.target = null; vrm.lookAt.yaw = 0; vrm.lookAt.pitch = 0; }
+}
+// 눈 직접 지정: 패드 값(-1~1)을 모델에 정해진 눈 움직임 범위 안에서 적용.
+// 패드 x+ = 화면 오른쪽(= 캐릭터의 왼쪽), y+ = 위.  두 눈을 따로 움직일 수 있다.
+const EYE_DEG = 90; // 모델의 눈 범위 설정(rangeMap)에 넣는 입력 최대값
+function isBoneEyes(vrm) { return !!(vrm.lookAt && vrm.lookAt.applier && vrm.humanoid.getRawBoneNode('rightEye') && vrm.humanoid.getRawBoneNode('leftEye')); }
+function prepareEyes(slot) {
+  // vrm.update 전에: 표정(블렌드셰이프)으로 눈을 움직이는 모델은 두 눈 평균으로
+  const vrm = slot.vrm; if (!vrm || !vrm.lookAt || slot.look !== 'manual') return;
+  vrm.lookAt.target = null;
+  if (isBoneEyes(vrm)) { vrm.lookAt.yaw = 0; vrm.lookAt.pitch = 0; return; }
+  const e = slot.eyes;
+  vrm.lookAt.yaw = (e.r.x + e.l.x) / 2 * EYE_DEG;
+  vrm.lookAt.pitch = -(e.r.y + e.l.y) / 2 * EYE_DEG; // three-vrm은 pitch가 음수일 때 위
+}
+function applyManualEyes(slot) {
+  // vrm.update 후에: 눈 뼈가 있는 모델은 양쪽을 따로
+  const vrm = slot.vrm; if (!vrm || slot.look !== 'manual' || !isBoneEyes(vrm)) return;
+  const ap = vrm.lookAt.applier, e = slot.eyes;
+  const rRaw = vrm.humanoid.getRawBoneNode('rightEye');
+  const rNorm = vrm.humanoid.getNormalizedBoneNode('rightEye');
+  ap.applyYawPitch(e.r.x * EYE_DEG, -e.r.y * EYE_DEG); // pitch 음수 = 위
+  const keepRaw = rRaw.quaternion.clone(), keepNorm = rNorm ? rNorm.quaternion.clone() : null;
+  ap.applyYawPitch(e.l.x * EYE_DEG, -e.l.y * EYE_DEG);
+  rRaw.quaternion.copy(keepRaw); if (rNorm && keepNorm) rNorm.quaternion.copy(keepNorm);
+}
+// 자동 눈 깜빡임 (화면에서만, 저장 이미지에는 적용 안 함)
+function autoBlinkValue(slot, dt) {
+  if (!slot.autoBlink) { slot.blinkT = -1; return 0; }
+  if (slot.blinkT < 0) {
+    slot.blinkNext -= dt;
+    if (slot.blinkNext <= 0) { slot.blinkT = 0; slot.blinkNext = 2.5 + Math.random() * 3.5; }
+    return 0;
+  }
+  slot.blinkT += dt;
+  const DUR = 0.16;
+  if (slot.blinkT >= DUR) { slot.blinkT = -1; return 0; }
+  return Math.sin(slot.blinkT / DUR * Math.PI);
+}
+function updateSlot(s, dt, still) {
+  if (!s.vrm) return;
+  applyExpressions(s, dt, still);
+  prepareEyes(s);
+  s.vrm.update(dt);
+  applyManualEyes(s);
+}
+function applyAll(slot) { applyPose(slot); applyPlacement(slot); applyPresence(slot); applyLook(slot); }
+
+function applyExpressions(slot, dt, still) {
+  const em = slot.vrm && slot.vrm.expressionManager; if (!em) return;
+  const set = (n, v) => { if (em.getExpression(n)) em.setValue(n, v); };
+  EMOTIONS.forEach(([n]) => n !== 'neutral' && set(n, 0));
+  if (slot.expr.emotion !== 'neutral') set(slot.expr.emotion, slot.expr.weight / 100);
+  let mouth = slot.expr.mouth;
+  if (talking && slot === slots[sel]) {
+    talkT += dt * 7;
+    const i = Math.floor(talkT) % MOUTH_KEYS.length;
+    const f = talkT % 1;
+    const open = Math.sin(f * Math.PI) * 0.85;
+    mouth = { [MOUTH_KEYS[i]]: open };
+    slot.liveMouth = mouth;
+  }
+  MOUTH_KEYS.forEach(k => set(k, mouth[k] || 0));
+  const auto = still ? 0 : autoBlinkValue(slot, dt);
+  set('blink', Math.max(slot.expr.blink / 100, auto));
+}
+
+// ---------- 관절 점: 그리기·고르기 ----------
+const markerGeo = new THREE.SphereGeometry(1, 12, 8);
+function buildMarkers(slot) {
+  slot.markers.forEach(m => overlay.remove(m));
+  slot.markers = [];
+  MARKER_BONES.forEach(name => {
+    const node = slot.vrm.humanoid.getRawBoneNode(name);
+    if (!node) return;
+    const mesh = new THREE.Mesh(markerGeo, new THREE.MeshBasicMaterial({ color: 0x2f5fbf, depthTest: false, transparent: true, opacity: 0.9 }));
+    mesh.userData = { slot, bone: name, node };
+    mesh.renderOrder = 10;
+    overlay.add(mesh);
+    slot.markers.push(mesh);
+  });
+}
+const tmp = new THREE.Vector3();
+// 점은 줌과 상관없이 화면에서 항상 같은 크기(반지름 px). 누르는 범위도 이 크기에 맞춤.
+const DOT_PX = 6, DOT_PX_ACTIVE = 8, PICK_PX = 15;
+let hoverMarker = null;
+function updateMarkers() {
+  const show = $('showJoints').checked;
+  const hPx = Math.max(1, renderer.domElement.clientHeight);
+  const k = 2 * Math.tan(D(camera.fov) / 2) / hPx;
+  slots.forEach((s, i) => s.markers.forEach(m => {
+    m.visible = show;
+    m.userData.node.getWorldPosition(m.position);
+    const active = i === sel && m.userData.bone === bone;
+    const hov = m === hoverMarker;
+    const dist = camera.position.distanceTo(m.position);
+    m.scale.setScalar((active || hov ? DOT_PX_ACTIVE : DOT_PX) * dist * k);
+    m.material.color.set(active ? 0xd2541f : hov ? 0x1b3f8f : (i === sel ? 0x2f5fbf : 0x8a8d92));
+    m.material.opacity = i === sel ? 0.95 : 0.55;
+  }));
+}
+function pickMarker(px, py) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  let best = null, bestD = Infinity;
+  slots.forEach((s, i) => s.markers.forEach(m => {
+    tmp.copy(m.position).project(camera);
+    if (tmp.z > 1 || tmp.z < -1) return;
+    const sx = (tmp.x + 1) / 2 * rect.width, sy = (1 - tmp.y) / 2 * rect.height;
+    const d = Math.hypot(sx - px, sy - py) + (i === sel ? 0 : 3); // 겹치면 선택 중인 인물 우선
+    if (d < PICK_PX && d < bestD) { bestD = d; best = m; }
+  }));
+  return best;
+}
+// ---------- 손발 끌기 (IK) ----------
+// 점을 누르고 끌면: 그 점이 마우스를 따라가도록 위쪽 관절들이 알아서 굽혀져요.
+// 결과는 관절 회전값(slot.pose)으로 저장되므로 모델을 바꿔도 그대로 유지돼요.
+const IK_CHAINS = {
+  leftHand: ['leftLowerArm', 'leftUpperArm'],
+  rightHand: ['rightLowerArm', 'rightUpperArm'],
+  leftLowerArm: ['leftUpperArm'],
+  rightLowerArm: ['rightUpperArm'],
+  leftFoot: ['leftLowerLeg', 'leftUpperLeg'],
+  rightFoot: ['rightLowerLeg', 'rightUpperLeg'],
+  leftLowerLeg: ['leftUpperLeg'],
+  rightLowerLeg: ['rightUpperLeg'],
+  head: ['neck', 'chest', 'spine'],
+};
+const _ikE = new THREE.Vector3(), _ikP = new THREE.Vector3(), _ikV1 = new THREE.Vector3(), _ikV2 = new THREE.Vector3();
+const _ikQ = new THREE.Quaternion(), _ikWQ = new THREE.Quaternion(), _ikPQ = new THREE.Quaternion(), _ikI = new THREE.Quaternion();
+const _ikEu = new THREE.Euler();
+function nodeToPose(slot, name, node) {
+  const flip = isVRM0(slot.vrm) ? -1 : 1;
+  _ikEu.setFromQuaternion(node.quaternion, 'XYZ');
+  return { x: round1(THREE.MathUtils.radToDeg(_ikEu.x) * flip), y: round1(THREE.MathUtils.radToDeg(_ikEu.y)), z: round1(THREE.MathUtils.radToDeg(_ikEu.z) * flip) };
+}
+function poseToNode(slot, node, r) {
+  const flip = isVRM0(slot.vrm) ? -1 : 1;
+  node.rotation.set(D(r.x) * flip, D(r.y), D(r.z) * flip);
+}
+// 월드 기준 회전 q를 node에 덧붙인다 (부모 기준 로컬 회전으로 변환)
+function rotateNodeWorld(node, q) {
+  node.getWorldQuaternion(_ikWQ);
+  node.parent.getWorldQuaternion(_ikPQ);
+  _ikWQ.premultiply(q);
+  node.quaternion.copy(_ikPQ.invert().multiply(_ikWQ));
+}
+// ---------- 사람처럼 움직이게: 관절 범위 제한 + 닿지 않으면 몸이 끌려옴 ----------
+// 팔꿈치·무릎은 한 방향으로만 굽는 경첩. 위팔·허벅지는 비틀리지 않게 경첩 방향까지 맞춰서 돌린다.
+const LIMB = {
+  leftHand:  { up: 'leftUpperArm',  mid: 'leftLowerArm',  kind: 'arm', side: 1 },
+  rightHand: { up: 'rightUpperArm', mid: 'rightLowerArm', kind: 'arm', side: -1 },
+  leftFoot:  { up: 'leftUpperLeg',  mid: 'leftLowerLeg',  kind: 'leg', side: 1 },
+  rightFoot: { up: 'rightUpperLeg', mid: 'rightLowerLeg', kind: 'leg', side: -1 },
+};
+const MAX_FLEX = { arm: D(145), leg: D(150) };
+// 사람 관절이 움직이는 범위 (단위: 도, 캐릭터 왼쪽 기준. 오른쪽은 좌우 대칭)
+// x: 앞뒤로 숙이기/비틀기, y·z: 몸 기준 축. 대략적인 정상 가동 범위.
+const JOINT_LIMITS = {
+  hips:  null,
+  spine: { x: [-25, 40], y: [-30, 30], z: [-25, 25] },
+  chest: { x: [-20, 30], y: [-30, 30], z: [-20, 20] },
+  upperChest: { x: [-15, 20], y: [-20, 20], z: [-15, 15] },
+  neck:  { x: [-35, 45], y: [-55, 55], z: [-35, 35] },
+  head:  { x: [-40, 40], y: [-50, 50], z: [-30, 30] },
+  leftShoulder: { x: [-10, 10], y: [-15, 15], z: [-10, 25] },
+  leftUpperArm: { x: [-90, 90], y: [-115, 45], z: [-85, 115] },  // y-: 앞으로, z+: 위로
+  leftLowerArm: { x: [-90, 90], y: [-150, 0], z: [-10, 10] },     // 팔꿈치는 앞으로만 굽힘
+  leftHand:     { x: [-35, 35], y: [-25, 35], z: [-75, 75] },     // 손목
+  leftUpperLeg: { x: [-120, 30], y: [-40, 40], z: [-25, 50] },    // x-: 앞으로 들기, z+: 바깥으로
+  leftLowerLeg: { x: [0, 150], y: [-10, 10], z: [-10, 10] },      // 무릎은 뒤로만 굽힘
+  leftFoot:     { x: [-45, 35], y: [-25, 25], z: [-25, 25] },
+  leftToes:     { x: [-40, 40], y: [-5, 5], z: [-5, 5] },
+};
+function getLimits(name) {
+  if (name.startsWith('right')) {
+    const l = JOINT_LIMITS['left' + name.slice(5)]; if (!l) return null;
+    return { x: l.x, y: [-l.y[1], -l.y[0]], z: [-l.z[1], -l.z[0]] };
+  }
+  return JOINT_LIMITS[name] || null;
+}
+const clampV = (v, [lo, hi]) => Math.min(hi, Math.max(lo, v));
+// start가 주어지면: 원래 범위 밖에 있던 값은 그 값까지는 허용(갑자기 튀지 않게), 더 벗어나지만 못하게
+function clampJoint(slot, name, node, start) {
+  const lim = getLimits(name); if (!lim) return;
+  const r = nodeToPose(slot, name, node);
+  const range = (ax) => start ? [Math.min(lim[ax][0], start[ax]), Math.max(lim[ax][1], start[ax])] : lim[ax];
+  const c = { x: clampV(r.x, range('x')), y: clampV(r.y, range('y')), z: clampV(r.z, range('z')) };
+  if (c.x !== r.x || c.y !== r.y || c.z !== r.z) poseToNode(slot, node, c);
+}
+// 캐릭터 기준 방향(월드): 왼쪽·앞·위
+function bodyFrame(slot) {
+  const q = slot.vrm.scene.getWorldQuaternion(new THREE.Quaternion());
+  const s = isVRM0(slot.vrm) ? -1 : 1; // VRM0은 원래 -Z를 보고 있다
+  return {
+    q, s,
+    left: new THREE.Vector3(s, 0, 0).applyQuaternion(q),
+    fwd: new THREE.Vector3(0, 0, s).applyQuaternion(q),
+    up: new THREE.Vector3(0, 1, 0).applyQuaternion(q),
+  };
+}
+// 벡터 u가 축 v 방향으로 m(=sin) 이상 넘어가지 않게 원뿔 안으로 되돌린다
+function capDir(u, v, m) {
+  const a = u.dot(v);
+  if (a <= m) return false;
+  const w = u.clone().addScaledVector(v, -a);
+  if (w.lengthSq() < 1e-10) return false;
+  w.normalize().multiplyScalar(Math.sqrt(Math.max(0, 1 - m * m)));
+  u.copy(w.addScaledVector(v, m)).normalize();
+  return true;
+}
+function limitUpperDir(u, L, fr) {
+  const side = fr.left.clone().multiplyScalar(L.side); // 바깥쪽
+  const back = fr.fwd.clone().negate();
+  for (let i = 0; i < 2; i++) {
+    if (L.kind === 'arm') {
+      capDir(u, back, Math.sin(D(40)));                  // 팔을 등 뒤로 40도 넘게 못 넘김
+      capDir(u, side.clone().negate(), Math.sin(D(55))); // 몸 앞을 가로질러 55도까지
+    } else {
+      capDir(u, back, Math.sin(D(30)));                  // 다리는 뒤로 30도까지
+      capDir(u, side.clone().negate(), Math.sin(D(25))); // 안쪽으로 25도까지
+      capDir(u, side, Math.sin(D(55)));                  // 바깥쪽으로 55도까지
+      capDir(u, fr.up, Math.sin(D(30)));                 // 앞으로 들어 올리기 120도까지
+    }
+  }
+}
+const _mA = new THREE.Matrix4(), _mB = new THREE.Matrix4(), _qW = new THREE.Quaternion(), _qP = new THREE.Quaternion();
+// 위팔/허벅지: 뼈 방향 u, 경첩 축 hw 가 되도록 회전.  아래팔/종아리: 경첩 축으로만 theta 만큼 굽힘
+function setLimb(slot, L, up, mid, u, hw, theta) {
+  const fr = bodyFrame(slot);
+  const s = fr.s;
+  const a0 = L.kind === 'arm' ? new THREE.Vector3(s * L.side, 0, 0) : new THREE.Vector3(0, -1, 0);
+  const f0 = new THREE.Vector3(0, 0, s), up0 = new THREE.Vector3(0, 1, 0);
+  const h0 = L.kind === 'arm' ? a0.clone().cross(f0) : up0.clone().cross(f0);
+  _mA.makeBasis(u, hw, u.clone().cross(hw));
+  _mB.makeBasis(a0, h0, a0.clone().cross(h0));
+  // 뼈의 로컬 휴식 방향(a0, h0)을 원하는 월드 방향(u, hw)으로 보내는 회전 = 뼈의 월드 회전
+  const W = _qW.setFromRotationMatrix(_mA.multiply(_mB.invert())).clone();
+  up.parent.getWorldQuaternion(_qP);
+  up.quaternion.copy(_qP.invert().multiply(W));
+  mid.quaternion.setFromAxisAngle(h0.normalize(), theta);
+}
+function solveLimb(slot, effName, target) {
+  const L = LIMB[effName], h = slot.vrm.humanoid;
+  const up = h.getNormalizedBoneNode(L.up), mid = h.getNormalizedBoneNode(L.mid), eff = h.getNormalizedBoneNode(effName);
+  if (!up || !mid || !eff) return false;
+  const fr = bodyFrame(slot);
+  const A = up.getWorldPosition(new THREE.Vector3());
+  const B = mid.getWorldPosition(new THREE.Vector3());
+  const C = eff.getWorldPosition(new THREE.Vector3());
+  const l1 = B.distanceTo(A), l2 = C.distanceTo(B);
+  const toT = target.clone().sub(A);
+  const d = Math.min(l1 + l2 - 1e-4, Math.max(Math.abs(l1 - l2) + 1e-4, toT.length()));
+  const dir = toT.lengthSq() > 1e-10 ? toT.normalize() : fr.up.clone().negate();
+  // 팔꿈치는 아래·뒤·바깥쪽, 무릎은 앞쪽을 향하게
+  const side = fr.left.clone().multiplyScalar(L.side);
+  const hint = L.kind === 'leg' ? fr.fwd.clone() : fr.up.clone().negate().addScaledVector(fr.fwd, -0.45).addScaledVector(side, 0.45);
+  let pole = hint.clone().addScaledVector(dir, -hint.dot(dir));
+  if (pole.lengthSq() < 1e-6) { pole = (L.kind === 'leg' ? fr.up : fr.fwd.clone().negate()).clone(); pole.addScaledVector(dir, -pole.dot(dir)); }
+  pole.normalize();
+  const cosA = Math.min(1, Math.max(-1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d)));
+  const sinA = Math.sqrt(1 - cosA * cosA);
+  const u = dir.clone().multiplyScalar(cosA).addScaledVector(pole, sinA).normalize();
+  limitUpperDir(u, L, fr);
+  // 위팔이 정해진 뒤, 손이 목표에 가장 가깝게 오도록 굽힘 각도 결정 (경첩 방향은 pole 쪽으로 고정)
+  const E = A.clone().addScaledVector(u, l1);
+  let hw = u.clone().cross(pole.clone().negate());
+  if (hw.lengthSq() < 1e-8) hw = u.clone().cross(fr.fwd);
+  hw.normalize();
+  const toTE = target.clone().sub(E);
+  // 경첩 평면(hw에 수직) 위에서 목표 방향 각도
+  const inPlane = toTE.clone().addScaledVector(hw, -toTE.dot(hw));
+  let theta = 0;
+  if (inPlane.lengthSq() > 1e-10) {
+    const v = inPlane.normalize();
+    const w = hw.clone().cross(u); // u를 hw축으로 +90도 돌린 방향
+    theta = Math.atan2(v.dot(w), v.dot(u));
+  }
+  theta = Math.min(MAX_FLEX[L.kind], Math.max(0, theta)); // 반대로 꺾이지 않음
+  setLimb(slot, L, up, mid, u, hw, theta);
+  slot.pose[L.up] = nodeToPose(slot, L.up, up);
+  slot.pose[L.mid] = nodeToPose(slot, L.mid, mid);
+  return true;
+}
+// 관절을 끝에서부터 하나씩 조금씩 돌려 끝점(eff)을 목표에 가깝게 (CCD). 각 관절은 사람 범위 안에서만.
+function ccdSolve(slot, effName, boneNames, target, maxStepDeg, iterations) {
+  const h = slot.vrm.humanoid, eff = h.getNormalizedBoneNode(effName);
+  const links = boneNames.map(n => [n, h.getNormalizedBoneNode(n)]).filter(([, n]) => n);
+  if (!eff || !links.length) return;
+  const maxStep = D(maxStepDeg);
+  for (let it = 0; it < iterations; it++) {
+    for (const [name, node] of links) {
+      node.getWorldPosition(_ikP); eff.getWorldPosition(_ikE);
+      _ikV1.subVectors(_ikE, _ikP); _ikV2.subVectors(target, _ikP);
+      if (_ikV1.lengthSq() < 1e-8 || _ikV2.lengthSq() < 1e-8) continue;
+      _ikQ.setFromUnitVectors(_ikV1.normalize(), _ikV2.normalize());
+      const ang = 2 * Math.acos(Math.min(1, Math.abs(_ikQ.w)));
+      if (ang > maxStep) _ikQ.copy(_ikI.identity()).slerp(_ikQ, maxStep / ang);
+      rotateNodeWorld(node, _ikQ);
+      clampJoint(slot, name, node);
+    }
+    eff.getWorldPosition(_ikE);
+    if (_ikE.distanceToSquared(target) < 1e-6) break;
+  }
+  links.forEach(([name, node]) => { slot.pose[name] = nodeToPose(slot, name, node); });
+}
+// 상체(가슴·허리)를 범위 안에서 기울여 손을 목표에 더 가깝게
+const leanToward = (slot, effName, target, names) => ccdSolve(slot, effName, names, target, 6, 6);
+// 손발: 팔다리 → (안 닿으면) 상체 기울이기 → (그래도 안 닿으면) 몸 전체가 끌려옴
+function dragLimb(slot, effName, target) {
+  const eff = slot.vrm.humanoid.getNormalizedBoneNode(effName);
+  const L = LIMB[effName];
+  solveLimb(slot, effName, target);
+  let miss = target.clone().sub(eff.getWorldPosition(new THREE.Vector3()));
+  if (L.kind === 'arm' && miss.length() > REACH_TOL) {
+    leanToward(slot, effName, target, ['chest', 'spine']);
+    solveLimb(slot, effName, target);
+    miss = target.clone().sub(eff.getWorldPosition(new THREE.Vector3()));
+  }
+  miss.y = 0; // 바닥 위에서만 끌려옴
+  if (miss.length() > REACH_TOL) {
+    slot.x = clampPos((slot.x + miss.x * 100));
+    slot.z = clampPos((slot.z + miss.z * 100));
+    applyPlacement(slot);
+    solveLimb(slot, effName, target);
+    return true;
+  }
+  return false;
+}
+// 점 끌기의 입구: 손발은 팔다리 계산(dragLimb), 그 외(팔꿈치·무릎·머리)는 CCD
+function solveIK(slot, effName, target) {
+  if (LIMB[effName]) return dragLimb(slot, effName, target);
+  ccdSolve(slot, effName, IK_CHAINS[effName], target, effName === 'head' ? 6 : 20, 14);
+  return false;
+}
+
+const raycaster = new THREE.Raycaster();
+const dragPlane = new THREE.Plane();
+const _ndc = new THREE.Vector2(), _hit = new THREE.Vector3(), _camDir = new THREE.Vector3();
+let drag = null; // { marker, x0, y0, moved, startX, startZ, offset }
+function rayAt(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  _ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+  raycaster.setFromCamera(_ndc, camera);
+  return raycaster.ray.intersectPlane(dragPlane, _hit);
+}
+function selectMarker(m) {
+  stopTalk(true);
+  sel = slots.indexOf(m.userData.slot);
+  bone = m.userData.bone;
+  if (bone === 'leftHand' || bone === 'rightHand') handSel = bone === 'leftHand' ? 'left' : 'right';
+  selectTab('pose');
+  syncUI();
+}
+// ---------- 축 기즈모 (점을 더블클릭) ----------
+// 손·발·팔꿈치·무릎·머리·엉덩이: X·Y·Z 화살표로 그 점을 한 방향으로만 끌기 (팔다리는 사람 범위 안에서)
+// 그 외 관절, 또는 "회전" 버튼: X·Y·Z 고리로 그 관절을 돌리기 (사람 범위 안에서)
+const tc = new TransformControls(camera, renderer.domElement);
+tc.setSize(0.85);
+tc.setSpace('world');
+overlay.add(tc.getHelper());
+const gizmoProxy = new THREE.Object3D();
+overlay.add(gizmoProxy);
+let gizmo = null; // { slot, bone, mode: 'move'|'rotate', start }
+const canMove = (b) => b === 'hips' || !!IK_CHAINS[b];
+tc.addEventListener('dragging-changed', (e) => {
+  controls.enabled = !e.value;
+  if (e.value && gizmo) {
+    const node = gizmo.slot.vrm.humanoid.getNormalizedBoneNode(gizmo.bone);
+    gizmo.start = node ? nodeToPose(gizmo.slot, gizmo.bone, node) : null;
+    gizmo.startX = gizmo.slot.x; gizmo.startZ = gizmo.slot.z;
+    gizmo.startPos = gizmoProxy.position.clone();
+  }
+});
+tc.addEventListener('objectChange', () => {
+  if (!gizmo) return;
+  const s = gizmo.slot;
+  if (gizmo.mode === 'rotate') {
+    const node = s.vrm.humanoid.getNormalizedBoneNode(gizmo.bone);
+    clampJoint(s, gizmo.bone, node, gizmo.start);
+    s.pose[gizmo.bone] = nodeToPose(s, gizmo.bone, node);
+  } else if (gizmo.bone === 'hips') {
+    s.x = clampPos((Math.round(gizmo.startX + (gizmoProxy.position.x - gizmo.startPos.x) * 100)));
+    s.z = clampPos((Math.round(gizmo.startZ + (gizmoProxy.position.z - gizmo.startPos.z) * 100)));
+    applyPlacement(s);
+  } else {
+    solveIK(s, gizmo.bone, gizmoProxy.position);
+  }
+  syncers.forEach(f => f());
+});
+tc.addEventListener('mouseUp', () => {
+  if (!gizmo) return;
+  pushHistory(); syncUI();
+  refreshGizmo();
+  say(`${gizmo.slot.letter}의 ${BONE_NAME[gizmo.bone]}을(를) ${gizmo.mode === 'rotate' ? '돌렸어요' : '옮겼어요'}. 되돌리기로 취소할 수 있어요.`);
+});
+function refreshGizmo() {
+  // 실제 관절 위치로 화살표를 다시 맞춘다 (범위 제한 때문에 덜 움직였을 수 있음)
+  if (!gizmo || gizmo.mode !== 'move') return;
+  const raw = gizmo.slot.vrm.humanoid.getRawBoneNode(gizmo.bone);
+  if (raw) raw.getWorldPosition(gizmoProxy.position);
+}
+function openGizmo(m, mode) {
+  const { slot, bone: b } = m.userData;
+  selectMarker(m);
+  const node = slot.vrm.humanoid.getNormalizedBoneNode(b);
+  if (!node) return;
+  mode = mode || (canMove(b) ? 'move' : 'rotate');
+  if (mode === 'move' && !canMove(b)) mode = 'rotate';
+  gizmo = { slot, bone: b, mode };
+  if (mode === 'move') {
+    m.userData.node.getWorldPosition(gizmoProxy.position);
+    tc.setMode('translate'); tc.setSpace('world');
+    tc.showY = b !== 'hips'; // 엉덩이는 바닥 위에서만
+    tc.attach(gizmoProxy);
+  } else {
+    tc.setMode('rotate'); tc.setSpace('local');
+    tc.showY = true;
+    tc.attach(node);
+  }
+  $('gizmoBar').hidden = false;
+  $('gizmoName').textContent = `${slot.letter} · ${BONE_NAME[b] || b}`;
+  $('gzMove').hidden = !canMove(b);
+  $('gzMove').setAttribute('aria-pressed', String(mode === 'move'));
+  $('gzRotate').setAttribute('aria-pressed', String(mode === 'rotate'));
+  say(mode === 'move'
+    ? `${slot.letter}의 ${BONE_NAME[b]}: 빨강(X)·초록(Y)·파랑(Z) 화살표를 끌면 그 방향으로만 움직여요. Esc나 빈 곳을 누르면 닫혀요.`
+    : `${slot.letter}의 ${BONE_NAME[b]}: 고리를 끌어 돌려요. 사람이 움직일 수 있는 범위까지만 돌아가요. Esc나 빈 곳을 누르면 닫혀요.`);
+}
+function closeGizmo() {
+  if (!gizmo) return;
+  tc.detach(); gizmo = null;
+  $('gizmoBar').hidden = true;
+}
+$('gzMove').addEventListener('click', () => { if (gizmo) { const m = gizmo.slot.markers.find(x => x.userData.bone === gizmo.bone); if (m) openGizmo(m, 'move'); } });
+$('gzRotate').addEventListener('click', () => { if (gizmo) { const m = gizmo.slot.markers.find(x => x.userData.bone === gizmo.bone); if (m) openGizmo(m, 'rotate'); } });
+$('gzClose').addEventListener('click', closeGizmo);
+function gizmoHit(e) {
+  if (!gizmo || !tc.object) return false;
+  const rect = renderer.domElement.getBoundingClientRect();
+  tc.pointerHover({ x: ((e.clientX - rect.left) / rect.width) * 2 - 1, y: -((e.clientY - rect.top) / rect.height) * 2 + 1, button: e.button });
+  return tc.axis !== null;
+}
+
+// ---------- 점 누르기 / 끌기 / 더블클릭 ----------
+// 캡처 단계에서 먼저 받아서, 점을 누른 경우엔 카메라가 돌지 않게 막아요.
+let emptyDown = null;
+viewport.addEventListener('pointerdown', e => {
+  if (e.target !== renderer.domElement || !slots.some(s => s.vrm)) return;
+  if (e.button !== 0) return;               // 오른쪽·가운데 버튼은 카메라
+  if (gizmoHit(e)) return;                  // 화살표·고리를 누른 경우 → 기즈모가 처리
+  const rect = renderer.domElement.getBoundingClientRect();
+  const m = $('showJoints').checked ? pickMarker(e.clientX - rect.left, e.clientY - rect.top) : null;
+  if (!m) { emptyDown = [e.clientX, e.clientY]; return; } // 빈 곳 → 카메라 조작
+  e.stopPropagation(); e.preventDefault();
+  const { slot, bone: b } = m.userData;
+  const pos = m.position.clone();
+  if (b === 'hips') dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), pos); // 바닥과 평행하게 이동
+  else { camera.getWorldDirection(_camDir); dragPlane.setFromNormalAndCoplanarPoint(_camDir, pos); }
+  drag = { marker: m, slot, bone: b, x0: e.clientX, y0: e.clientY, moved: false, startX: slot.x, startZ: slot.z, start: pos };
+  document.body.classList.add('dragging');
+  try { window.getSelection().removeAllRanges(); } catch (err) {}
+  renderer.domElement.setPointerCapture && renderer.domElement.setPointerCapture(e.pointerId);
+}, true);
+window.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < DRAG_START_PX) return;
+  if (!canMove(drag.bone)) return;
+  if (!drag.moved) { drag.moved = true; stopTalk(true); sel = slots.indexOf(drag.slot); viewport.style.cursor = 'grabbing'; $('tip').hidden = true; }
+  if (!rayAt(e)) return;
+  const s = drag.slot;
+  if (drag.bone === 'hips') {
+    s.x = clampPos((Math.round(drag.startX + (_hit.x - drag.start.x) * 100)));
+    s.z = clampPos((Math.round(drag.startZ + (_hit.z - drag.start.z) * 100)));
+    applyPlacement(s);
+  } else {
+    solveIK(s, drag.bone, _hit);
+    bone = IK_CHAINS[drag.bone][0];
+  }
+  syncers.forEach(f => f());
+});
+window.addEventListener('pointerup', e => {
+  if (emptyDown) {
+    // 빈 곳을 (끌지 않고) 누르면 축 닫기
+    if (Math.hypot(e.clientX - emptyDown[0], e.clientY - emptyDown[1]) < DRAG_START_PX && !tc.dragging) closeGizmo();
+    emptyDown = null;
+  }
+  if (!drag) return;
+  const d = drag; drag = null;
+  viewport.style.cursor = '';
+  document.body.classList.remove('dragging');
+  if (d.moved) {
+    pushHistory(); syncUI(); refreshGizmo();
+    const what = d.bone === 'hips' ? '위치를 옮겼어요' : `${BONE_NAME[d.bone]}을(를) 끌어서 자세를 바꿨어요`;
+    say(`${d.slot.letter}의 ${what}. 되돌리기로 취소할 수 있어요.`);
+  } else {
+    selectMarker(d.marker);
+    if (gizmo && (gizmo.slot !== d.slot || gizmo.bone !== d.bone)) openGizmo(d.marker, gizmo.mode);
+    else if (!gizmo) say(`${slots[sel].letter}의 ${BONE_NAME[bone]}을(를) 선택했어요. ${canMove(d.bone) ? '끌어서 움직이거나, ' : ''}두 번 누르면 X·Y·Z 축이 나와요.`);
+  }
+});
+viewport.addEventListener('dblclick', e => {
+  if (e.target !== renderer.domElement || !$('showJoints').checked) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const m = pickMarker(e.clientX - rect.left, e.clientY - rect.top);
+  if (m) openGizmo(m);
+});
+// 점에 마우스를 올리면 관절 이름 표시 + 커서 모양
+renderer.domElement.addEventListener('pointermove', e => {
+  if (drag || tc.dragging) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const m = $('showJoints').checked && !gizmoHit(e) ? pickMarker(e.clientX - rect.left, e.clientY - rect.top) : null;
+  hoverMarker = m;
+  viewport.style.cursor = m ? (canMove(m.userData.bone) ? 'grab' : 'pointer') : '';
+  const tip = $('tip');
+  if (!m) { tip.hidden = true; return; }
+  const vr = viewport.getBoundingClientRect();
+  tip.style.left = (e.clientX - vr.left) + 'px';
+  tip.style.top = (e.clientY - vr.top) + 'px';
+  tip.textContent = `${m.userData.slot.letter} · ${BONE_NAME[m.userData.bone] || m.userData.bone}${canMove(m.userData.bone) ? ' — 끌기 가능' : ''} · 더블클릭: 축`;
+  tip.hidden = false;
+});
+renderer.domElement.addEventListener('pointerleave', () => { hoverMarker = null; $('tip').hidden = true; });
+
+// ---------- 화면 배치와 컷 틀 ----------
+function layout() {
+  const w = viewport.clientWidth, h = viewport.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  const r = cutRatio[0] / cutRatio[1];
+  let fw = w * 0.86, fh = fw / r;
+  if (fh > h * 0.84) { fh = h * 0.84; fw = fh * r; }
+  frameRect = { x: (w - fw) / 2, y: (h - fh) / 2, w: fw, h: fh };
+  Object.assign($('frame').style, { left: frameRect.x + 'px', top: frameRect.y + 'px', width: fw + 'px', height: fh + 'px' });
+  if (bgSpec) rebuildBackground(); // 화면 비율이 바뀌면 배경도 다시 그림
+}
+new ResizeObserver(layout).observe(viewport);
+
+// ---------- 카메라 샷 ----------
+function focusPoint() {
+  const live = slots.filter(s => s.vrm);
+  if (!live.length) return { x: 0, head: 1.4 };
+  const x = live.reduce((a, s) => a + s.x / 100, 0) / live.length;
+  const s = slots[sel].vrm ? slots[sel] : live[0];
+  s.vrm.humanoid.getRawBoneNode('head').getWorldPosition(tmp);
+  return { x, head: tmp.y };
+}
+function shot(kind) {
+  const { x, head } = focusPoint();
+  const spread = Math.max(0, ...slots.filter(s => s.vrm).map(s => Math.abs(s.x / 100 - x)));
+  // vertical span of the body to fit inside the cut: [bottom, top]
+  const span = {
+    full: [-0.05, head + 0.2], bust: [head - 0.62, head + 0.16], close: [head - 0.24, head + 0.13],
+    low: [head - 0.75, head + 0.2], high: [head - 0.8, head + 0.18],
+  }[kind];
+  const ty = (span[0] + span[1]) / 2;
+  const vp = viewport.clientHeight, wp = viewport.clientWidth;
+  const tanV = Math.tan(D(camera.fov) / 2) * (frameRect.h / vp);
+  const tanH = Math.tan(D(camera.fov) / 2) * camera.aspect * (frameRect.w / wp);
+  const halfW = spread + (kind === 'close' ? 0.16 : 0.42);
+  let d = Math.max(((span[1] - span[0]) / 2) / tanV, halfW / tanH) * 1.06;
+  const tilt = kind === 'low' ? -0.45 : kind === 'high' ? 0.5 : 0;
+  controls.target.set(x, ty, 0);
+  camera.position.set(x, ty + d * tilt, d * Math.sqrt(1 - Math.min(tilt * tilt, 0.5)));
+  controls.update();
+  shotSel = kind;
+  syncUI();
+}
+let shotSel = 'bust';
+
+// ---------- 저장 ----------
+let downloads = null;
+if (window.claude && window.claude.use) window.claude.use('downloads').then(d => { downloads = d; }).catch(() => {});
+let cutNo = 0;
+// 컷 틀 안쪽만 그려서 캔버스로 돌려준다 (저장·AI 배경 생성에 공통 사용)
+// hideBackground: 배경 대신 종이색 + 바닥 격자 (AI에게 원근을 알려주는 참고용)
+function renderCut({ scale, transparent, withFilter, hideBackground }) {
+  const prevRatio = renderer.getPixelRatio();
+  const w = viewport.clientWidth, h = viewport.clientHeight;
+  slots.forEach(s => { s.blinkT = -1; updateSlot(s, 0, true); }); // 깜빡임·말하기 중간 모습이 찍히지 않게
+  renderer.setPixelRatio(scale);
+  renderer.setSize(w, h, false);
+  scene.background = transparent ? null : hideBackground ? PAPER : currentBackground();
+  grid.visible = !!hideBackground;
+  renderer.autoClear = true;
+  renderer.setClearColor(0x000000, transparent ? 0 : 1);
+  renderer.render(scene, camera);
+  if (withFilter) renderFilter();
+  const out = document.createElement('canvas');
+  out.width = Math.round(frameRect.w * scale);
+  out.height = Math.round(frameRect.h * scale);
+  out.getContext('2d').drawImage(renderer.domElement, frameRect.x * scale, frameRect.y * scale, frameRect.w * scale, frameRect.h * scale, 0, 0, out.width, out.height);
+  renderer.setPixelRatio(prevRatio);
+  renderer.setSize(w, h, false);
+  scene.background = currentBackground();
+  grid.visible = $('showGrid').checked;
+  return out;
+}
+async function capture() {
+  if (!slots.some(s => s.vrm)) { say('먼저 VRM 모델을 불러와 주세요.'); return; }
+  // 앤티앨리어싱 단계만큼 더 촘촘하게 그려서 저장
+  const out = renderCut({ scale: 2 * aaLevel, transparent: $('transparent').checked, withFilter: true, hideBackground: false });
+  const blob = await new Promise(r => out.toBlob(r, 'image/png'));
+  cutNo += 1;
+  const name = `컷_${String(cutNo).padStart(2, '0')}.png`;
+  addThumb(blob, name);
+  offerSave(blob, name);
+}
+async function offerSave(blob, name) {
+  if (!downloads) { say(`${name}을(를) 만들었어요. 이 화면에서는 바로 저장할 수 없으니 아래 미리보기를 길게 누르거나 우클릭해서 저장해 주세요.`); return; }
+  try { await downloads.save({ filename: name, data: blob }); say(`${name}을(를) 저장했어요.`); }
+  catch (e) {
+    if (e && e.code === 'declined') say('저장을 취소했어요. 아래 미리보기를 눌러 다시 저장할 수 있어요.');
+    else if (e && e.code === 'rate_limited') say('저장 확인 창이 이미 열려 있어요. 잠시 후 다시 눌러주세요.');
+    else say('이 화면에서는 저장할 수 없어요. 미리보기를 길게 누르거나 우클릭해서 저장해 주세요.');
+  }
+}
+function addThumb(blob, name) {
+  $('stripEmpty').hidden = true;
+  const fig = document.createElement('figure');
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.setAttribute('aria-label', `${name} 다시 저장`);
+  const img = document.createElement('img');
+  img.src = URL.createObjectURL(blob);
+  img.alt = name;
+  b.append(img);
+  b.addEventListener('click', () => offerSave(blob, name));
+  const cap = document.createElement('figcaption');
+  cap.textContent = name;
+  fig.append(b, cap);
+  $('strip').prepend(fig);
+}
+
+// ---------- 오른쪽 탭 UI ----------
+function makeChip(label, onClick, key) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'chip'; b.textContent = label;
+  if (key !== undefined) { b.dataset.key = key; b.setAttribute('aria-pressed', 'false'); }
+  b.addEventListener('click', onClick);
+  return b;
+}
+function chipRow(el, items, onPick) {
+  el.replaceChildren(...items.map(([key, label]) => makeChip(label, () => onPick(key), key)));
+}
+const pressRow = (el, key) => el.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.key === key)));
+
+chipRow($('presets'), PRESETS.map(([n], i) => [String(i), n]), (i) => {
+  const s = slots[sel];
+  s.pose = JSON.parse(JSON.stringify(PRESETS[i][1]));
+  applyPose(s); pushHistory(); syncUI();
+  say(`${s.letter}에게 "${PRESETS[i][0]}" 포즈를 적용했어요.`);
+});
+chipRow($('emotions'), EMOTIONS, (k) => { slots[sel].expr.emotion = k; pushHistory(); syncUI(); });
+chipRow($('mouths'), MOUTHS, (k) => {
+  stopTalk(false);
+  slots[sel].expr.mouth = k === 'none' ? {} : { [k]: 0.8 };
+  pushHistory(); syncUI();
+});
+// ---------- 눈 움직임 패드 ----------
+function setLook(k) { const s = slots[sel]; s.look = k; applyLook(s); pushHistory(); syncUI(); }
+$('lookCam').addEventListener('change', e => setLook(e.target.checked ? 'camera' : 'manual'));
+$('lookOther').addEventListener('change', e => setLook(e.target.checked ? 'other' : 'manual'));
+$('autoBlink').addEventListener('change', e => { slots[sel].autoBlink = e.target.checked; pushHistory(); });
+$('eyeLink').addEventListener('change', e => {
+  const s = slots[sel]; s.eyes.link = e.target.checked;
+  if (s.eyes.link) s.eyes.l = { ...s.eyes.r };
+  pushHistory(); syncUI();
+});
+const clampCircle = (x, y) => { const m = Math.hypot(x, y); return m > 1 ? [x / m, y / m] : [x, y]; };
+function setEye(which, x, y) {
+  const s = slots[sel];
+  [x, y] = clampCircle(Math.max(-1, Math.min(1, x)), Math.max(-1, Math.min(1, y)));
+  const v = { x: round2(x), y: round2(y) };
+  if (s.look !== 'manual') { s.look = 'manual'; applyLook(s); }
+  if (s.eyes.link) { s.eyes.r = { ...v }; s.eyes.l = { ...v }; } else s.eyes[which] = v;
+  syncEyePads();
+}
+function eyeText(v) {
+  if (Math.hypot(v.x, v.y) < 0.08) return '가운데';
+  const h = v.x > 0.15 ? '오른쪽' : v.x < -0.15 ? '왼쪽' : '';
+  const vv = v.y > 0.15 ? '위' : v.y < -0.15 ? '아래' : '';
+  return [h, vv].filter(Boolean).join(' ') || '가운데 근처';
+}
+function syncEyePads() {
+  const s = slots[sel], manual = s.look === 'manual';
+  [['padR', 'r'], ['padL', 'l']].forEach(([id, k]) => {
+    const pad = $(id), v = manual ? s.eyes[k] : { x: 0, y: 0 };
+    const dot = pad.querySelector('.dot');
+    dot.style.left = (50 + v.x * 50) + '%';
+    dot.style.top = (50 - v.y * 50) + '%';
+    pad.setAttribute('aria-disabled', String(!manual));
+    pad.setAttribute('aria-valuetext', manual ? eyeText(v) : '바라보기 켜짐');
+  });
+}
+[['padR', 'r'], ['padL', 'l']].forEach(([id, k]) => {
+  const pad = $(id);
+  let active = false;
+  const fromEvent = (e) => {
+    const r = pad.getBoundingClientRect();
+    setEye(k, ((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1));
+  };
+  pad.addEventListener('pointerdown', e => { active = true; pad.setPointerCapture(e.pointerId); fromEvent(e); syncUI(); });
+  pad.addEventListener('pointermove', e => { if (active) fromEvent(e); });
+  pad.addEventListener('pointerup', () => { if (!active) return; active = false; pushHistory(); syncUI(); });
+  pad.addEventListener('dblclick', () => { setEye(k, 0, 0); pushHistory(); syncUI(); });
+  pad.addEventListener('keydown', e => {
+    const s = slots[sel], v = s.look === 'manual' ? s.eyes[k] : { x: 0, y: 0 };
+    const step = e.shiftKey ? 0.25 : 0.1;
+    const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
+    if (moves[e.key]) { e.preventDefault(); setEye(k, v.x + moves[e.key][0], v.y + moves[e.key][1]); pushHistory(); syncUI(); }
+    else if (e.key === 'Home' || e.key === '0') { e.preventDefault(); setEye(k, 0, 0); pushHistory(); syncUI(); }
+  });
+});
+chipRow($('shots'), SHOTS, (k) => shot(k));
+
+$('bone').innerHTML = BONES.map(([k, n]) => `<option value="${k}">${n}</option>`).join('');
+$('bone').addEventListener('change', e => { bone = e.target.value; syncUI(); });
+
+// 슬라이더 + 숫자 입력칸. 숫자를 직접 입력해도 바로 적용돼요.
+function bindRange(id, read, write, commit = true) {
+  const el = $(id), old = $(id + 'o');
+  const num = document.createElement('input');
+  num.type = 'number'; num.id = id + 'o'; num.className = 'num';
+  num.min = el.min; num.max = el.max; num.step = el.step || '1';
+  const label = el.labels && el.labels[0] ? el.labels[0].textContent : id;
+  num.setAttribute('aria-label', label + ' 값 입력');
+  old.replaceWith(num);
+  const clamp = (v) => Math.min(Number(el.max), Math.max(Number(el.min), v));
+  el.addEventListener('input', () => { write(Number(el.value)); num.value = el.value; });
+  if (commit) el.addEventListener('change', pushHistory);
+  const fromNum = (final) => {
+    if (num.value === '' || Number.isNaN(Number(num.value))) { if (final) num.value = Math.round(read()); return; }
+    const v = clamp(Number(num.value));
+    el.value = v; write(v);
+    if (final) { num.value = v; if (commit) pushHistory(); }
+  };
+  num.addEventListener('input', () => fromNum(false));
+  num.addEventListener('change', () => fromNum(true));
+  num.addEventListener('keydown', (e) => { if (e.key === 'Enter') { num.blur(); } });
+  return () => { const v = read(); el.value = v; if (document.activeElement !== num) num.value = round1(v); };
+}
+const getRot = (name) => slots[sel].pose[name] || { x: 0, y: 0, z: 0 };
+const setRot = (name, axis, v) => { const s = slots[sel]; s.pose[name] = { ...getRot(name), [axis]: v }; applyPose(s); };
+const syncers = [
+  bindRange('rx', () => getRot(bone).x, v => setRot(bone, 'x', v)),
+  bindRange('ry', () => getRot(bone).y, v => setRot(bone, 'y', v)),
+  bindRange('rz', () => getRot(bone).z, v => setRot(bone, 'z', v)),
+  bindRange('hx', () => getRot('head').x, v => setRot('head', 'x', v)),
+  bindRange('hy', () => getRot('head').y, v => setRot('head', 'y', v)),
+  bindRange('hz', () => getRot('head').z, v => setRot('head', 'z', v)),
+  bindRange('emoW', () => slots[sel].expr.weight, v => { slots[sel].expr.weight = v; }),
+  bindRange('blink', () => slots[sel].expr.blink, v => { slots[sel].expr.blink = v; }),
+  bindRange('posX', () => slots[sel].x, v => { slots[sel].x = v; applyPlacement(slots[sel]); }),
+  bindRange('posZ', () => slots[sel].z, v => { slots[sel].z = v; applyPlacement(slots[sel]); }),
+  bindRange('rotY', () => slots[sel].rot, v => { slots[sel].rot = v; applyPlacement(slots[sel]); }),
+  bindRange('presence', () => slots[sel].presence, v => { slots[sel].presence = v; applyPresence(slots[sel]); }),
+  bindRange('fov', () => camera.fov, v => { camera.fov = v; camera.updateProjectionMatrix(); }, false),
+  bindRange('sens', () => sens, v => { sens = v; applySens(); }, false),
+  bindRange('filterAmt', () => filter.amt, v => { filter.amt = v; filter.preset = matchFilterPreset(); syncFilterUI(); }, false),
+  ...[['fThumb', 'thumb'], ['fIndex', 'index'], ['fMiddle', 'middle'], ['fRing', 'ring'], ['fLittle', 'little'], ['fSpread', 'spread']].map(([id, k]) =>
+    bindRange(id, () => slots[sel].hands[handSel][k], v => { slots[sel].hands[handSel][k] = v; applyFingers(slots[sel]); })),
+];
+// 앤티앨리어싱 · 전체 조명 UI
+$('aa').value = String(aaLevel);
+$('aa').addEventListener('change', e => { aaLevel = Number(e.target.value); applyAA(); layout(); say(`앤티앨리어싱을 "${e.target.selectedOptions[0].textContent.split(' · ')[0]}"으로 바꿨어요.`); });
+function matchFilterPreset() {
+  const p = FILTER_PRESETS.find(([, , c, a]) => c === filter.color.toLowerCase() && a === filter.amt);
+  return p ? p[0] : (filter.amt === 0 ? 'none' : '');
+}
+function syncFilterUI() {
+  pressRow($('filterPresets'), filter.preset);
+  if ($('filterColor').value.toLowerCase() !== filter.color.toLowerCase()) $('filterColor').value = filter.color;
+}
+chipRow($('filterPresets'), FILTER_PRESETS.map(([k, n]) => [k, n]), (k) => {
+  const p = FILTER_PRESETS.find(x => x[0] === k);
+  filter.preset = k; filter.color = p[2]; filter.amt = p[3];
+  syncUI();
+  say(k === 'none' ? '전체 조명을 껐어요.' : `전체 조명을 "${p[1]}"(으)로 바꿨어요. 색과 세기는 아래에서 바꿀 수 있어요.`);
+});
+$('filterColor').addEventListener('input', e => {
+  filter.color = e.target.value;
+  if (filter.amt === 0) filter.amt = 40; // 색을 고르면 바로 보이게
+  filter.preset = matchFilterPreset();
+  syncUI();
+});
+const HAND_SIDES = [['left', '왼손'], ['right', '오른손']];
+chipRow($('handSide'), HAND_SIDES, (k) => { handSel = k; syncUI(); });
+chipRow($('handPresets'), HAND_PRESETS.map(([n], i) => [String(i), n]), (i) => {
+  const s = slots[sel];
+  s.hands[handSel] = { ...HAND_PRESETS[i][1] };
+  applyFingers(s); pushHistory(); syncUI();
+  say(`${s.letter}의 ${handSel === 'left' ? '왼손' : '오른손'}을 "${HAND_PRESETS[i][0]}" 모양으로 바꿨어요.`);
+});
+
+$('resetBone').addEventListener('click', () => { delete slots[sel].pose[bone]; applyPose(slots[sel]); pushHistory(); syncUI(); });
+$('resetPose').addEventListener('click', () => { slots[sel].pose = {}; applyPose(slots[sel]); pushHistory(); syncUI(); say('T자 기본 자세로 돌렸어요.'); });
+
+function stopTalk(keep) {
+  if (!talking) return;
+  talking = false;
+  const s = slots[sel];
+  if (keep && s.liveMouth) s.expr.mouth = { ...s.liveMouth };
+  $('talk').setAttribute('aria-pressed', 'false');
+  $('talk').textContent = '말하기 ▶';
+}
+$('talk').addEventListener('click', () => {
+  if (talking) { stopTalk(true); pushHistory(); syncUI(); say('지금 입모양을 남겼어요.'); return; }
+  talking = true; talkT = Math.random() * 5;
+  $('talk').setAttribute('aria-pressed', 'true');
+  $('talk').textContent = '멈추기 ❚❚';
+});
+
+function selectTab(name) {
+  ['pose', 'face', 'cam', 'ai'].forEach(t => {
+    $('t-' + t).setAttribute('aria-selected', String(t === name));
+    $('p-' + t).hidden = t !== name;
+  });
+}
+['pose', 'face', 'cam', 'ai'].forEach(t => $('t-' + t).addEventListener('click', () => selectTab(t)));
+
+$('ratio').addEventListener('change', e => {
+  cutRatio = e.target.value.split(':').map(Number);
+  $('frameLabel').textContent = '컷 ' + e.target.value;
+  layout();
+  shot(shotSel);
+});
+$('showGrid').addEventListener('change', e => { grid.visible = e.target.checked; });
+$('capture').addEventListener('click', capture);
+$('undo').addEventListener('click', undo);
+$('redo').addEventListener('click', redo);
+window.addEventListener('keydown', e => {
+  const typing = ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName) && document.activeElement.type !== 'checkbox' && document.activeElement.type !== 'range';
+  const k = e.key.toLowerCase();
+  if (e.key === 'Escape' && gizmo) { closeGizmo(); return; }
+  if (typing || !(e.ctrlKey || e.metaKey)) return;
+  if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+  else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
+});
+
+let fileTarget = null;
+async function loadFile(s, f) {
+  const first = !slots.some(x => x.vrm);
+  const hadModel = !!s.vrm;
+  if (!(await loadInto(s, f, f.name))) return false;
+  $('empty').hidden = true;
+  if (first || !hadModel) { shot(shotSel); pushHistory(); }
+  say(hadModel ? `${s.letter}의 모델을 ${f.name}(으)로 바꿨어요. 포즈와 표정은 그대로예요.` : `${s.letter}에 ${f.name}을(를) 넣었어요. 관절 점을 눌러 자세를 잡아보세요.`);
+  return true;
+}
+$('file').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  const target = fileTarget === null ? sel : fileTarget;
+  fileTarget = null;
+  if (!f) return;
+  if (target === 'new' && slots.length < 2) {
+    const b = makeSlot('B', 45);
+    b.rot = -20;
+    slots.push(b);
+    slots[0].x = Math.min(slots[0].x, -35);
+    applyPlacement(slots[0]);
+    sel = 1;
+    syncUI();
+    if (!(await loadFile(b, f))) { slots.pop(); sel = 0; syncUI(); }
+    return;
+  }
+  await loadFile(slots[target === 'new' ? sel : target], f);
+});
+$('file').addEventListener('click', () => { if (!$('file').dataset.keep) fileTarget = sel; delete $('file').dataset.keep; });
+$('swap').addEventListener('click', () => { fileTarget = sel; $('file').dataset.keep = '1'; $('file').click(); });
+
+$('addB').addEventListener('click', () => {
+  if (slots.length > 1) return;
+  if (!slots[0].vrm) { say('먼저 A의 모델을 불러와 주세요.'); return; }
+  fileTarget = 'new'; $('file').dataset.keep = '1'; $('file').click();
+});
+$('removeB').addEventListener('click', () => {
+  const b = slots[1]; if (!b) return;
+  if (b.vrm) { scene.remove(b.vrm.scene); VRMUtils.deepDispose(b.vrm.scene); }
+  b.markers.forEach(m => overlay.remove(m));
+  slots.pop(); sel = 0;
+  slots[0].look = slots[0].look === 'other' ? 'camera' : slots[0].look;
+  applyLook(slots[0]); pushHistory(); syncUI();
+  say('B를 뺐어요.');
+});
+
+// drag & drop
+['dragenter', 'dragover'].forEach(ev => viewport.addEventListener(ev, e => { e.preventDefault(); $('drop').hidden = false; }));
+['dragleave', 'drop'].forEach(ev => viewport.addEventListener(ev, e => { e.preventDefault(); if (ev === 'dragleave' && viewport.contains(e.relatedTarget)) return; $('drop').hidden = true; }));
+viewport.addEventListener('drop', async e => {
+  const f = [...(e.dataTransfer.files || [])].find(x => /\.vrm$/i.test(x.name));
+  if (!f) { say('.vrm 파일만 넣을 수 있어요.'); return; }
+  await loadFile(slots[sel], f);
+});
+
+function renderCast() {
+  const el = $('cast');
+  el.innerHTML = '';
+  slots.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'cast-row';
+    b.setAttribute('aria-pressed', String(i === sel));
+    const av = document.createElement('span'); av.className = 'avatar'; av.textContent = s.letter;
+    const meta = document.createElement('span'); meta.className = 'meta';
+    const n = document.createElement('span'); n.textContent = s.letter;
+    const f = document.createElement('span'); f.textContent = s.file || '모델 없음';
+    meta.append(n, f); b.append(av, meta);
+    b.addEventListener('click', () => { stopTalk(true); sel = i; syncUI(); });
+    el.append(b);
+  });
+}
+function syncUI() {
+  const s = slots[sel];
+  renderCast();
+  $('selName').textContent = `${s.letter} 배치`;
+  $('tabOwner').textContent = `${s.letter}에게 적용`;
+  $('addB').hidden = slots.length > 1;
+  $('removeB').hidden = !(slots.length > 1 && sel === 1);
+  $('bone').value = bone;
+  syncers.forEach(f => f());
+  pressRow($('emotions'), s.expr.emotion);
+  const mk = Object.keys(s.expr.mouth).find(k => s.expr.mouth[k] > 0.05);
+  pressRow($('mouths'), mk && Object.keys(s.expr.mouth).length === 1 && s.expr.mouth[mk] === 0.8 ? mk : (mk ? '' : 'none'));
+  if (s.look === 'front') s.look = 'manual';
+  $('lookCam').checked = s.look === 'camera';
+  $('lookOther').checked = s.look === 'other';
+  $('lookOther').disabled = slots.length < 2;
+  $('autoBlink').checked = !!s.autoBlink;
+  $('eyeLink').checked = !!s.eyes.link;
+  syncEyePads();
+  pressRow($('handSide'), handSel);
+  const hp = HAND_PRESETS.findIndex(([, v]) => FINGERS.every(([k]) => v[k] === s.hands[handSel][k]) && v.spread === s.hands[handSel].spread);
+  pressRow($('handPresets'), hp >= 0 ? String(hp) : '');
+  const hasFingers = !s.vrm || !!s.vrm.humanoid.getNormalizedBoneNode(handSel + 'IndexProximal');
+  $('fingerNote').textContent = hasFingers ? '0은 쭉 편 상태, 100은 끝까지 굽힌 상태예요. 손 점을 누르면 그쪽 손이 선택돼요.' : '이 모델에는 손가락 관절이 없어서 손가락을 움직일 수 없어요.';
+  pressRow($('shots'), shotSel);
+  syncFilterUI();
+  syncUndoButtons();
+}
+
+// ---------- loop: 매 화면 갱신 ----------
+const clock = new THREE.Clock();
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.1);
+  controls.update();
+  slots.forEach(s => updateSlot(s, dt, false));
+  updateMarkers();
+  renderer.autoClear = true;
+  renderer.setClearColor(0x000000, 1);
+  renderer.render(scene, camera);
+  renderFilter();
+  renderer.autoClear = false;
+  renderer.render(overlay, camera);
+  requestAnimationFrame(frame);
+}
+
+// =====================================================================
+// AI 도움 탭
+//  - 키 없이: 사진→포즈(MediaPipe), 한국어 명령 해석, 카메라 제안, 만화 효과 배경, Openverse 이미지 검색
+//  - 키 필요: Gemini (자유 문장 해석, 검색어 만들기, 구도 맞춤 배경 생성)
+//  - 키는 이 브라우저의 localStorage에만 저장 (파일·서버에 저장하지 않음)
+// =====================================================================
+const GEMINI = {
+  textModel: 'gemini-2.5-flash-lite',
+  imageModel: 'gemini-2.5-flash-image',
+  // 1토큰당 달러 (Google 공개 가격 기준: Flash-Lite 입력 $0.10/1M·출력 $0.40/1M, Flash Image 출력 $30/1M ≒ 1장 $0.039)
+  price: { textIn: 0.10 / 1e6, textOut: 0.40 / 1e6, imgIn: 0.30 / 1e6, imgOut: 30 / 1e6 },
+  krwPerUsd: 1400,
+  url: (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+};
+const KEY_STORE = 'rough.geminiKey', LIMIT_STORE = 'rough.aiLimitKRW', USAGE_STORE = 'rough.aiUsage';
+let aiLimit = Number(store.get(LIMIT_STORE, '1000'));
+if (!Number.isFinite(aiLimit)) aiLimit = 1000;
+const hasKey = () => !!store.get(KEY_STORE, '');
+const monthId = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}`; };
+function getUsage() {
+  let u = null;
+  try { u = JSON.parse(store.get(USAGE_STORE, 'null')); } catch (e) { u = null; }
+  return u && u.month === monthId() ? u : { month: monthId(), krw: 0, calls: 0 };
+}
+function addUsage(krw) {
+  const u = getUsage(); u.krw += krw; u.calls += 1;
+  store.set(USAGE_STORE, JSON.stringify(u));
+  syncAI();
+}
+const won = (v) => (v < 10 ? Math.round(v * 10) / 10 : Math.round(v)).toLocaleString('ko-KR') + '원';
+
+async function gemini(model, body, estimateKrw) {
+  const key = store.get(KEY_STORE, '');
+  if (!key) throw new Error('API 키를 먼저 등록해 주세요.');
+  if (getUsage().krw + estimateKrw > aiLimit) throw new Error(`이번 달 한도(${won(aiLimit)})를 넘게 돼서 멈췄어요. "AI 연결"에서 한도를 올릴 수 있어요.`);
+  let res;
+  try {
+    res = await fetch(GEMINI.url(model), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(body) });
+  } catch (e) { throw new Error('인터넷 연결을 확인해 주세요. AI 서버에 닿지 못했어요.'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = (data.error && data.error.message) || res.statusText;
+    if (res.status === 400 || res.status === 401 || res.status === 403) throw new Error(`키가 올바르지 않거나 이 기능을 쓸 권한이 없어요. (${msg})`);
+    if (res.status === 429) throw new Error('요청이 너무 많거나 무료 한도를 넘었어요. 잠시 뒤 다시 해보세요.');
+    throw new Error(`AI 요청이 실패했어요. (${msg})`);
+  }
+  const um = data.usageMetadata || {};
+  const inT = um.promptTokenCount || 0, outT = um.candidatesTokenCount || 0;
+  const p = GEMINI.price;
+  const usd = model === GEMINI.imageModel ? inT * p.imgIn + outT * p.imgOut : inT * p.textIn + outT * p.textOut;
+  addUsage(usd * GEMINI.krwPerUsd);
+  return data;
+}
+async function geminiJSON(prompt, schema, estimateKrw) {
+  const data = await gemini(GEMINI.textModel, {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: { responseMimeType: 'application/json', responseSchema: schema, temperature: 0.2 },
+  }, estimateKrw);
+  const text = (((data.candidates || [])[0] || {}).content || { parts: [] }).parts.map(x => x.text || '').join('');
+  return JSON.parse(text);
+}
+
+// ---------- AI 연결(키) UI ----------
+function syncAI() {
+  const on = hasKey(), u = getUsage();
+  $('keyBadge').textContent = on ? '키 연결됨' : '키 없음';
+  $('keyBadge').className = on ? 'badge free' : 'badge';
+  $('keyState').textContent = on
+    ? `키를 쓰는 기능도 켜졌어요. 이번 달 ${won(u.krw)} 사용 / 한도 ${won(aiLimit)}.`
+    : 'API 키 없이도 "무료" 표시 기능은 모두 쓸 수 있어요.';
+  $('aiUsage').textContent = `이번 달 사용: ${won(u.krw)} (${u.calls}회) · 한도 ${won(aiLimit)}`;
+  const k = store.get(KEY_STORE, '');
+  $('apiKey').placeholder = k ? `저장됨: ${k.slice(0, 4)}…${k.slice(-4)}` : 'AIza로 시작하는 키를 붙여넣기';
+  document.querySelectorAll('.ai-card.keyed').forEach(c => c.classList.toggle('unlocked', on));
+  $('cmdUseAI').disabled = !on;
+  if (!on) $('cmdUseAI').checked = false;
+  $('worldAI').disabled = !on;
+  $('worldAI').title = on ? '' : 'API 키 필요';
+}
+$('keySave').addEventListener('click', () => {
+  const v = $('apiKey').value.trim();
+  if (!v) { say('붙여넣은 키가 없어요.'); return; }
+  if (!/^[A-Za-z0-9_\-]{20,}$/.test(v)) { say('키 모양이 이상해요. Google AI Studio에서 복사한 키 전체를 붙여넣어 주세요.'); return; }
+  if (!store.set(KEY_STORE, v)) { say('이 브라우저에서는 키를 저장할 수 없어요(시크릿 창이거나 저장소가 꺼져 있어요).'); return; }
+  $('apiKey').value = '';
+  syncAI();
+  say('키를 이 컴퓨터의 크롬에 저장했어요. 키를 쓰는 기능이 켜졌어요.');
+});
+$('keyClear').addEventListener('click', () => { store.del(KEY_STORE); syncAI(); say('저장된 키를 지웠어요.'); });
+bindRange('aiLimit', () => aiLimit, v => { aiLimit = v; store.set(LIMIT_STORE, String(v)); syncAI(); }, false)();
+document.querySelectorAll('[data-open-key]').forEach(b => b.addEventListener('click', () => {
+  selectTab('ai'); $('keyBox').open = true; $('apiKey').focus();
+}));
+
+
+// ---------- 1) 만화 효과 배경 (무료) ----------
+const FX = [['none', '없음'], ['focus', '집중선'], ['speed', '속도선'], ['sparkle', '반짝이'], ['gradient', '그라데이션'], ['tone', '스크린톤'], ['solid', '단색']];
+const FX_NAME = Object.fromEntries(FX);
+let fxSel = 'none';
+function applyFx(type, color) {
+  fxSel = type;
+  if (color) $('fxColor').value = color;
+  setBackground(type === 'none' ? null : { kind: 'fx', type, color: $('fxColor').value });
+  pressRow($('fxChips'), type);
+  $('worldCredit').textContent = '';
+}
+chipRow($('fxChips'), FX, (k) => { applyFx(k); say(k === 'none' ? '배경을 종이색으로 돌렸어요.' : `배경을 "${FX_NAME[k]}"(으)로 바꿨어요.`); });
+$('fxColor').addEventListener('input', () => { if (fxSel !== 'none') applyFx(fxSel); });
+// 표정 → 어울리는 효과
+const FX_FOR_EMOTION = {
+  surprised: ['focus', '#1d1f22', '놀란 표정엔 집중선이 잘 어울려요.'],
+  angry: ['focus', '#8a1c1c', '화난 표정엔 붉은 집중선을 추천해요.'],
+  happy: ['sparkle', '#f2a7c3', '기쁜 표정엔 반짝이 배경을 추천해요.'],
+  sad: ['gradient', '#5b6b84', '슬픈 표정엔 어두운 세로 그라데이션을 추천해요.'],
+  relaxed: ['tone', '#9aa3ad', '편안한 표정엔 옅은 스크린톤을 추천해요.'],
+  neutral: ['gradient', '#d9dde3', '무표정엔 옅은 그라데이션을 추천해요.'],
+};
+$('fxRecommend').addEventListener('click', () => {
+  const s = slots[sel], [type, color, why] = FX_FOR_EMOTION[s.expr.emotion] || FX_FOR_EMOTION.neutral;
+  applyFx(type, color);
+  $('fxNote').textContent = `${s.letter}의 표정 기준: ${why}`;
+  say(`배경을 "${FX_NAME[type]}"(으)로 추천해서 바꿨어요.`);
+});
+
+// ---------- 2) 카메라 앵글 제안 (무료) ----------
+const MOODS = [
+  { words: ['위압', '당당', '강하', '강한', '압도', '영웅', '무서', '위협', '거대', '든든'], shot: 'low', fov: 35, why: '아래에서 올려다보면 인물이 크고 강해 보여요.' },
+  { words: ['쓸쓸', '외로', '작아', '약한', '불쌍', '절망', '고독', '초라', '버려'], shot: 'high', fov: 30, why: '위에서 내려다보면 인물이 작고 약해 보여요.' },
+  { words: ['긴장', '고백', '눈물', '감정', '떨리', '두근', '놀람', '충격', '결심', '울'], shot: 'close', fov: 26, why: '얼굴을 크게 잡으면 감정이 또렷하게 전달돼요.' },
+  { words: ['대화', '이야기', '말하', '마주', '설명', '평범', '일상'], shot: 'bust', fov: 28, why: '가슴 위로 잡으면 대화 장면이 자연스러워요.' },
+  { words: ['전체', '풍경', '등장', '배경', '상황', '도착', '걷', '달리', '액션', '싸움'], shot: 'full', fov: 32, why: '전신과 주변을 보여주면 상황이 한눈에 들어와요.' },
+];
+const SHOT_NAME = Object.fromEntries(SHOTS);
+function suggestCamera(text) {
+  const t = text.replace(/\s+/g, '');
+  const hits = MOODS.filter(m => m.words.some(w => t.includes(w)));
+  const list = hits.length ? hits : [MOODS[3], MOODS[4]];
+  return { matched: hits.length > 0, list: list.slice(0, 3) };
+}
+function applyCameraSuggestion(m) {
+  camera.fov = m.fov; camera.updateProjectionMatrix();
+  shot(m.shot);
+  syncers.forEach(f => f());
+  say(`${SHOT_NAME[m.shot]} · 화각 ${m.fov}°로 바꿨어요. ${m.why}`);
+}
+$('moodRun').addEventListener('click', () => {
+  const { matched, list } = suggestCamera($('moodText').value);
+  const out = $('moodOut');
+  out.innerHTML = '';
+  list.forEach(m => { const b = makeChip(`${SHOT_NAME[m.shot]} · ${m.fov}°`, () => applyCameraSuggestion(m)); b.title = m.why; out.append(b); });
+  applyCameraSuggestion(list[0]);
+  if (!matched) say('분위기 단어를 못 찾아서 기본 추천(바스트·전신)을 보여드려요. "위압감", "쓸쓸함", "긴장" 같은 단어를 넣어 보세요.');
+});
+
+// ---------- 3) 한국어 명령 해석 (무료) ----------
+// 문장을 짧은 구절로 나누고, 구절마다 [누가] [어디를] [어떻게] [얼마나]를 찾아 실행한다.
+const PARTS = [ // 긴 단어부터 확인
+  ['오른팔꿈치', 'elbow', 'right'], ['왼팔꿈치', 'elbow', 'left'], ['팔꿈치', 'elbow', 'both'],
+  ['오른무릎', 'knee', 'right'], ['왼무릎', 'knee', 'left'], ['무릎', 'knee', 'both'],
+  ['오른손목', 'wrist', 'right'], ['왼손목', 'wrist', 'left'], ['손목', 'wrist', 'both'],
+  ['오른팔', 'arm', 'right'], ['왼팔', 'arm', 'left'], ['양팔', 'arm', 'both'], ['두팔', 'arm', 'both'],
+  ['오른쪽팔', 'arm', 'right'], ['왼쪽팔', 'arm', 'left'],
+  ['오른다리', 'leg', 'right'], ['왼다리', 'leg', 'left'], ['오른쪽다리', 'leg', 'right'], ['왼쪽다리', 'leg', 'left'], ['양다리', 'leg', 'both'], ['다리', 'leg', 'both'],
+  ['오른손', 'hand', 'right'], ['왼손', 'hand', 'left'], ['양손', 'hand', 'both'], ['손', 'hand', 'both'],
+  ['팔', 'arm', 'both'],
+  ['고개', 'head'], ['머리', 'head'], ['얼굴', 'head'],
+  ['허리', 'waist'], ['상체', 'waist'], ['몸통', 'waist'],
+  ['몸', 'body'], ['전신', 'body'],
+];
+const DIRS = [ // [단어들, 방향]
+  [['숙여', '숙이', '숙인'], 'bow'], [['젖혀', '젖히'], 'lean'],
+  [['위로', '올려', '올리', '들어', '들고', '치켜', '들'], 'up'], [['아래로', '내려', '내리', '떨궈'], 'down'],
+  [['앞으로', '내밀', '뻗어앞'], 'forward'], [['뒤로'], 'back'],
+  [['벌려', '벌리', '옆으로'], 'out'], [['모아', '모으', '붙여', '오므'], 'in'],
+  [['굽혀', '굽히', '구부려', '구부리', '접어', '접'], 'bend'], [['펴', '뻗어', '쭉'], 'straight'],
+  [['갸웃', '기울'], 'tilt'], [['돌려', '돌리', '돌아', '틀어', '봐', '보게', '향해'], 'turn'],
+];
+const AMOUNT = (t) => {
+  const m = t.match(/(\d+)도/); if (m) return Math.min(180, Number(m[1]));
+  if (/살짝|조금|약간|좀/.test(t)) return 15;
+  if (/많이|크게|최대한|완전히|힘껏|쭉/.test(t)) return 60;
+  return 30;
+};
+const sideOf = (t) => (/왼쪽|왼편|좌측/.test(t) ? 'left' : /오른쪽|오른편|우측/.test(t) ? 'right' : null);
+function whoOf(t, prev) {
+  if (/둘다|둘이|모두|두사람|둘은|둘을|다같이/.test(t)) return 'all';
+  const m = t.match(/(^|[^가-힣A-Za-z])(A|B|에이|비)(?=가|는|의|를|도|만|한테|에게|이|\s|$|[^가-힣A-Za-z])/i);
+  if (m) return /^(a|에이)$/i.test(m[2]) ? 'A' : 'B';
+  return prev;
+}
+const targets = (who) => (who === 'all' ? slots.filter(s => s.vrm) : [slots.find(s => s.letter === who) || slots[sel]]).filter(Boolean);
+const mirrorFor = (side) => (side === 'right' ? -1 : 1); // 오른쪽은 y·z 부호 반대
+const wrapDeg = (d) => ((((d + 180) % 360) + 360) % 360) - 180;
+// 관절값 더하기 (사람 범위 안에서, 원래 범위 밖에 있던 값은 더 벗어나지 않게만)
+function addRot(s, boneName, axis, deg) {
+  const cur = s.pose[boneName] || { x: 0, y: 0, z: 0 };
+  const next = { ...cur, [axis]: round1(cur[axis] + deg) };
+  const lim = getLimits(boneName);
+  if (lim) { const lo = Math.min(lim[axis][0], cur[axis]), hi = Math.max(lim[axis][1], cur[axis]); next[axis] = clampV(next[axis], [lo, hi]); }
+  s.pose[boneName] = next;
+}
+function setRotAxis(s, boneName, axis, deg) { s.pose[boneName] = { ...(s.pose[boneName] || { x: 0, y: 0, z: 0 }), [axis]: deg }; }
+const PRESET_WORDS = [[/T자|티자/, 0], [/차렷/, 1], [/손흔들|흔들어|흔들기|인사/, 2], [/만세/, 3], [/걷|걸어|걸음/, 4], [/고개숙이기/, 5]];
+const EMOTION_WORDS = [[/웃|기뻐|기쁜|행복|미소/, 'happy'], [/화나|화난|화내|짜증|분노/, 'angry'], [/슬퍼|슬픈|울어|우는|울상/, 'sad'], [/놀라|놀란|깜짝/, 'surprised'], [/편안|졸려|나른/, 'relaxed'], [/무표정|기본표정|표정없/, 'neutral']];
+const HAND_WORDS = [[/주먹/, 2], [/가리키|가리켜|손가락질/, 3], [/브이|V자|v자/, 4], [/엄지척|엄지/, 5], [/쥐어|쥐고|잡아|잡고/, 6], [/손펴|손을펴|손바닥/, 0]];
+const CAM_WORDS = [[/클로즈업|얼굴크게|가까이찍/, 'close'], [/바스트|상반신/, 'bust'], [/전신|멀리찍|전체샷/, 'full'], [/로우앵글|올려다/, 'low'], [/하이앵글|내려다/, 'high']];
+
+// 부위별 동작 규칙 (캐릭터 왼쪽 기준). [관절 이름 뒷부분, 축, 부호]
+//  부호: +1/-1 = 그 방향으로 amt만큼(y·z축은 오른쪽이면 자동 좌우 대칭), 0 = 0으로 되돌림, 'lr' = 왼쪽 +, 오른쪽 -
+const SIDED_RULES = {
+  arm: {
+    up: [['UpperArm', 'z', 1]], out: [['UpperArm', 'z', 1]], down: [['UpperArm', 'z', -1]], in: [['UpperArm', 'z', -1]],
+    forward: [['UpperArm', 'y', -1]], back: [['UpperArm', 'y', 1]],
+    bend: [['LowerArm', 'y', -1]], straight: [['LowerArm', 'y', 0], ['LowerArm', 'z', 0]],
+  },
+  elbow: { bend: [['LowerArm', 'y', -1]], straight: [['LowerArm', 'y', 0], ['LowerArm', 'z', 0]] },
+  hand: {
+    up: [['Hand', 'z', 1]], lean: [['Hand', 'z', 1]],
+    down: [['Hand', 'z', -1]], bend: [['Hand', 'z', -1]], bow: [['Hand', 'z', -1]],
+    turn: [['Hand', 'x', 'lr']],
+  },
+  leg: {
+    up: [['UpperLeg', 'x', -1]], forward: [['UpperLeg', 'x', -1]], back: [['UpperLeg', 'x', 1]],
+    out: [['UpperLeg', 'z', 1]], in: [['UpperLeg', 'z', -1]],
+    bend: [['LowerLeg', 'x', 1]], straight: [['LowerLeg', 'x', 0]],
+  },
+  knee: { bend: [['LowerLeg', 'x', 1]], straight: [['LowerLeg', 'x', 0]] },
+};
+SIDED_RULES.wrist = SIDED_RULES.hand;
+// 고개·허리: [축, 부호]  ('rl' = 왼쪽 -, 오른쪽 +)
+const CENTER_RULES = {
+  bow: ['x', 1], down: ['x', 1], forward: ['x', 1], bend: ['x', 1],
+  lean: ['x', -1], up: ['x', -1], back: ['x', -1],
+  turn: ['y', 'lr'], tilt: ['z', 'rl'],
+};
+const lrSign = (lr) => (lr === 'right' ? -1 : 1);
+const SIDE_WORDS_RE = /오른팔꿈치|왼팔꿈치|오른손목|왼손목|오른쪽팔|왼쪽팔|오른쪽다리|왼쪽다리|오른팔|왼팔|오른손|왼손|오른다리|왼다리|오른무릎|왼무릎/g;
+const DIR_TEXT = { up: '위로', down: '아래로', forward: '앞으로', back: '뒤로', out: '옆으로', in: '안으로', bend: '굽히기', straight: '펴기', bow: '숙이기', lean: '젖히기' };
+const describeDir = (dir, lr) => DIR_TEXT[dir] || `${lr === 'right' ? '오른쪽' : '왼쪽'}으로 ${dir === 'tilt' ? '기울이기' : '돌리기'}`;
+
+function applySidedRule(s, limb, dir, sides, amt, lr) {
+  const rules = SIDED_RULES[limb][dir];
+  if (!rules) return false;
+  sides.forEach(sd => rules.forEach(([suffix, axis, sign]) => {
+    if (sign === 0) { setRotAxis(s, sd + suffix, axis, 0); return; }
+    const k = sign === 'lr' ? lrSign(lr) : sign * (axis === 'x' ? 1 : mirrorFor(sd));
+    addRot(s, sd + suffix, axis, amt * k);
+  }));
+  return true;
+}
+function applyCenterRule(s, boneName, dir, amt, lr) {
+  const rule = CENTER_RULES[dir];
+  if (!rule) return false;
+  const [axis, sign] = rule;
+  addRot(s, boneName, axis, amt * (sign === 'lr' ? lrSign(lr) : sign === 'rl' ? -lrSign(lr) : sign));
+  return true;
+}
+function moveBody(s, dir, amt, lr, t) {
+  if (dir === 'bow' || dir === 'lean') { addRot(s, 'spine', 'x', dir === 'bow' ? amt : -amt); return true; }
+  if (dir === 'turn') s.rot = wrapDeg(s.rot + (/뒤돌|뒤로돌/.test(t) ? 180 : amt * lrSign(lr)));
+  else if (dir === 'forward') s.z = clampPos(s.z + amt);
+  else if (dir === 'back') s.z = clampPos(s.z - amt);
+  else return false;
+  applyPlacement(s);
+  return true;
+}
+
+// 구절 하나를 해석하는 단계들. 각 단계는 해낸 일을 글로 돌려주고, 못 하면 null.
+function tryCamera(t) {
+  const hit = CAM_WORDS.find(([re]) => re.test(t));
+  if (!hit) return null;
+  shot(hit[1]);
+  return `카메라: ${SHOT_NAME[hit[1]]}`;
+}
+function tryArrange(t) {
+  if (!/마주|서로봐|서로보|등돌|등지|나란히|가까이|떨어져|멀리서/.test(t) || slots.filter(s => s.vrm).length < 2) return null;
+  const [a, b] = slots;
+  let text;
+  if (/마주|서로봐|서로보/.test(t)) { a.x = -35; b.x = 35; a.rot = 90; b.rot = -90; a.look = b.look = 'other'; text = 'A와 B가 마주 보게'; }
+  else if (/등돌|등지/.test(t)) { a.x = -25; b.x = 25; a.rot = -90; b.rot = 90; text = 'A와 B가 등지게'; }
+  else if (/나란히/.test(t)) { a.x = -30; b.x = 30; a.rot = 0; b.rot = 0; text = 'A와 B를 나란히'; }
+  else if (/가까이/.test(t)) { a.x = Math.min(-12, a.x + 10); b.x = Math.max(12, b.x - 10); text = 'A와 B를 더 가까이'; }
+  else { a.x = clampPos(a.x - 15); b.x = clampPos(b.x + 15); text = 'A와 B를 더 멀리'; }
+  slots.forEach(applyAll);
+  return text;
+}
+function tryPreset(t, ss, label) {
+  if (/팔|다리|고개|머리|허리/.test(t)) return null;
+  const hit = PRESET_WORDS.find(([re]) => re.test(t));
+  if (!hit) return null;
+  const [name, pose] = PRESETS[hit[1]];
+  ss.forEach(s => { s.pose = JSON.parse(JSON.stringify(pose)); applyPose(s); });
+  return `${label}: "${name}" 포즈`;
+}
+function tryHandShape(raw, t, ss, label) {
+  const hit = HAND_WORDS.find(([re]) => re.test(t));
+  if (!hit) return null;
+  const sd = sideOf(raw) || (/오른/.test(t) ? 'right' : /왼/.test(t) ? 'left' : null);
+  const sides = sd ? [sd] : ['left', 'right'];
+  ss.forEach(s => { sides.forEach(h => { s.hands[h] = { ...HAND_PRESETS[hit[1]][1] }; }); applyFingers(s); });
+  return `${label}: ${sides.map(h => (h === 'left' ? '왼손' : '오른손')).join('·')} "${HAND_PRESETS[hit[1]][0]}"`;
+}
+function applyFaceWords(t, ss, label) {
+  const done = [];
+  const emo = EMOTION_WORDS.find(([re]) => re.test(t));
+  if (emo) { ss.forEach(s => { s.expr.emotion = emo[1]; }); done.push(`${label}: 표정 ${Object.fromEntries(EMOTIONS)[emo[1]]}`); }
+  if (/눈감|눈을감/.test(t)) { ss.forEach(s => { s.expr.blink = 100; }); done.push(`${label}: 눈 감기`); }
+  if (/눈떠|눈을떠/.test(t)) { ss.forEach(s => { s.expr.blink = 0; }); done.push(`${label}: 눈 뜨기`); }
+  if (/입벌|입을벌/.test(t)) { ss.forEach(s => { s.expr.mouth = { aa: 0.8 }; }); done.push(`${label}: 입 벌리기`); }
+  if (/입다물|입을다물/.test(t)) { ss.forEach(s => { s.expr.mouth = {}; }); done.push(`${label}: 입 다물기`); }
+  return done;
+}
+function tryLook(t, ss, label) {
+  let look = null;
+  if (/카메라봐|카메라를봐|정면봐|독자/.test(t)) look = 'camera';
+  else if (/(A|B|에이|비|상대|서로).*(봐|보게|쳐다)/i.test(t) && !PARTS.some(([w]) => t.includes(w))) look = 'other';
+  if (!look) return null;
+  ss.forEach(s => { s.look = look; applyLook(s); });
+  return `${label}: ${look === 'camera' ? '카메라' : '상대'} 보기`;
+}
+function tryBodyPart(raw, t, ss, label) {
+  const part = PARTS.find(([w]) => t.includes(w));
+  if (!part) return null;
+  const [word, limb, side0] = part;
+  let dir = (DIRS.find(([ws]) => ws.some(w => t.includes(w))) || [])[1];
+  if (!dir && ['head', 'waist', 'body'].includes(limb) && sideOf(raw)) dir = 'turn'; // "고개 왼쪽으로"
+  if (!dir) return null;
+  const amt = AMOUNT(t);
+  const lr = sideOf(raw.replace(SIDE_WORDS_RE, ''));
+  const sides = !side0 || side0 === 'both' ? ['left', 'right'] : [side0];
+  let applied = false;
+  ss.forEach(s => {
+    if (SIDED_RULES[limb]) applied = applySidedRule(s, limb, dir, sides, amt, lr) || applied;
+    else if (limb === 'head' || limb === 'waist') applied = applyCenterRule(s, limb === 'head' ? 'head' : 'spine', dir, amt, lr) || applied;
+    else if (limb === 'body') applied = moveBody(s, dir, amt, lr, t) || applied;
+    applyPose(s);
+  });
+  return applied ? `${label}: ${word} ${describeDir(dir, lr)}${dir === 'straight' ? '' : ' ' + amt + '°'}` : null;
+}
+function tryTurnAround(t, ss, label) {
+  if (!/뒤돌|뒤로돌/.test(t)) return null;
+  ss.forEach(s => { s.rot = wrapDeg(s.rot + 180); applyPlacement(s); });
+  return `${label}: 뒤돌기`;
+}
+function runClause(raw, ctx) {
+  const t = raw.replace(/\s+/g, '');
+  if (!t) return null;
+  ctx.who = whoOf(raw, ctx.who);
+  const ss = targets(ctx.who);
+  if (!ss.length) return { ok: false, text: raw };
+  const label = ss.map(s => s.letter).join('·');
+  const whole = tryCamera(t) || tryArrange(t) || tryPreset(t, ss, label) || tryHandShape(raw, t, ss, label);
+  if (whole) return { ok: true, text: whole };
+  const done = applyFaceWords(t, ss, label);
+  const look = tryLook(t, ss, label);
+  if (look) return { ok: true, text: [...done, look].join(', ') };
+  const move = tryBodyPart(raw, t, ss, label) || tryTurnAround(t, ss, label);
+  if (move) done.push(move);
+  return done.length ? { ok: true, text: done.join(', ') } : { ok: false, text: raw };
+}
+function runCommandText(text) {
+  const clauses = text.split(/[\n,.;!?]|그리고|그다음|그러고|(?<=[가-힣])고\s+|(?<=[가-힣])면서\s*/).map(x => (x || '').trim()).filter(Boolean);
+  const ctx = { who: slots[sel] ? slots[sel].letter : 'A' };
+  const ok = [], miss = [];
+  clauses.forEach(c => { const r = runClause(c, ctx); if (!r) return; (r.ok ? ok : miss).push(r.text); });
+  if (ok.length) { pushHistory(); syncUI(); }
+  return { ok, miss };
+}
+function showCommandResult({ ok, miss }, viaAI) {
+  const lines = [];
+  if (ok.length) lines.push('했어요: ' + ok.join(' / '));
+  if (miss.length) lines.push('못 알아들은 부분: ' + miss.join(' / ') + (hasKey() && !viaAI ? ' — "AI로 해석"을 켜면 이해할 수도 있어요.' : ''));
+  $('cmdResult').textContent = lines.join('\n') || '바꿀 내용을 찾지 못했어요.';
+  say(ok.length ? `명령을 적용했어요. 되돌리기로 취소할 수 있어요.` : '명령을 이해하지 못했어요. 아래 예시처럼 써 보세요.');
+}
+const CMD_EXAMPLES = ['A 오른팔 조금 올려', '고개 왼쪽으로 돌려', '허리 살짝 숙여', '왼쪽 무릎 굽혀', '웃어', '오른손 브이', '카메라 봐', '만세', '둘이 마주 보게', '클로즈업'];
+$('cmdExamples').replaceChildren(...CMD_EXAMPLES.map(ex => makeChip(ex, () => { $('cmdText').value = ex; })));
+const commandGuide = (cast) => `너는 웹툰 러프용 3D 포즈 도구의 명령 변환기야. 사용자의 자유로운 한국어 문장을, 아래 형식의 짧은 한국어 명령 여러 개로 바꿔.
+- 인물: A, B, 둘 다 (말하지 않으면 생략)
+- 부위: 오른팔, 왼팔, 양팔, 오른팔꿈치, 왼팔꿈치, 오른손, 왼손, 오른손목, 왼손목, 오른다리, 왼다리, 오른무릎, 왼무릎, 고개, 허리, 몸
+- 동작: 올려, 내려, 앞으로, 뒤로, 벌려, 모아, 굽혀, 펴, 숙여, 젖혀, 왼쪽으로 돌려, 오른쪽으로 돌려, 왼쪽으로 기울여, 오른쪽으로 기울여
+- 정도: 살짝, (보통), 많이, 또는 "45도"
+- 그 밖: 차렷, 만세, 손 흔들어, 걸어, T자, 웃어, 화나, 슬퍼, 놀라, 편안, 무표정, 눈 감아, 눈 떠, 입 벌려, 입 다물어, 카메라 봐, A 봐, B 봐, 주먹, 가리켜, 브이, 엄지척, 쥐어, 손 펴, 마주 보게, 나란히, 등지게, 가까이, 멀리, 뒤돌아, 클로즈업, 바스트, 전신, 로우앵글, 하이앵글
+예: "민망해서 고개를 떨구고 손으로 얼굴 가리는 느낌" → ["고개 많이 숙여", "오른팔 앞으로", "오른팔꿈치 많이 굽혀", "오른손 쥐어"]
+지금 상황: 등장인물 ${cast}.`;
+$('cmdRun').addEventListener('click', async () => {
+  const text = $('cmdText').value.trim();
+  if (!text) { say('명령을 입력해 주세요.'); return; }
+  if (!slots.some(s => s.vrm)) { say('먼저 VRM 모델을 불러와 주세요.'); return; }
+  if ($('cmdUseAI').checked) {
+    $('cmdResult').textContent = 'AI가 해석하는 중…';
+    try {
+      const cast = slots.filter(s => s.vrm).map(s => s.letter).join(', ');
+      const res = await geminiJSON(`${commandGuide(cast)}\n\n사용자 문장: ${text}`,
+        { type: 'OBJECT', properties: { commands: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['commands'] }, 1);
+      showCommandResult(runCommandText((res.commands || []).join('\n')), true);
+    } catch (e) { $('cmdResult').textContent = e.message; say(e.message); }
+    return;
+  }
+  showCommandResult(runCommandText(text), false);
+});
+
+// ---------- 4) 세계관 배경 찾기: Openverse (무료, 키 없음) ----------
+const KO_EN = { 카페: 'cafe interior', 교실: 'classroom', 학교: 'school building', 복도: 'school hallway', 옥상: 'rooftop', 거리: 'city street', 골목: 'alley', 공원: 'park', 바다: 'sea beach', 해변: 'beach', 숲: 'forest', 산: 'mountain', 방: 'bedroom', 침실: 'bedroom', 거실: 'living room', 부엌: 'kitchen', 주방: 'kitchen', 지하철: 'subway train', 역: 'train station', 버스: 'bus interior', 도서관: 'library', 병원: 'hospital', 사무실: 'office', 회사: 'office', 편의점: 'convenience store', 시장: 'market', 성: 'castle', 판타지: 'fantasy landscape', 궁전: 'palace', 밤: 'night', 비: 'rain', 눈: 'snow', 노을: 'sunset', 하늘: 'sky', 구름: 'clouds', 새벽: 'dawn', 도시: 'city', 시골: 'countryside', 논: 'rice field', 다리: 'bridge', 강: 'river', 체육관: 'gym', 운동장: 'school playground', 신사: 'shrine', 절: 'temple', 교회: 'church', 놀이공원: 'amusement park', 계단: 'stairs', 창문: 'window light', 벚꽃: 'cherry blossom', 가을: 'autumn', 여름: 'summer', 겨울: 'winter', 봄: 'spring' };
+function toSearchQuery(text) {
+  const en = Object.entries(KO_EN).filter(([k]) => text.includes(k)).map(([, v]) => v);
+  const rest = text.replace(/[가-힣]+/g, ' ').trim(); // 영어로 쓴 단어는 그대로
+  return [...new Set([...en, rest].filter(Boolean))].join(' ') || text;
+}
+let worldResults = [];
+async function searchOpenverse(q) {
+  $('worldResults').innerHTML = '';
+  $('worldCredit').textContent = `"${q}" 검색 중…`;
+  try {
+    const res = await fetch(`https://api.openverse.org/v1/images/?q=${encodeURIComponent(q)}&page_size=12&mature=false`);
+    if (res.status === 429) throw new Error('검색이 너무 잦아요. 잠시 뒤 다시 해보세요.');
+    if (!res.ok) throw new Error('검색 서버가 응답하지 않아요.');
+    const data = await res.json();
+    worldResults = (data.results || []).filter(r => r.thumbnail || r.url);
+  } catch (e) {
+    $('worldCredit').textContent = e.message.includes('fetch') ? '인터넷 연결을 확인해 주세요.' : e.message;
+    return;
+  }
+  if (!worldResults.length) { $('worldCredit').textContent = `"${q}"로 찾은 이미지가 없어요. 다른 단어로 해보세요.`; return; }
+  $('worldCredit').textContent = `"${q}" 결과 ${worldResults.length}개 · 눌러서 배경으로 써요.`;
+  worldResults.forEach((r, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('aria-label', `${r.title || '이미지'} 배경으로 쓰기`);
+    const img = document.createElement('img');
+    img.src = r.thumbnail || r.url; img.alt = r.title || ''; img.loading = 'lazy';
+    b.append(img);
+    b.addEventListener('click', () => useWorldImage(i));
+    $('worldResults').append(b);
+  });
+}
+async function useWorldImage(i) {
+  const r = worldResults[i];
+  $('worldCredit').textContent = '배경을 불러오는 중…';
+  let img = null;
+  for (const src of [r.url, r.thumbnail].filter(Boolean)) {
+    try { img = await loadImage(src, true); break; } catch (e) { img = null; }
+  }
+  if (!img) { $('worldCredit').textContent = '이 이미지는 원본 사이트가 막아서 배경으로 쓸 수 없어요. 다른 이미지를 골라 주세요.'; return; }
+  try { setBackground({ kind: 'image', img }); } catch (e) { $('worldCredit').textContent = '이 이미지는 배경으로 쓸 수 없어요. 다른 이미지를 골라 주세요.'; return; }
+  fxSel = 'none'; pressRow($('fxChips'), '');
+  const lic = r.license ? `CC ${String(r.license).toUpperCase()} ${r.license_version || ''}`.trim() : '라이선스 확인 필요';
+  const credit = `배경: "${r.title || '제목 없음'}" — ${r.creator || '작가 미상'} · ${lic} (Openverse)`;
+  $('worldCredit').textContent = credit + (r.foreign_landing_url ? ` · 원문: ${r.foreign_landing_url}` : '');
+  say('배경 이미지를 적용했어요. 공개할 때는 아래 출처 표기를 함께 남겨 주세요.');
+}
+$('worldSearch').addEventListener('click', () => {
+  const t = $('worldText').value.trim();
+  if (!t) { say('검색할 장소나 분위기를 입력해 주세요.'); return; }
+  searchOpenverse(toSearchQuery(t));
+});
+$('worldAI').addEventListener('click', async () => {
+  const t = $('worldText').value.trim();
+  if (!t) { say('세계관이나 장면 설명을 입력해 주세요.'); return; }
+  $('worldCredit').textContent = 'AI가 검색어를 만드는 중…';
+  try {
+    const res = await geminiJSON(`웹툰 배경 사진을 CC 이미지 검색엔진에서 찾으려 해. 아래 세계관·장면 설명에 맞는 짧은 영어 검색어 3개를 만들어줘. 사람 대신 장소·분위기 위주로.\n설명: ${t}`,
+      { type: 'OBJECT', properties: { queries: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['queries'] }, 0.5);
+    const qs = (res.queries || []).filter(Boolean).slice(0, 3);
+    if (!qs.length) throw new Error('검색어를 만들지 못했어요.');
+    await searchOpenverse(qs[0]);
+    $('worldCredit').textContent += ` · 다른 검색어: ${qs.slice(1).join(', ')}`;
+  } catch (e) { $('worldCredit').textContent = e.message; }
+});
+
+// ---------- 5) 구도 맞춤 배경 생성 (키 필요) ----------
+const ASPECTS = [['1:1', 1], ['4:3', 4 / 3], ['3:4', 3 / 4], ['16:9', 16 / 9], ['9:16', 9 / 16], ['21:9', 21 / 9], ['3:2', 1.5], ['2:3', 2 / 3]];
+const nearestAspect = (r) => ASPECTS.reduce((a, b) => (Math.abs(Math.log(b[1] / r)) < Math.abs(Math.log(a[1] / r)) ? b : a))[0];
+const IMAGE_COST_KRW = 0.039 * GEMINI.krwPerUsd; // 약 55원
+$('genRun').addEventListener('click', async () => {
+  if (!hasKey()) return;
+  const desc = $('genText').value.trim();
+  if (!desc) { say('어떤 배경을 원하는지 적어 주세요.'); return; }
+  if (!window.confirm(`배경 한 장을 만드는 데 약 ${won(IMAGE_COST_KRW)}이 들어요. 만들까요?`)) return;
+  $('genResult').textContent = '배경을 그리는 중이에요… (10~30초)';
+  try {
+    const ref = renderCut({ scale: 1, transparent: false, withFilter: false, hideBackground: true });
+    const b64 = ref.toDataURL('image/png').split(',')[1];
+    const prompt = `Create a background illustration for one manga/webtoon panel.\n` +
+      `Match the reference render exactly: same camera height, tilt, lens perspective and horizon. The floor grid shows the ground plane.\n` +
+      `Do NOT draw any people or characters; where the figures stand, draw only the background behind them.\n` +
+      `Scene: ${desc}`;
+    const data = await gemini(GEMINI.imageModel, {
+      contents: [{ role: 'user', parts: [{ text: prompt }, { inlineData: { mimeType: 'image/png', data: b64 } }] }],
+      generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: nearestAspect(cutRatio[0] / cutRatio[1]) } },
+    }, IMAGE_COST_KRW);
+    const part = (((data.candidates || [])[0] || {}).content || { parts: [] }).parts.find(x => x.inlineData && x.inlineData.data);
+    if (!part) throw new Error('그림이 오지 않았어요. 설명을 바꿔서 다시 해보세요.');
+    const img = await loadImage(`data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`, false);
+    setBackground({ kind: 'image', img });
+    fxSel = 'none'; pressRow($('fxChips'), '');
+    $('genResult').textContent = '배경을 만들었어요. 바닥 격자는 카메라 탭에서 끌 수 있어요.';
+    $('worldCredit').textContent = '배경: AI 생성 이미지 (Gemini)';
+  } catch (e) { $('genResult').textContent = e.message; say(e.message); }
+});
+
+// ---------- 6) 사진·그림 → 포즈 (무료, 브라우저 안에서 실행) ----------
+const MP_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21';
+const MP_MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task';
+let poseLandmarker = null;
+async function getPoseLandmarker() {
+  if (poseLandmarker) return poseLandmarker;
+  const { FilesetResolver, PoseLandmarker } = await import(`${MP_BASE}/vision_bundle.mjs`);
+  const vision = await FilesetResolver.forVisionTasks(`${MP_BASE}/wasm`);
+  const opts = (delegate) => ({ baseOptions: { modelAssetPath: MP_MODEL, delegate }, runningMode: 'IMAGE', numPoses: 2 });
+  try { poseLandmarker = await PoseLandmarker.createFromOptions(vision, opts('GPU')); }
+  catch (e) { poseLandmarker = await PoseLandmarker.createFromOptions(vision, opts('CPU')); }
+  return poseLandmarker;
+}
+// 사진 속 사람 기준 관절 번호 (MediaPipe 33점 중 쓰는 것)
+const LM = { nose: 0, lEar: 7, rEar: 8, lSh: 11, rSh: 12, lEl: 13, rEl: 14, lWr: 15, rWr: 16, lHip: 23, rHip: 24, lKnee: 25, rKnee: 26, lAnk: 27, rAnk: 28 };
+const LM_EDIT = Object.values(LM);
+const LM_LINES = [[LM.lSh, LM.rSh], [LM.lSh, LM.lEl], [LM.lEl, LM.lWr], [LM.rSh, LM.rEl], [LM.rEl, LM.rWr], [LM.lSh, LM.lHip], [LM.rSh, LM.rHip], [LM.lHip, LM.rHip], [LM.lHip, LM.lKnee], [LM.lKnee, LM.lAnk], [LM.rHip, LM.rKnee], [LM.rKnee, LM.rAnk], [LM.lEar, LM.nose], [LM.rEar, LM.nose]];
+const LM_LEFT = new Set([LM.lEar, LM.lSh, LM.lEl, LM.lWr, LM.lHip, LM.lKnee, LM.lAnk]);
+let photo = null; // { img, points: [{x,y}] (0~1), world: [{x,y,z}] }
+$('photoFile').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  if (!slots[sel].vrm) { say('먼저 VRM 모델을 불러와 주세요.'); return; }
+  say('사진에서 관절을 찾는 중이에요… (처음 한 번은 모델을 받느라 조금 걸려요)');
+  const url = URL.createObjectURL(f);
+  if (photo && photo.url) URL.revokeObjectURL(photo.url);
+  try {
+    const img = await loadImage(url, false);
+    const det = await getPoseLandmarker();
+    const r = det.detect(img);
+    if (!r.landmarks || !r.landmarks.length) { say('사진에서 사람을 찾지 못했어요. 전신이 잘 보이는 사진으로 해보세요.'); return; }
+    openPoseEditor(img, r.landmarks[0], r.worldLandmarks[0]);
+    photo.url = url;
+  } catch (err) {
+    console.error(err);
+    say('관절 찾기 도구를 불러오지 못했어요. 인터넷 연결을 확인하고 다시 해보세요.');
+  }
+});
+function openPoseEditor(img, lm2d, world) {
+  photo = { img, points: lm2d.map(p => ({ x: p.x, y: p.y })), orig: lm2d.map(p => ({ x: p.x, y: p.y })), world: world.map(p => ({ x: p.x, y: p.y, z: p.z })) };
+  $('poseImg').src = img.src;
+  $('poseApply').textContent = `${slots[sel].letter}에게 적용`;
+  drawPoseSvg();
+  $('poseDlg').showModal();
+}
+function drawPoseSvg() {
+  const svg = $('poseSvg'), W = photo.img.naturalWidth, H = photo.img.naturalHeight;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const r = Math.max(W, H) * 0.012, sw = Math.max(W, H) * 0.004;
+  const P = (i) => [photo.points[i].x * W, photo.points[i].y * H];
+  let html = '';
+  LM_LINES.forEach(([a, b]) => { const [x1, y1] = P(a), [x2, y2] = P(b); html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ffffff" stroke-width="${sw * 2}" stroke-opacity=".7"/><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#1d1f22" stroke-width="${sw}"/>`; });
+  LM_EDIT.forEach(i => { const [x, y] = P(i); html += `<circle data-i="${i}" cx="${x}" cy="${y}" r="${r}" fill="${LM_LEFT.has(i) ? '#2f5fbf' : '#d2541f'}" stroke="#ffffff" stroke-width="${sw}" style="cursor: grab"/>`; });
+  svg.innerHTML = html;
+}
+(() => {
+  let dragI = -1;
+  const svg = $('poseSvg');
+  const toPoint = (e) => { const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); };
+  svg.addEventListener('pointerdown', e => { const i = e.target.getAttribute && e.target.getAttribute('data-i'); if (i === null || i === undefined) return; dragI = Number(i); svg.setPointerCapture(e.pointerId); });
+  svg.addEventListener('pointermove', e => {
+    if (dragI < 0) return;
+    const p = toPoint(e);
+    photo.points[dragI] = { x: Math.min(1, Math.max(0, p.x / photo.img.naturalWidth)), y: Math.min(1, Math.max(0, p.y / photo.img.naturalHeight)) };
+    drawPoseSvg();
+  });
+  svg.addEventListener('pointerup', () => { dragI = -1; });
+})();
+$('poseCancel').addEventListener('click', () => $('poseDlg').close());
+$('poseApply').addEventListener('click', () => {
+  // 2D로 옮긴 만큼 3D 좌표에도 반영 (어깨 너비로 픽셀↔미터 비율 계산)
+  const W = photo.img.naturalWidth, H = photo.img.naturalHeight;
+  const px = (p) => [p.x * W, p.y * H];
+  const [a, b] = [px(photo.orig[LM.lSh]), px(photo.orig[LM.rSh])];
+  const k = Math.hypot(photo.world[LM.lSh].x - photo.world[LM.rSh].x, photo.world[LM.lSh].y - photo.world[LM.rSh].y) / Math.max(1, Math.hypot(a[0] - b[0], a[1] - b[1]));
+  const world = photo.world.map((w, i) => {
+    const d = [(photo.points[i].x - photo.orig[i].x) * W, (photo.points[i].y - photo.orig[i].y) * H];
+    return { x: w.x + d[0] * k, y: w.y + d[1] * k, z: w.z };
+  });
+  retargetFromLandmarks(slots[sel], world, $('poseMirror').checked);
+  $('poseDlg').close();
+  pushHistory(); syncUI();
+  say(`${slots[sel].letter}에게 사진 속 자세를 적용했어요. 되돌리기로 취소할 수 있어요.`);
+});
+// MediaPipe 월드 좌표(미터, 엉덩이 중심, y 아래) → 캐릭터 관절 회전
+function retargetFromLandmarks(slot, world, mirror) {
+  const swap = { 7: 8, 8: 7, 11: 12, 12: 11, 13: 14, 14: 13, 15: 16, 16: 15, 23: 24, 24: 23, 25: 26, 26: 25, 27: 28, 28: 27 };
+  // 카메라를 보고 선 사람 기준 축: x = 사람의 왼쪽(화면 오른쪽), y = 위, z = 앞(카메라 쪽)
+  const P = (i) => {
+    const j = mirror ? (swap[i] ?? i) : i, w = world[j];
+    return new THREE.Vector3(mirror ? -w.x : w.x, -w.y, -w.z);
+  };
+  const mid = (a, b) => P(a).add(P(b)).multiplyScalar(0.5);
+  const fr = bodyFrame(slot); // 장면 회전 등
+  const s = fr.s;
+  const toLocal = (v) => new THREE.Vector3(s * v.x, v.y, s * v.z); // 사진 축 → 모델 로컬 축 (VRM0은 반대)
+  const toWorld = (v) => toLocal(v).applyQuaternion(fr.q);
+  // 1) 몸통 방향 → 엉덩이 회전
+  let left = P(LM.lHip).sub(P(LM.rHip)).add(P(LM.lSh).sub(P(LM.rSh))).normalize();
+  const up = mid(LM.lSh, LM.rSh).sub(mid(LM.lHip, LM.rHip)).normalize();
+  const fwd = left.clone().cross(up).normalize();
+  left = up.clone().cross(fwd).normalize();
+  const mPhoto = new THREE.Matrix4().makeBasis(toLocal(left), toLocal(up), toLocal(fwd));
+  const mRest = new THREE.Matrix4().makeBasis(new THREE.Vector3(s, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, s));
+  const hipsQ = new THREE.Quaternion().setFromRotationMatrix(mPhoto.multiply(mRest.invert()));
+  const keepHands = slot.hands;
+  slot.pose = {};
+  applyPose(slot);
+  const h = slot.vrm.humanoid, hips = h.getNormalizedBoneNode('hips');
+  hips.quaternion.copy(hipsQ);
+  slot.pose.hips = nodeToPose(slot, 'hips', hips);
+  // 2) 팔다리: 관절 방향 그대로 (팔꿈치·무릎은 경첩, 사람 범위)
+  const limb = (eff, a, b, c) => {
+    const L = LIMB[eff], upN = h.getNormalizedBoneNode(L.up), midN = h.getNormalizedBoneNode(L.mid);
+    if (!upN || !midN) return;
+    const frNow = bodyFrame(slot);
+    const u = toWorld(P(b).sub(P(a)).normalize()).normalize();
+    const l = toWorld(P(c).sub(P(b)).normalize()).normalize();
+    limitUpperDir(u, L, frNow);
+    const side = frNow.left.clone().multiplyScalar(L.side);
+    const pole = L.kind === 'leg' ? frNow.fwd.clone() : frNow.up.clone().negate().addScaledVector(frNow.fwd, -0.45).addScaledVector(side, 0.45);
+    const idealHinge = u.clone().cross(pole.clone().negate()).normalize();
+    let hw = u.clone().cross(l);
+    let theta = u.angleTo(l);
+    if (hw.lengthSq() < 0.0025) { hw = idealHinge; theta = 0; }
+    else {
+      hw.normalize();
+      if (L.kind === 'leg' && hw.dot(idealHinge) < 0) { hw = idealHinge; theta = 0; } // 무릎이 거꾸로 꺾이지 않게
+    }
+    theta = Math.min(MAX_FLEX[L.kind], Math.max(0, theta));
+    setLimb(slot, L, upN, midN, u, hw, theta);
+    slot.pose[L.up] = nodeToPose(slot, L.up, upN);
+    slot.pose[L.mid] = nodeToPose(slot, L.mid, midN);
+  };
+  limb('leftHand', LM.lSh, LM.lEl, LM.lWr);
+  limb('rightHand', LM.rSh, LM.rEl, LM.rWr);
+  limb('leftFoot', LM.lHip, LM.lKnee, LM.lAnk);
+  limb('rightFoot', LM.rHip, LM.rKnee, LM.rAnk);
+  // 3) 고개: 코가 향한 방향(좌우·위아래)과 양쪽 귀 높이(기울기)
+  const basis = [left, up, fwd];
+  const inBody = (v) => new THREE.Vector3(v.dot(basis[0]), v.dot(basis[1]), v.dot(basis[2]));
+  const face = inBody(P(LM.nose).sub(mid(LM.lEar, LM.rEar)).normalize());
+  const ear = inBody(P(LM.lEar).sub(P(LM.rEar)));
+  const lim = getLimits('head');
+  slot.pose.head = {
+    x: round1(clampV(THREE.MathUtils.radToDeg(Math.atan2(-face.y, Math.hypot(face.x, face.z))) - 12, lim.x)), // 코는 귀보다 조금 아래라 12° 보정
+    y: round1(clampV(THREE.MathUtils.radToDeg(Math.atan2(face.x, face.z)), lim.y)),
+    z: round1(clampV(THREE.MathUtils.radToDeg(Math.atan2(ear.y, ear.x)), lim.z)),
+  };
+  slot.hands = keepHands;
+  applyPose(slot);
+}
+
+// ---------- 7) 비슷한 포즈 레퍼런스 찾기 (무료: 단어 사전 + Openverse + 브라우저 안 관절 비교) ----------
+// 캐릭터 설정: 원고 설정과 연결하기 전까지는 이 컴퓨터에만 저장
+const CAST_KEY = 'rough.cast';
+const castProfile = (() => {
+  const d = { A: { gender: '', age: 'adult' }, B: { gender: '', age: 'adult' } };
+  try { return { ...d, ...JSON.parse(store.get(CAST_KEY, '{}')) }; } catch (e) { return d; }
+})();
+const GENDERS = [['', '정하지 않음'], ['m', '남자'], ['f', '여자']];
+const AGES = [['adult', '성인'], ['teen', '청소년'], ['child', '아이'], ['old', '노인']];
+function buildCastRows() {
+  const box = $('castRows');
+  box.textContent = '';
+  ['A', 'B'].forEach(letter => {
+    const row = document.createElement('div'); row.className = 'cast-row';
+    const av = document.createElement('span'); av.className = 'avatar'; av.textContent = letter;
+    row.append(av);
+    [['gender', GENDERS, '성별'], ['age', AGES, '나이대']].forEach(([key, list, name]) => {
+      const sel_ = document.createElement('select');
+      sel_.setAttribute('aria-label', `${letter} ${name}`);
+      list.forEach(([v, t]) => sel_.add(new Option(t, v, false, castProfile[letter][key] === v)));
+      sel_.addEventListener('change', () => { castProfile[letter][key] = sel_.value; store.set(CAST_KEY, JSON.stringify(castProfile)); });
+      row.append(sel_);
+    });
+    box.append(row);
+  });
+}
+buildCastRows();
+
+// 사람 부르는 말 (영어 검색어)
+const NOUN = {
+  m: { adult: 'man', teen: 'teenage boy', child: 'boy', old: 'old man' },
+  f: { adult: 'woman', teen: 'teenage girl', child: 'girl', old: 'old woman' },
+  '': { adult: 'person', teen: 'teenager', child: 'child', old: 'elderly person' },
+};
+const PLURAL = { man: 'men', woman: 'women', boy: 'boys', girl: 'girls', person: 'people', child: 'children', teenager: 'teenagers' };
+function peopleWords(letters) {
+  const n = letters.map(l => NOUN[castProfile[l].gender][castProfile[l].age]);
+  if (n.length < 2) return n[0] || 'person';
+  if (n[0] === n[1]) return `two ${PLURAL[n[0]] || n[0] + 's'}`;
+  return `${n[0]} and ${n[1]}`;
+}
+// 동작 사전: 위에서부터 맞춰 보고, 맞은 부분은 지워서 겹치지 않게 (예: "뒤에서 안아" → back hug 하나만)
+const KO_POSE = [
+  [/공주님\s*안기|안아\s*들/, 'bridal carry'], [/업[어고은는다]|업기/, 'piggyback ride'],
+  [/뒤에서\s*안|백허그/, 'back hug'], [/껴안|포옹|안[아고은는기]|안다/, 'hug'],
+  [/손목.{0,6}(잡|끌)/, 'pulling by the wrist'], [/손\s*(을\s*)?잡/, 'holding hands'],
+  [/어깨동무/, 'arm around shoulder'], [/어깨에\s*손/, 'hand on shoulder'], [/벽\s*쿵|벽에\s*몰/, 'kabedon'],
+  [/키스|뽀뽀|입맞/, 'kiss'], [/머리.{0,3}쓰다듬|쓰다듬/, 'patting head'],
+  [/멱살/, 'grabbing collar'], [/주먹|때리|펀치/, 'punching'], [/발차기|걷어차/, 'kicking'],
+  [/칼싸움|검을|칼을/, 'sword fighting'], [/싸우|싸움|격투|대결/, 'fighting'],
+  [/밀[어치고다]|밀쳐/, 'pushing'], [/끌[어고다]/, 'pulling'], [/붙잡|잡[아고는다]/, 'grabbing'],
+  [/가리키|손가락질/, 'pointing'], [/손\s*흔|인사/, 'waving'], [/팔짱/, 'arms crossed'],
+  [/무릎\s*꿇|꿇어/, 'kneeling'], [/쪼그려|웅크/, 'crouching'], [/앉[아은는다]|앉기|앉은/, 'sitting'],
+  [/누[워운]|눕[고는다기]/, 'lying down'], [/기대/, 'leaning'], [/넘어지|쓰러지|쓰러진/, 'falling'],
+  [/점프|뛰어\s*오르/, 'jumping'], [/달리|달려|뛰어가/, 'running'], [/걷[고는다기]|걸어/, 'walking'],
+  [/춤/, 'dancing'], [/울[고어다며]|눈물/, 'crying'], [/웃[고어다는으]/, 'laughing'],
+  [/화[가난나]|분노|노려/, 'angry'], [/놀라|놀란/, 'surprised'], [/고민|생각/, 'thinking'],
+  [/전화/, 'talking on phone'], [/책.{0,3}읽|독서/, 'reading a book'],
+  [/마주\s*보|마주/, 'facing each other'], [/등\s*(을\s*)?(지|돌|맞)/, 'back to back'],
+  [/돌아보|뒤돌아/, 'looking back over shoulder'], [/올려다/, 'looking up'], [/내려다/, 'looking down'],
+  [/서\s*있|서서/, 'standing'],
+];
+function sceneLetters(text) {
+  const named = ['A', 'B'].filter(l => new RegExp(`(?<![a-zA-Z])${l}(?![a-zA-Z])`).test(text) || (l === 'A' ? /에이/ : /(^|\s)비(가|는|를|의|와|랑|에게)/).test(text));
+  if (named.length) return named;
+  if (/둘|두\s*사람|두\s*명|서로|함께|같이/.test(text)) return ['A', 'B'];
+  const loaded = slots.filter(s => s.vrm).map(s => s.letter);
+  return loaded.length ? loaded : ['A'];
+}
+function sceneActions(text) {
+  let t = text; const out = [];
+  for (const [re, en] of KO_POSE) {
+    if (out.length >= 2) break;
+    if (re.test(t)) { out.push(en); t = t.replace(re, ' '); }
+  }
+  const english = text.replace(/[^a-zA-Z\s]/g, ' ').split(/\s+/).filter(w => w.length > 1 && !/^[ab]$/i.test(w));
+  return [...out, ...english].join(' ');
+}
+function referenceQueries(text) {
+  const letters = sceneLetters(text);
+  const people = peopleWords(letters);
+  const action = sceneActions(text);
+  const qs = action ? [`${people} ${action}`, `${action} pose`, action] : [`${people} pose`, people];
+  return { letters, people, action, queries: [...new Set(qs)] };
+}
+
+// 자세 비교: 몸통 기준 축(왼쪽·위·앞)으로 팔다리 방향을 바꿔 비교 → 몸이 어느 쪽을 보든 상관없음
+const SEG = [['lSh', 'lEl', 1], ['lEl', 'lWr', 0.8], ['rSh', 'rEl', 1], ['rEl', 'rWr', 0.8], ['lHip', 'lKn', 1], ['lKn', 'lAn', 0.8], ['rHip', 'rKn', 1], ['rKn', 'rAn', 0.8]];
+const SEG_MIRROR = [2, 3, 0, 1, 6, 7, 4, 5];
+function poseSignature(p) {
+  const mid = (a, b) => p[a].clone().add(p[b]).multiplyScalar(0.5);
+  let left = p.lHip.clone().sub(p.rHip).add(p.lSh.clone().sub(p.rSh)).normalize();
+  const up = mid('lSh', 'rSh').sub(mid('lHip', 'rHip')).normalize();
+  const fwd = left.clone().cross(up).normalize();
+  left = up.clone().cross(fwd).normalize();
+  const local = (v) => new THREE.Vector3(v.dot(left), v.dot(up), v.dot(fwd));
+  return {
+    seg: SEG.map(([a, b]) => local(p[b].clone().sub(p[a]).normalize())),
+    grav: local(new THREE.Vector3(0, 1, 0)), // 눕기·숙이기 구분용
+  };
+}
+const mirrorSig = (g) => ({
+  seg: SEG_MIRROR.map(i => new THREE.Vector3(-g.seg[i].x, g.seg[i].y, g.seg[i].z)),
+  grav: new THREE.Vector3(-g.grav.x, g.grav.y, g.grav.z),
+});
+function sigSimilarity(a, b) {
+  const one = (bb) => {
+    let s = 0, w = 0;
+    SEG.forEach(([, , wt], i) => { s += a.seg[i].dot(bb.seg[i]) * wt; w += wt; });
+    s += a.grav.dot(bb.grav) * 1.2; w += 1.2;
+    return (s / w + 1) / 2; // 0~1
+  };
+  return Math.max(one(b), one(mirrorSig(b))); // 좌우 반전된 사진도 같은 자세로 침
+}
+const VRM_POINTS = { lSh: 'leftUpperArm', rSh: 'rightUpperArm', lEl: 'leftLowerArm', rEl: 'rightLowerArm', lWr: 'leftHand', rWr: 'rightHand', lHip: 'leftUpperLeg', rHip: 'rightUpperLeg', lKn: 'leftLowerLeg', rKn: 'rightLowerLeg', lAn: 'leftFoot', rAn: 'rightFoot' };
+function slotSignature(slot) {
+  scene.updateMatrixWorld(true);
+  const p = {};
+  for (const [k, b] of Object.entries(VRM_POINTS)) {
+    const n = slot.vrm.humanoid.getRawBoneNode(b);
+    if (!n) return null;
+    p[k] = n.getWorldPosition(new THREE.Vector3());
+  }
+  return poseSignature(p);
+}
+const LM_POINTS = { lSh: LM.lSh, rSh: LM.rSh, lEl: LM.lEl, rEl: LM.rEl, lWr: LM.lWr, rWr: LM.rWr, lHip: LM.lHip, rHip: LM.rHip, lKn: LM.lKnee, rKn: LM.rKnee, lAn: LM.lAnk, rAn: LM.rAnk };
+function landmarkSignature(world) {
+  const p = {};
+  for (const [k, i] of Object.entries(LM_POINTS)) p[k] = new THREE.Vector3(world[i].x, -world[i].y, -world[i].z);
+  return poseSignature(p);
+}
+// 사진 속 사람들 ↔ 장면 인물들 짝짓기. 돌려주는 값: { score 0~1, match: {A: 사람번호, B: 사람번호} }
+function scoreReference(targets, people) {
+  if (!targets.length || !people.length) return { score: 0, match: {} };
+  const sim = targets.map(t => people.map(p => sigSimilarity(t.sig, p)));
+  if (targets.length === 1) {
+    const best = sim[0].indexOf(Math.max(...sim[0]));
+    return { score: sim[0][best], match: { [targets[0].letter]: best } };
+  }
+  if (people.length === 1) {
+    const s = (sim[0][0] + sim[1][0]) / 2 * 0.85; // 두 명 장면인데 한 명만 나온 사진은 조금 낮게
+    return { score: s, match: { [targets[0].letter]: 0, [targets[1].letter]: 0 } };
+  }
+  const straight = (sim[0][0] + sim[1][1]) / 2, crossed = (sim[0][1] + sim[1][0]) / 2;
+  return straight >= crossed
+    ? { score: straight, match: { [targets[0].letter]: 0, [targets[1].letter]: 1 } }
+    : { score: crossed, match: { [targets[0].letter]: 1, [targets[1].letter]: 0 } };
+}
+const simPercent = (s) => Math.round(Math.min(1, Math.max(0, (s - 0.5) / 0.5)) * 100); // 아무 자세끼리도 50% 근처라 넓혀서 보여줌
+
+// 새 탭
+const REF_PAGE = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>포즈 레퍼런스</title><style>
+:root { --bg: #F3F3EF; --surface: #FFFFFF; --line: #DAD9D2; --ink: #1D1F22; --muted: #5B5E62; --accent: #2F5FBF; --accent-soft: #E3EAF7; --good: #1E6B33; --good-bg: #E3F2E6; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #17191C; --surface: #202327; --line: #363A40; --ink: #ECEDEE; --muted: #A4A8AE; --accent: #7FA6F0; --accent-soft: #24324B; --good: #9BD8AA; --good-bg: #1F3326; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #17191C; --surface: #202327; --line: #363A40; --ink: #ECEDEE; --muted: #A4A8AE; --accent: #7FA6F0; --accent-soft: #24324B; --good: #9BD8AA; --good-bg: #1F3326; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 14px 16px; display: grid; gap: 8px; }
+h1 { margin: 0; font-size: 17px; font-weight: 600; }
+.sub { margin: 0; color: var(--muted); font-size: 13px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+input { flex: 1 1 260px; min-height: 36px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
+button, a.btn { min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+main { padding: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; }
+.pic { position: relative; aspect-ratio: 3 / 4; background: var(--line); overflow: hidden; }
+.pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pic svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.meta { padding: 8px 10px 10px; display: grid; gap: 6px; align-content: start; }
+.tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); }
+.tag.good { background: var(--good-bg); color: var(--good); }
+.tag.dim { background: transparent; border: 1px solid var(--line); color: var(--muted); }
+.credit { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+.credit a { color: inherit; }
+.empty { grid-column: 1 / -1; color: var(--muted); padding: 24px 0; }
+</style></head><body><header>
+<h1>비슷한 포즈 레퍼런스</h1>
+<p class="sub" id="why"></p>
+<div class="row"><label for="q" class="sub">검색어</label><input id="q" spellcheck="false"><button id="again" class="primary" type="button">다시 찾기</button></div>
+<div class="row" id="links"></div>
+<p class="sub" id="state" role="status"></p>
+</header><main id="grid"></main></body></html>`;
+let refRun = 0;
+function openReferenceTab(info) {
+  const win = window.open('', 'rough-refs');
+  if (!win) { $('refNote').textContent = '새 탭이 막혔어요. 주소창 오른쪽의 팝업 차단 아이콘을 눌러 허용해 주세요.'; return null; }
+  win.document.open(); win.document.write(REF_PAGE); win.document.close();
+  const d = win.document;
+  d.getElementById('q').value = info.queries[0];
+  d.getElementById('again').addEventListener('click', () => {
+    const q = d.getElementById('q').value.trim();
+    if (q) runReferenceSearch(win, { ...info, queries: [q] });
+  });
+  d.getElementById('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') d.getElementById('again').click(); });
+  return win;
+}
+function setExternalLinks(win, q) {
+  const box = win.document.getElementById('links'); box.textContent = '';
+  const label = win.document.createElement('span'); label.className = 'sub'; label.textContent = '더 많이 보기:';
+  box.append(label);
+  const qq = encodeURIComponent(`${q} pose reference`);
+  [['Pinterest', `https://www.pinterest.com/search/pins/?q=${qq}`], ['구글 이미지', `https://www.google.com/search?tbm=isch&q=${qq}`], ['Openverse', `https://openverse.org/search/image?q=${encodeURIComponent(q)}`]].forEach(([t, href]) => {
+    const a = win.document.createElement('a'); a.className = 'btn'; a.href = href; a.target = '_blank'; a.rel = 'noopener'; a.textContent = t;
+    box.append(a);
+  });
+}
+async function fetchOpenverse(q, size) {
+  const res = await fetch(`https://api.openverse.org/v1/images/?q=${encodeURIComponent(q)}&page_size=${size}&mature=false`);
+  if (res.status === 429) throw new Error('검색이 너무 잦아요. 잠시 뒤 다시 해보세요.');
+  if (!res.ok) throw new Error('검색 서버가 응답하지 않아요.');
+  return ((await res.json()).results || []).filter(r => r.thumbnail || r.url);
+}
+const REF_WANT = 24;
+async function runReferenceSearch(win, info) {
+  const run = ++refRun;
+  const d = win.document, grid = d.getElementById('grid'), state = d.getElementById('state');
+  const alive = () => run === refRun && !win.closed;
+  grid.textContent = '';
+  setExternalLinks(win, info.queries[0]);
+  const targets = info.letters.map(l => slots.find(s => s.letter === l && s.vrm)).filter(Boolean)
+    .map(s => ({ letter: s.letter, sig: slotSignature(s) })).filter(t => t.sig);
+  d.getElementById('why').textContent = targets.length
+    ? `정렬 기준: 지금 화면 속 ${targets.map(t => t.letter).join('·')}의 자세와 팔다리 방향이 비슷한 순 (좌우 반전도 같은 자세로 봐요). 대충이라도 자세를 먼저 잡고 찾으면 더 잘 맞아요.`
+    : '모델이 없어서 자세 비교 없이 검색 순서대로 보여줘요.';
+  // 1) 검색: 구체적인 검색어부터, 모자라면 넓은 검색어로
+  state.textContent = `"${info.queries[0]}" 찾는 중…`;
+  const found = [], seen = new Set();
+  try {
+    for (const q of info.queries) {
+      if (found.length >= REF_WANT || !alive()) break;
+      (await fetchOpenverse(q, 20)).forEach(r => { if (!seen.has(r.id)) { seen.add(r.id); found.push({ ...r, q }); } });
+    }
+  } catch (e) {
+    if (alive()) state.textContent = e.message.includes('fetch') ? '인터넷 연결을 확인해 주세요.' : e.message;
+    return;
+  }
+  if (!alive()) return;
+  if (!found.length) {
+    state.textContent = '';
+    const p = d.createElement('p'); p.className = 'empty';
+    p.textContent = '찾은 이미지가 없어요. 위 검색어를 더 짧게 고치거나 "더 많이 보기"의 Pinterest·구글 이미지를 눌러 보세요.';
+    grid.append(p);
+    return;
+  }
+  // 2) 카드 먼저 그리고, 관절 비교는 한 장씩
+  const items = found.slice(0, REF_WANT).map((r, i) => ({ r, i, card: refCard(win, r), score: -1, people: null }));
+  items.forEach(it => grid.append(it.card.el));
+  let det = null;
+  if (targets.length) {
+    state.textContent = '관절 찾기 도구를 준비하는 중… (처음 한 번은 조금 걸려요)';
+    try { det = await getPoseLandmarker(); } catch (e) { det = null; }
+    if (!det && alive()) d.getElementById('why').textContent = '관절 찾기 도구를 불러오지 못해서 검색 순서대로 보여줘요.';
+  }
+  let done = 0;
+  for (const it of items) {
+    if (!alive()) return;
+    if (det) {
+      state.textContent = `자세 비교 중… ${done + 1}/${items.length}`;
+      try {
+        const img = await loadImage(it.r.thumbnail || it.r.url, true);
+        const res = det.detect(img);
+        it.img = img;
+        it.people = (res.landmarks || []).map((lm, k) => ({ lm, world: res.worldLandmarks[k] }));
+        if (it.people.length) {
+          const sc = scoreReference(targets, it.people.map(p => landmarkSignature(p.world)));
+          const countBonus = it.people.length === targets.length ? 0.04 : 0;
+          it.score = sc.score + countBonus; it.match = sc.match; it.sim = sc.score;
+        }
+      } catch (e) { it.failed = true; }
+      it.card.update(it, targets);
+      // 비교가 끝난 것끼리 점수순으로, 아직 안 한 것·못 찾은 것은 뒤로
+      items.slice().sort((a, b) => b.score - a.score || a.i - b.i).forEach(x => grid.append(x.card.el));
+    }
+    done++;
+  }
+  if (!alive()) return;
+  const ok = items.filter(x => x.score >= 0).length;
+  state.textContent = det
+    ? `${items.length}장 중 ${ok}장에서 사람 자세를 찾았어요. 만화 그림은 관절을 못 찾을 때가 있어 뒤쪽에 모아 뒀어요.`
+    : `${items.length}장을 찾았어요.`;
+}
+function refCard(win, r) {
+  const d = win.document;
+  const el = d.createElement('article'); el.className = 'card';
+  const pic = d.createElement('div'); pic.className = 'pic';
+  const img = d.createElement('img'); img.src = r.thumbnail || r.url; img.alt = r.title || '레퍼런스 이미지'; img.loading = 'lazy';
+  pic.append(img);
+  const meta = d.createElement('div'); meta.className = 'meta';
+  const tags = d.createElement('div'); tags.className = 'tags';
+  const wait = d.createElement('span'); wait.className = 'tag dim'; wait.textContent = '비교 전';
+  tags.append(wait);
+  const actions = d.createElement('div'); actions.className = 'row';
+  const credit = d.createElement('p'); credit.className = 'credit';
+  const lic = r.license ? `CC ${String(r.license).toUpperCase()} ${r.license_version || ''}`.trim() : '라이선스 확인 필요';
+  credit.append(`${r.title || '제목 없음'} — ${r.creator || '작가 미상'} · ${lic} `);
+  if (r.foreign_landing_url) { const a = d.createElement('a'); a.href = r.foreign_landing_url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = '원문'; credit.append(a); }
+  meta.append(tags, actions, credit);
+  el.append(pic, meta);
+  const update = (it, targets) => {
+    tags.textContent = ''; actions.textContent = '';
+    const tag = (t, cls) => { const s = d.createElement('span'); s.className = 'tag' + (cls ? ' ' + cls : ''); s.textContent = t; tags.append(s); };
+    if (it.failed) { tag('사이트가 막아서 비교 못 함', 'dim'); return; }
+    if (!it.people || !it.people.length) { tag('사람 관절 못 찾음', 'dim'); return; }
+    const pct = simPercent(it.sim);
+    tag(`자세 ${pct}% 비슷`, pct >= 60 ? 'good' : '');
+    tag(`${it.people.length}명`, it.people.length === targets.length ? 'good' : 'dim');
+    drawSkeleton(win, pic, it.people);
+    targets.forEach(t => {
+      const b = d.createElement('button'); b.type = 'button';
+      b.textContent = `${t.letter}에게 이 자세`;
+      b.addEventListener('click', () => usePoseFromReference(win, it, t.letter));
+      actions.append(b);
+    });
+  };
+  return { el, update };
+}
+function drawSkeleton(win, pic, people) {
+  const NS = 'http://www.w3.org/2000/svg', d = win.document;
+  const svg = d.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none');
+  const colors = ['#2F5FBF', '#D2541F'];
+  people.forEach((p, k) => LM_LINES.forEach(([a, b]) => {
+    const l = d.createElementNS(NS, 'line');
+    [['x1', p.lm[a].x], ['y1', p.lm[a].y], ['x2', p.lm[b].x], ['y2', p.lm[b].y]].forEach(([n, v]) => l.setAttribute(n, String(v * 100)));
+    l.setAttribute('stroke', colors[k % 2]); l.setAttribute('stroke-width', '1.2'); l.setAttribute('stroke-opacity', '.85'); l.setAttribute('vector-effect', 'non-scaling-stroke');
+    svg.append(l);
+  }));
+  // 사진이 칸에 맞춰 잘려 보이므로(cover) 같은 비율로 맞춤
+  const img = pic.querySelector('img');
+  const fit = () => {
+    const W = img.naturalWidth, H = img.naturalHeight, bw = pic.clientWidth, bh = pic.clientHeight;
+    if (!W || !H || !bw) return;
+    const k = Math.max(bw / W, bh / H), w = W * k, h = H * k;
+    Object.assign(svg.style, { left: `${(bw - w) / 2}px`, top: `${(bh - h) / 2}px`, width: `${w}px`, height: `${h}px` });
+  };
+  if (img.complete) fit(); else img.addEventListener('load', fit);
+  pic.append(svg);
+}
+function usePoseFromReference(win, it, letter) {
+  const i = slots.findIndex(s => s.letter === letter && s.vrm);
+  if (i < 0) return;
+  const p = it.people[it.match && it.match[letter] !== undefined ? it.match[letter] : 0];
+  sel = i; syncUI(); selectTab('ai');
+  openPoseEditor(it.img, p.lm, p.world);
+  win.document.getElementById('state').textContent = `원래 탭으로 돌아가면 ${letter}에게 적용할 점 편집 창이 열려 있어요.`;
+  try { window.focus(); } catch (e) { /* 브라우저가 탭 전환을 막으면 무시 */ }
+}
+$('refRun').addEventListener('click', () => {
+  const text = $('refText').value.trim();
+  if (!text) { say('어떤 장면인지 적어 주세요.'); return; }
+  const info = referenceQueries(text);
+  const win = openReferenceTab(info); // 클릭 바로 안에서 열어야 팝업 차단에 안 걸림
+  if (!win) return;
+  $('refNote').textContent = `검색어: ${info.queries[0]} · 새 탭에서 결과를 확인하세요.`;
+  runReferenceSearch(win, info);
+});
+
+syncAI();
+
+// 테스트용 (주소 끝에 ?debug 를 붙였을 때만)
+if (new URLSearchParams(location.search).has('debug')) {
+  window.__rough = {
+    markerScreen(letter, b) {
+      const s = slots.find(x => x.letter === letter); const m = s && s.markers.find(x => x.userData.bone === b);
+      if (!m) return null;
+      const rect = renderer.domElement.getBoundingClientRect(); const p = m.position.clone().project(camera);
+      return { x: rect.left + (p.x + 1) / 2 * rect.width, y: rect.top + (1 - p.y) / 2 * rect.height };
+    },
+    pose(letter) { return JSON.parse(JSON.stringify(slots.find(x => x.letter === letter).pose)); },
+    damping() { return controls.enableDamping; },
+    slotXZ(letter) { const s = slots.find(x => x.letter === letter); return [s.x, s.z]; },
+    gizmoAxisAt(cx, cy) { return gizmoHit({ clientX: cx, clientY: cy, button: 0 }) ? tc.axis : null; },
+    gizmo() { return gizmo ? { bone: gizmo.bone, mode: gizmo.mode, slot: gizmo.slot.letter } : null; },
+    world(letter, b) { const s = slots.find(x => x.letter === letter); const p = s.vrm.humanoid.getRawBoneNode(b).getWorldPosition(new THREE.Vector3()); return [p.x, p.y, p.z]; },
+    bones(letter) { return slots.find(x => x.letter === letter).markers.map(m => m.userData.bone); },
+    camTarget() { return controls.target.toArray(); },
+    pixelRatio() { return renderer.getPixelRatio(); },
+    selBone() { return bone; },
+    retarget(world, mirror) { retargetFromLandmarks(slots[sel], world, !!mirror); pushHistory(); syncUI(); },
+    openEditor(w, h, lm2d, world) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#ddd'; g.fillRect(0, 0, w, h); const img = new Image(); img.src = c.toDataURL(); return new Promise(r => { img.onload = () => { openPoseEditor(img, lm2d, world); r(true); }; }); },
+    bgKind() { return bgSpec ? (bgSpec.kind === 'fx' ? bgSpec.type : 'image') : 'paper'; },
+    slotState(letter) { const s = slots.find(x => x.letter === letter); return { x: s.x, z: s.z, rot: s.rot, look: s.look, emotion: s.expr.emotion, blink: s.expr.blink, hands: s.hands }; },
+    fov() { return camera.fov; },
+    shotSel() { return shotSel; },
+    look(letter, b, off) {
+      const s = slots.find(x => x.letter === letter); const p = s.vrm.humanoid.getRawBoneNode(b).getWorldPosition(new THREE.Vector3());
+      controls.target.copy(p); camera.position.set(p.x + off[0], p.y + off[1], p.z + off[2]); controls.update();
+    },
+    speeds() { return [controls.rotateSpeed, controls.panSpeed, controls.zoomSpeed]; },
+    refQueries(text) { return referenceQueries(text); },
+    mockDetector(byName) { poseLandmarker = { detect(img) { const k = Object.keys(byName).find(n => img.src.includes(n)); const ps = k ? byName[k] : []; return { landmarks: ps.map(p => p.lm), worldLandmarks: ps.map(p => p.world) }; } }; },
+    photoOpen() { return $('poseDlg').open; },
+  };
+}
+
+// ---------- 앱 연결 (주소에 ?embed 가 있을 때: 러프 도구 앱의 컷 편집 화면 안에서 실행) ----------
+// 앱은 같은 출처의 iframe으로 이 파일을 열고 window.roughEngine 을 직접 부른다.
+const EMBED = new URLSearchParams(location.search).has('embed');
+if (EMBED) {
+  document.body.classList.add('embed');
+  let changeCb = null, changeTimer = 0;
+  const notify = () => {
+    if (!changeCb) return;
+    clearTimeout(changeTimer);
+    changeTimer = setTimeout(() => changeCb(), 300);
+  };
+  const exportScene = () => ({
+    v: 1,
+    slots: JSON.parse(snapshot()),
+    camera: { pos: camera.position.toArray(), target: controls.target.toArray(), fov: camera.fov },
+    shot: shotSel,
+    aa: aaLevel,
+  });
+  function importScene(data) {
+    if (!data || data.v !== 1) return;
+    restoreSnap(JSON.stringify(data.slots.slice(0, slots.length)));
+    camera.fov = data.camera.fov; camera.updateProjectionMatrix();
+    camera.position.fromArray(data.camera.pos);
+    controls.target.fromArray(data.camera.target);
+    controls.update();
+    shotSel = data.shot || shotSel;
+    if (data.aa && data.aa !== aaLevel) { $('aa').value = String(data.aa); $('aa').dispatchEvent(new Event('change')); }
+    history.length = 0; future.length = 0; pushHistory();
+    syncUI();
+  }
+  async function addSecond(file) {
+    const b = makeSlot('B', 45);
+    b.rot = -20;
+    slots.push(b);
+    slots[0].x = Math.min(slots[0].x, -35);
+    applyPlacement(slots[0]);
+    if (!(await loadFile(b, file))) { slots.pop(); return false; }
+    return true;
+  }
+  window.roughEngine = {
+    /** ratio: [가로, 세로], models: { A?: File, B?: File }, scene: 저장된 장면 또는 null */
+    async load({ ratio, models, scene }) {
+      // 앱 창에서 만든 File은 이 창의 File과 달라서(instanceof 실패) 이 창의 File로 다시 감싼다
+      const own = (f) => (f ? new File([f], f.name) : null);
+      models = { A: own(models.A), B: own(models.B) };
+      cutRatio = ratio;
+      $('frameLabel').textContent = `컷 ${ratio[0]}:${ratio[1]}`;
+      layout();
+      if (models.A) await loadFile(slots[0], models.A);
+      if (models.A && models.B) await addSecond(models.B);
+      if (scene) importScene(scene); else shot(shotSel);
+      sel = 0; syncUI();
+      return { loaded: slots.filter(s => s.vrm).map(s => s.letter) };
+    },
+    exportScene,
+    /** 원고 화면용 작은 그림 */
+    thumbnail(maxWidth = 360) {
+      if (!slots.some(s => s.vrm) || !frameRect.w || !viewport.clientWidth) return null;
+      const scale = Math.min(1, maxWidth / Math.max(1, frameRect.w));
+      return renderCut({ scale, transparent: false, withFilter: true, hideBackground: false }).toDataURL('image/jpeg', 0.82);
+    },
+    onChange(cb) { changeCb = cb; },
+  };
+  // 바뀔 수 있는 모든 경로: 되돌리기 기록, 카메라 조작, 패널 입력
+  const basePush = pushHistory;
+  pushHistory = function () { basePush(); notify(); };
+  controls.addEventListener('end', notify);
+  document.addEventListener('input', notify, true);
+  document.addEventListener('change', notify, true);
+  document.addEventListener('click', notify, true);
+}
+
+// ---------- start ----------
+slots.push(makeSlot('A', 0));
+layout();
+syncUI();
+frame();
+</script>

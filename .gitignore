@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+.env.*
+*.log
+.DS_Store
+# 샘플 모델은 라이선스가 확인된 것(직접 만든 VRoid 모델)만 올린다
+public/models/*.vrm
+!public/models/README.md

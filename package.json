@@ -1,0 +1,31 @@
+{
+  "name": "webtoon-rough",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "러프 도구 - 3D 캐릭터로 웹툰 러프(초안)를 만드는 웹 도구",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc -b --noEmit"
+  },
+  "dependencies": {
+    "dexie": "^4.0.11",
+    "dexie-react-hooks": "^1.1.7",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "fake-indexeddb": "^6.0.0",
+    "typescript": "~5.8.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
+  }
+}
