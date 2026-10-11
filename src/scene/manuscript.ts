@@ -80,3 +80,11 @@ export function removePage(m: Manuscript, pageIndex: number): Manuscript {
   if (m.pages.length <= 1) return m;
   return { ...m, pages: m.pages.filter((_, i) => i !== pageIndex) };
 }
+
+/** 이름을 비워 두면 붙는 자동 이름: 임시1, 임시2 … (이미 쓴 번호 다음) */
+export const TEMP_PREFIX = '임시';
+export function nextTempName(existing: string[], prefix = TEMP_PREFIX): string {
+  const re = new RegExp(`^${prefix}\\s*(\\d+)$`);
+  const used = existing.map(t => re.exec(t.trim())?.[1]).filter(Boolean).map(Number);
+  return `${prefix}${used.length ? Math.max(...used) + 1 : 1}`;
+}

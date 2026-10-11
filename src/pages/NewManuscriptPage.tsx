@@ -6,7 +6,7 @@ import { HomeLayout } from '../components/HomeLayout';
 import { PageView } from '../components/PageView';
 import { CharacterEditor } from '../components/CharacterEditor';
 import { DEFAULT_PAGE_RATIO, DEFAULT_STYLE, TEMPLATES, describeTemplate, makePage } from '../scene/layout';
-import { newManuscript, newWork } from '../scene/manuscript';
+import { newManuscript, newWork, nextTempName } from '../scene/manuscript';
 import type { Format, FrameStyle, TemplateId, Work } from '../scene/types';
 import { db, sampleAvailable, saveManuscript, saveWork } from '../storage/db';
 
@@ -33,13 +33,20 @@ export function NewManuscriptPage() {
 
   const preview = useMemo(() => makePage(format, template, style, DEFAULT_PAGE_RATIO), [format, template, style]);
   const existing = works?.find(w => w.id === existingId) ?? null;
+  const autoWorkTitle = nextTempName(works?.map(w => w.title) ?? []);
 
-  async function create() {
+  /** quick = 작품 설정을 건너뛰고 임시 작품으로 바로 만들기. 제목·설명은 나중에 원고 화면 "작품 설정"에서 */
+  async function create(quick = false) {
     let work: Work;
-    if (mode === 'existing' && existing) work = existing;
-    else { work = draft; await saveWork(work); }
+    if (!quick && mode === 'existing' && existing) work = existing;
+    else {
+      const base = quick ? { ...newWork(), characters: draft.characters } : draft;
+      const allTitles = (await db.works.toArray()).map(w => w.title);
+      work = { ...base, title: base.title.trim() || nextTempName(allTitles) };
+      await saveWork(work);
+    }
     const count = (await db.manuscripts.where('workId').equals(work.id).count()) + 1;
-    const m = newManuscript({ title: title.trim() || `${count}화`, work, format, template, style, pageRatio: DEFAULT_PAGE_RATIO });
+    const m = newManuscript({ title: (quick ? '' : title.trim()) || `${count}화`, work, format, template, style, pageRatio: DEFAULT_PAGE_RATIO });
     await saveManuscript(m);
     navigate(`/m/${m.id}`);
   }
@@ -89,8 +96,10 @@ export function NewManuscriptPage() {
                 <p className="sub">처음 고른 틀은 나중에 바꿀 수 없어요. 테두리 굵기·색은 원고 화면에서도 고칠 수 있어요.</p>
               </div>
               <div className="actions">
+                <button type="button" className="btn" onClick={() => create(true)} title="작품 이름은 임시 이름으로 정하고, 제목·설명·등장인물은 나중에 적어요">설정 건너뛰고 바로 만들기</button>
                 <button type="button" className="btn primary" onClick={() => setStep(2)}>다음: 작품 설정</button>
               </div>
+              <p className="sub" style={{ textAlign: 'right' }}>건너뛰면 작품 이름이 "{autoWorkTitle}"처럼 자동으로 붙어요. 원고 화면의 "작품 설정"에서 언제든 바꿀 수 있어요.</p>
             </div>
             <div className="preview">
               <h3>미리보기</h3>
@@ -102,7 +111,7 @@ export function NewManuscriptPage() {
 
         {step === 2 && (
           <div style={{ display: 'grid', gap: 16 }}>
-            <label className="field">원고 제목 (비우면 "n화")<input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="예: 3화 카페 장면" /></label>
+            <label className="field">원고 제목 (비우면 "n화")<input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="비워 두면 1화, 2화…" /></label>
             <div className="choices">
               <button type="button" className="choice" aria-pressed={mode === 'new'} onClick={() => setMode('new')}>
                 <b>새 작품 만들기</b><small>세계관과 등장인물을 새로 입력해요</small>
@@ -123,8 +132,8 @@ export function NewManuscriptPage() {
             {mode === 'new' && (
               <>
                 <div style={{ display: 'grid', gap: 8 }}>
-                  <h2>세계관 <small className="sub">건너뛰기 가능</small></h2>
-                  <label className="field">작품 제목<input type="text" value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} /></label>
+                  <h2>세계관 <small className="sub">모두 비워도 돼요 · 나중에 적기</small></h2>
+                  <label className="field">작품 제목<input type="text" value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} placeholder={`비워 두면 "${autoWorkTitle}"`} /></label>
                   <label className="field">시대·장소·분위기<textarea rows={2} value={draft.world} onChange={e => setDraft({ ...draft, world: e.target.value })} placeholder="예: 현대 한국, 대학가 골목의 작은 카페. 잔잔하고 따뜻한 일상물" /></label>
                 </div>
                 <div style={{ display: 'grid', gap: 8 }}>
@@ -136,7 +145,7 @@ export function NewManuscriptPage() {
 
             <div className="actions">
               <button type="button" className="btn" onClick={() => setStep(1)}>이전</button>
-              <button type="button" className="btn primary" onClick={create} disabled={mode === 'existing' && !existing}>만들기</button>
+              <button type="button" className="btn primary" onClick={() => create()} disabled={mode === 'existing' && !existing}>만들기</button>
             </div>
           </div>
         )}

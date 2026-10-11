@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addPage, allCuts, clearCut, findCut, neighbourCutId, newManuscript, newWork, pasteScene, previousCut, updateCut } from './manuscript';
+import { addPage, allCuts, clearCut, findCut, neighbourCutId, newManuscript, newWork, nextTempName, pasteScene, previousCut, updateCut } from './manuscript';
 import { DEFAULT_PAGE_RATIO, DEFAULT_STYLE } from './layout';
 import type { EngineScene } from './types';
 
@@ -39,5 +39,13 @@ describe('원고 다루기', () => {
     const m = addPage(make('webtoon'));
     expect(m.pages).toHaveLength(1);
     expect(m.pages[0].cuts).toHaveLength(5);
+  });
+});
+
+describe('자동 이름', () => {
+  it('비어 있으면 임시1, 있으면 가장 큰 번호 다음', () => {
+    expect(nextTempName([])).toBe('임시1');
+    expect(nextTempName(['카페', '임시1', '임시 3'])).toBe('임시4');
+    expect(nextTempName(['임시작품'])).toBe('임시1');
   });
 });
