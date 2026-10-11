@@ -1,4 +1,6 @@
-# 러프 도구
+# posecut · 러프 도구
+
+체험판: https://ahncheer.github.io/posecut/
 
 VRoid로 만든 3D 캐릭터(VRM)를 불러와 포즈·표정·카메라를 잡고, 컷 틀에 맞춰 웹툰 러프(초안)를 만드는 웹 도구.
 
@@ -17,7 +19,7 @@ npm run build    # 배포용 빌드 → dist/
 
 `main` 브랜치에 push하면 GitHub Actions가 테스트 → 빌드 → GitHub Pages 배포를 한다.
 처음 한 번만 저장소 **Settings → Pages → Build and deployment → Source**를 **GitHub Actions**로 바꿔 둔다.
-주소: `https://<계정>.github.io/<저장소>/`
+주소: https://ahncheer.github.io/posecut/
 
 ## 구조
 
