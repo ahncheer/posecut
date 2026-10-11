@@ -68,6 +68,11 @@ export async function sampleAvailable(): Promise<boolean> {
   }
 }
 
+/** 원고를 지운다. 그 작품의 마지막 원고였으면 작품(설명·등장인물 설정)도 같이 지운다. */
 export async function deleteManuscript(id: string): Promise<void> {
-  await db.manuscripts.delete(id);
+  await db.transaction('rw', db.manuscripts, db.works, async () => {
+    const m = await db.manuscripts.get(id);
+    await db.manuscripts.delete(id);
+    if (m && (await db.manuscripts.where('workId').equals(m.workId).count()) === 0) await db.works.delete(m.workId);
+  });
 }

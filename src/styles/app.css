@@ -348,3 +348,11 @@ details.castedit { border-top: 1px solid var(--line); padding-top: 12px; display
 details.castedit > summary h3 { margin: 0; font-size: 15px; }
 details.castedit[open] > summary { margin-bottom: 12px; }
 .castorder { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-right: 6px; padding: 0 5px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-size: 11.5px; font-weight: 700; vertical-align: 1px; }
+/* 내 원고 목록: 줄마다 삭제 버튼 (마우스를 올리거나 키보드로 고르면 보임, 휴대폰은 항상) */
+.msrow { position: relative; }
+.msrow .msitem { padding-right: 40px; }
+.msdel { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer; opacity: 0; transition: opacity .12s; }
+.msrow:hover .msdel, .msdel:focus-visible { opacity: 1; }
+.msdel:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+.msdel:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (hover: none) { .msdel { opacity: 1; } }
