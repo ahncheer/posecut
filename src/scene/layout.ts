@@ -45,7 +45,8 @@ export function pageLayout(template: TemplateId, style: FrameStyle, ratio: [numb
   const area = { x: m, y: m, w: PAGE_W - 2 * m, h: height - 2 * m };
   const g = style.gutter;
   const rects =
-    template === 'four' ? rows(area, g, [1, 1, 1, 1], [1, 1, 1, 1])
+    template === 'custom' ? rows(area, g, [1], [1]) // 직접 그린 틀은 split.ts가 계산 (여기선 한 칸)
+    : template === 'four' ? rows(area, g, [1, 1, 1, 1], [1, 1, 1, 1])
     : template === 'three' ? rows(area, g, [1, 1, 1], [1, 1, 1])
     : template === 'bigTwo' ? rows(area, g, [2, 1], [1, 2])
     : rows(area, g, [1], [1]);
@@ -82,9 +83,14 @@ export function retemplatePage(page: Page, template: TemplateId, style: FrameSty
   const filled = page.cuts.filter(c => c.scene);
   const cuts = rects.map((rect, i) => {
     const src = filled[i];
-    return src ? { ...src, rect } : emptyCut(rect);
+    if (!src) return emptyCut(rect);
+    const c: Cut = { ...src, rect };
+    delete c.poly;
+    return c;
   });
-  return { page: { ...page, template, height, cuts }, lost: Math.max(0, filled.length - rects.length) };
+  const next: Page = { ...page, template, height, cuts };
+  delete next.split;
+  return { page: next, lost: Math.max(0, filled.length - rects.length) };
 }
 
 /** 이 페이지의 컷 틀 (예전 원고는 원고의 틀) */
@@ -104,9 +110,12 @@ export function cutRatio(rect: Rect): [number, number] {
   return r >= 1 ? [Math.round(r * 9 * 10) / 10, 9] : [9, Math.round((9 / r) * 10) / 10];
 }
 
+/** 틀 이름 (직접 그린 틀 포함) */
+export const templateLabel = (t: TemplateId): string => (t === 'custom' ? '직접 그린 틀' : TEMPLATES.find(x => x.id === t)?.label ?? '');
+
 export function describeTemplate(format: Format, template: TemplateId, ratio: [number, number]): string {
   const t = TEMPLATES.find(x => x.id === template);
   return format === 'page'
-    ? `${ratio[0]}:${ratio[1]} · ${t?.label ?? ''}`
+    ? `${ratio[0]}:${ratio[1]} · ${templateLabel(template)}`
     : `웹툰 세로 · ${t?.cuts ?? 0}컷으로 시작`;
 }

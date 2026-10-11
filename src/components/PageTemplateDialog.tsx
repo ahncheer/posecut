@@ -34,7 +34,8 @@ export function PageTemplateDialog({ open, mode, pageNumber, initial, style, rat
     <dialog ref={ref} onClose={onClose} aria-labelledby="ptdTitle">
       <form className="dlg" method="dialog" onSubmit={e => { e.preventDefault(); if (!same) onConfirm(value); }}>
         <h2 className="sect-title" id="ptdTitle">{mode === 'add' ? `${pageNumber}페이지 추가` : `${pageNumber}페이지 컷 틀 바꾸기`}</h2>
-        <TemplatePicker name="pageTemplate" format="page" style={style} ratio={ratio} value={value} onChange={setValue} labelledBy="ptdTitle" showDraw={false} />
+        <TemplatePicker name="pageTemplate" format="page" style={style} ratio={ratio} value={value} onChange={setValue} labelledBy="ptdTitle" showDraw={mode === 'add'} />
+        {mode === 'add' && value === 'custom' && <p className="sect-note">추가하면 바로 선을 그어 컷을 나누는 창이 열려요. 앞에 직접 그린 페이지가 있으면 그 모양에서 시작해요.</p>}
         {mode === 'change' && (
           <p className="sect-note" role="status" style={lost ? { color: 'var(--danger)' } : undefined}>
             {same ? '지금 틀이에요.' : lost ? `컷이 모자라서 뒤쪽 장면 ${lost}개가 사라져요. 되돌릴 수 없어요.` : '장면은 앞 컷부터 차례로 옮겨져요.'}

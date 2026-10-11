@@ -37,7 +37,8 @@ export interface Work {
 }
 
 export type Format = 'page' | 'webtoon';
-export type TemplateId = 'four' | 'three' | 'bigTwo' | 'one';
+/** custom = 직접 그린 틀 (Page.split) */
+export type TemplateId = 'four' | 'three' | 'bigTwo' | 'one' | 'custom';
 
 export interface FrameStyle {
   /** 컷 사이 여백 (페이지 단위) */
@@ -62,12 +63,17 @@ export interface EngineScene {
   aa: number;
 }
 
+/** 직접 그리기: 선 하나가 칸을 a(선의 음수 쪽)·b(양수 쪽)로 나눈다. 잎은 컷 id */
+export type SplitNode = { cut: string } | { line: [number, number, number, number]; a: SplitNode; b: SplitNode };
+
 export interface Cut {
   id: string;
   rect: Rect;
   scene: EngineScene | null;
   /** 원고 화면에 보여줄 작은 그림 (data URL) */
   thumb: string | null;
+  /** 직접 그린 틀의 네모가 아닌 컷 모양 (페이지 단위 꼭짓점). 없으면 rect 네모 */
+  poly?: [number, number][];
   /** 이 컷에 나오는 등장인물(slot). 없으면 모델이 있는 앞의 인물들 */
   cast?: SlotId[];
 }
@@ -76,6 +82,8 @@ export interface Page {
   id: string;
   /** 이 페이지의 컷 틀 (페이지마다 다를 수 있다). 예전 원고에는 없어서 선택 항목 */
   template?: TemplateId;
+  /** 직접 그린 틀: 선으로 칸을 나눈 나무 (template이 'custom'일 때) */
+  split?: SplitNode;
   /** 페이지 높이 (웹툰은 컷을 더하면 늘어난다) */
   height: number;
   cuts: Cut[];

@@ -8,12 +8,14 @@ export interface EngineCast { letter: string; name: string; gender: string; age:
 
 export interface RoughEngine {
   /** models: 자리 글자(A, B, C …)마다 VRM 파일 */
-  load(args: { ratio: [number, number]; models: Record<string, File | undefined>; scene: EngineScene | null; cast?: EngineCast[]; name?: string }): Promise<{ loaded: string[] }>;
+  load(args: { ratio: [number, number]; models: Record<string, File | undefined>; scene: EngineScene | null; cast?: EngineCast[]; name?: string; shape?: [number, number][] | null }): Promise<{ loaded: string[] }>;
   exportScene(): EngineScene;
   thumbnail(maxWidth?: number): string | null;
   onChange(cb: () => void): void;
   /** 엔진 안 버튼이 앱에 부탁하는 일. 'cast' = 등장인물 창 열기, 'remove' = 그 자리 인물을 이 컷에서 빼기 */
-  onAction?(cb: (a: { type: 'cast' } | { type: 'remove'; letter: string }) => void): void;
+  onAction?(cb: (a: { type: 'cast' | 'save' | 'preview' } | { type: 'remove'; letter: string }) => void): void;
+  /** 엔진 위쪽 안내 줄에 한 줄 띄우기 */
+  notice?(text: string): void;
 }
 
 export const ENGINE_URL = `${import.meta.env.BASE_URL}engine/cut-test.html?embed`;

@@ -2,6 +2,7 @@
 import type { Character, Cut, EngineScene, Format, FrameStyle, Manuscript, SlotId, TemplateId, Work } from './types';
 import { DEFAULT_IN_CUT, MAX_IN_CUT } from './types';
 import { appendWebtoonCut, makePage, retemplatePage, templateOf } from './layout';
+import { applySplit, cloneSplit, splitFromTemplate } from './split';
 import { newId } from './id';
 
 export interface CutRef { pageIndex: number; cutIndex: number }
@@ -115,6 +116,14 @@ export function addPage(m: Manuscript, template?: TemplateId): Manuscript {
   if (m.format === 'webtoon') return { ...m, pages: m.pages.map((p, i) => (i === m.pages.length - 1 ? appendWebtoonCut(p, m.style) : p)) };
   const last = m.pages[m.pages.length - 1];
   const t = template ?? (last ? templateOf(last, m.template) : m.template);
+  if (t === 'custom') {
+    // 직접 그린 틀: 마지막 직접 그린 페이지와 같은 모양 (없으면 기본 4컷 모양에서 시작)
+    const src = [...m.pages].reverse().find(p => p.split);
+    const blank = makePage(m.format, 'four', m.style, m.pageRatio);
+    const split = src?.split ? cloneSplit(src.split) : splitFromTemplate('four', m.style, m.pageRatio, blank.cuts.map(c => c.id));
+    const page = applySplit(blank, split, m.style, m.pageRatio) ?? blank;
+    return { ...m, pages: [...m.pages, page] };
+  }
   return { ...m, pages: [...m.pages, makePage(m.format, t, m.style, m.pageRatio)] };
 }
 

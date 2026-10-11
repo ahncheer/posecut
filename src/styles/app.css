@@ -191,7 +191,8 @@ input.num:focus { background: var(--surface); }
 .tpl[data-disabled="true"] { opacity: .45; cursor: not-allowed; }
 .tplpic { height: 76px; display: grid; place-items: center; }
 .tplpic svg { max-height: 76px; width: auto; box-shadow: none; outline: 1px solid var(--line); }
-.tplpic-empty { width: 36px; border: 1px dashed var(--muted); border-radius: 3px; color: var(--muted); font-size: 16px; }
+.tplpic-empty { display: grid; place-items: center; width: 36px; height: 76px; border: 1px dashed var(--muted); border-radius: 3px; color: var(--muted); font-size: 16px; }
+.tplchange .tplpic-empty { height: 60px; }
 .tplname { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; white-space: nowrap; }
 .tplname input { margin: 0; width: 16px; height: 16px; accent-color: var(--accent); }
 
@@ -356,3 +357,37 @@ details.castedit[open] > summary { margin-bottom: 12px; }
 .msdel:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
 .msdel:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 @media (hover: none) { .msdel { opacity: 1; } }
+
+/* 직접 그리기 창: 왼쪽 큰 판, 오른쪽 도구 */
+dialog.drawdlg { width: min(1100px, calc(100% - 24px)); height: min(920px, calc(100vh - 24px)); max-height: none; }
+.draw { display: grid; grid-template-columns: minmax(0, 1fr) 290px; height: 100%; }
+.draw-stage { min-height: 0; display: grid; place-items: center; padding: 16px; background: var(--bg); border-right: 1px solid var(--line); }
+.draw-svg { height: 100%; max-height: 100%; max-width: 100%; touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; filter: drop-shadow(0 1px 4px rgba(0, 0, 0, .12)); }
+.draw-side { display: flex; flex-direction: column; gap: 14px; padding: 18px; min-height: 0; overflow: auto; }
+.draw-side .spacer { flex: 1; }
+.draw-count { font-size: 14px; color: var(--ink); font-weight: 600; }
+.draw-tools { display: grid; gap: 8px; }
+.draw-tools .btn { justify-content: flex-start; }
+.draw-msg { min-height: 3.2em; line-height: 1.5; }
+.check-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.check-row input { width: 17px; height: 17px; accent-color: var(--accent); margin: 0; }
+@media (max-width: 760px) {
+  .draw { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+  .draw-stage { border-right: 0; border-bottom: 1px solid var(--line); padding: 8px; }
+  .draw-side { padding: 12px; gap: 10px; }
+  .draw-msg { min-height: 0; }
+  .draw-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+  .draw-svg:focus { outline: none; }
+  .draw-side .spacer { display: none; }
+}
+.draw-svg:focus { outline: none; }
+
+/* 컷 편집: 페이지·컷 미리보기 */
+dialog.previewdlg { width: min(1040px, calc(100% - 24px)); }
+.pv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: start; }
+.pv figure { margin: 0; display: grid; gap: 8px; justify-items: center; }
+.pv figcaption { font-size: 13px; color: var(--muted); }
+.pv-page .pagesvg { max-height: 70vh; width: auto; height: auto; box-shadow: 0 1px 4px rgba(0, 0, 0, .12); }
+.pv-cutbox { width: 100%; max-height: 70vh; display: grid; place-items: center; background: var(--bg); border-radius: 8px; overflow: hidden; }
+.pv-cutbox img { width: 100%; height: 100%; object-fit: contain; display: block; }
+@media (max-width: 760px) { .pv { grid-template-columns: 1fr; } }

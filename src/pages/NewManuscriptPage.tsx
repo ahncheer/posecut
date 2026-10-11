@@ -9,8 +9,10 @@ import { TemplatePicker } from '../components/TemplatePicker';
 import { Stepper } from '../components/Stepper';
 import { Info } from '../components/Info';
 import { DEFAULT_PAGE_RATIO, DEFAULT_STYLE, describeTemplate, makePage } from '../scene/layout';
+import { applySplit } from '../scene/split';
+import { CutDrawDialog } from '../components/CutDrawDialog';
 import { newManuscript, newWork, nextEpisodeTitle, nextTempName, resolveTitle } from '../scene/manuscript';
-import type { Format, FrameStyle, TemplateId, Work } from '../scene/types';
+import type { Format, FrameStyle, SplitNode, TemplateId, Work } from '../scene/types';
 import { db, sampleAvailable, saveManuscript, saveWork } from '../storage/db';
 
 const clampNum = (v: string, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number(v) || 0));
@@ -26,6 +28,10 @@ export function NewManuscriptPage() {
   const [template, setTemplate] = useState<TemplateId>('four');
   const [style, setStyle] = useState<FrameStyle>(DEFAULT_STYLE);
   const [ratio, setRatio] = useState<[number, number]>(DEFAULT_PAGE_RATIO);
+  // 직접 그리기: 그린 틀과, 그리기를 시작할 틀(직전에 고른 정해진 틀)
+  const [firstSplit, setFirstSplit] = useState<SplitNode | null>(null);
+  const [drawOpen, setDrawOpen] = useState(false);
+  const [baseTpl, setBaseTpl] = useState<TemplateId>('four');
 
   const works = useLiveQuery(() => db.works.orderBy('updatedAt').reverse().toArray(), []);
 
@@ -36,7 +42,10 @@ export function NewManuscriptPage() {
     });
   }, []);
 
-  const preview = useMemo(() => makePage(format, template, style, ratio), [format, template, style, ratio]);
+  const basePage = useMemo(() => makePage(format, baseTpl, style, ratio), [format, baseTpl, style, ratio]);
+  const customPage = useMemo(() => (firstSplit && format === 'page' ? applySplit(makePage(format, 'one', style, ratio), firstSplit, style, ratio) : null), [firstSplit, format, style, ratio]);
+  const isCustom = template === 'custom' && format === 'page' && !!customPage;
+  const preview = useMemo(() => (isCustom && customPage ? customPage : makePage(format, template === 'custom' ? baseTpl : template, style, ratio)), [isCustom, customPage, format, template, baseTpl, style, ratio]);
   const existing = existingId ? works?.find(w => w.id === existingId) ?? null : null;
   const workHint = nextTempName(works?.map(w => w.title) ?? []);
 
@@ -49,7 +58,9 @@ export function NewManuscriptPage() {
       await saveWork(work);
     }
     const inWork = (await db.manuscripts.where('workId').equals(work.id).toArray()).map(x => x.title);
-    const m = newManuscript({ title: nextEpisodeTitle(inWork), work, format, template, style, pageRatio: ratio });
+    const useTpl = template === 'custom' && !isCustom ? baseTpl : template;
+    const m = newManuscript({ title: nextEpisodeTitle(inWork), work, format, template: useTpl, style, pageRatio: ratio });
+    if (isCustom && firstSplit) m.pages[0] = applySplit(m.pages[0], firstSplit, style, ratio) ?? m.pages[0];
     await saveManuscript(m);
     navigate(`/m/${m.id}`);
   }
@@ -162,7 +173,23 @@ export function NewManuscriptPage() {
                   <h2 className="sect-title" id="sTpl">{format === 'page' ? '첫 페이지 컷 틀' : '처음 컷 구성'}</h2>
                   <Info text={format === 'page' ? '페이지를 추가할 때 다른 틀을 고를 수 있고, 원고 화면에서 페이지마다 바꿀 수도 있어요.' : '이 컷 수로 시작하고, 원고 화면에서 컷을 더할 수 있어요.'} />
                 </div>
-                <TemplatePicker name="template" format={format} style={style} ratio={ratio} value={template} onChange={setTemplate} labelledBy="sTpl" />
+                <TemplatePicker
+                  name="template" format={format} style={style} ratio={ratio} value={isCustom ? 'custom' : template === 'custom' ? baseTpl : template}
+                  onChange={t => { if (t !== 'custom') { setTemplate(t); setBaseTpl(t); } }}
+                  onDraw={() => setDrawOpen(true)}
+                  customPage={customPage}
+                  labelledBy="sTpl"
+                />
+                <CutDrawDialog
+                  open={drawOpen}
+                  page={isCustom && customPage ? customPage : basePage}
+                  fallback={baseTpl}
+                  style={style}
+                  ratio={ratio}
+                  title="첫 페이지 컷 직접 그리기"
+                  onClose={() => setDrawOpen(false)}
+                  onApply={root => { setFirstSplit(root); setTemplate('custom'); setDrawOpen(false); }}
+                />
               </section>
 
               <section className="sect" aria-labelledby="sStyle">

@@ -24,6 +24,13 @@ export function PageView({ page, style, width, selectedCutId, onSelect, onOpen, 
       {page.cuts.map((c, i) => {
         const sel = c.id === selectedCutId;
         const { x, y, w, h } = c.rect;
+        const d = c.poly ? `M${c.poly.map(pt => pt.join(' ')).join('L')}Z` : null;
+        const clipId = `clip-${page.id}-${c.id}`;
+        // 컷 번호는 컷 안쪽 왼쪽 위 꼭짓점 근처에
+        const corner = c.poly ? c.poly.reduce((a, b) => (b[0] + b[1] < a[0] + a[1] ? b : a)) : [x, y];
+        const cx = c.poly ? c.poly.reduce((a, b) => a + b[0], 0) / c.poly.length : x + w / 2;
+        const cy = c.poly ? c.poly.reduce((a, b) => a + b[1], 0) / c.poly.length : y + h / 2;
+        const numX = corner[0] + (cx - corner[0]) * 0.18 + 2, numY = corner[1] + (cy - corner[1]) * 0.18 + 10;
         return (
           <g
             key={c.id}
@@ -36,14 +43,18 @@ export function PageView({ page, style, width, selectedCutId, onSelect, onOpen, 
             onDoubleClick={onOpen ? () => onOpen(c.id) : undefined}
             onKeyDown={interactive ? (e) => { if (e.key === 'Enter') (onOpen ?? onSelect)?.(c.id); if (e.key === ' ') { e.preventDefault(); onSelect?.(c.id); } } : undefined}
           >
-            <rect x={x} y={y} width={w} height={h} fill="#F8F7F2" />
-            {c.thumb && <image href={c.thumb} x={x} y={y} width={w} height={h} preserveAspectRatio="xMidYMid slice" />}
-            {!c.thumb && interactive && <text className="hint" x={x + w / 2} y={y + h / 2 + 4} textAnchor="middle">장면 만들기</text>}
-            <rect x={x} y={y} width={w} height={h} fill="none" stroke={style.border.color} strokeWidth={style.border.width} />
+            {d && <clipPath id={clipId}><path d={d} /></clipPath>}
+            {sel && d && <path d={d} fill="none" stroke="#2F5FBF" strokeWidth={style.border.width + 7} strokeLinejoin="round" />}
+            {d ? <path d={d} fill="#F8F7F2" /> : <rect x={x} y={y} width={w} height={h} fill="#F8F7F2" />}
+            {c.thumb && <image href={c.thumb} x={x} y={y} width={w} height={h} preserveAspectRatio="xMidYMid slice" clipPath={d ? `url(#${clipId})` : undefined} />}
+            {!c.thumb && interactive && <text className="hint" x={cx} y={cy + 4} textAnchor="middle">장면 만들기</text>}
+            {d
+              ? <path d={d} fill="none" stroke={style.border.color} strokeWidth={style.border.width} strokeLinejoin="miter" />
+              : <rect x={x} y={y} width={w} height={h} fill="none" stroke={style.border.color} strokeWidth={style.border.width} />}
             {showNumbers && (
-              <text x={x + 6} y={y + 14} fontSize="10" fill="#5B5E62">{i + 1}</text>
+              <text x={d ? numX : x + 6} y={d ? numY : y + 14} fontSize="10" fill="#5B5E62">{i + 1}</text>
             )}
-            {sel && <rect x={x - 3} y={y - 3} width={w + 6} height={h + 6} fill="none" stroke="#2F5FBF" strokeWidth="2.5" rx="2" />}
+            {sel && !d && <rect x={x - 3} y={y - 3} width={w + 6} height={h + 6} fill="none" stroke="#2F5FBF" strokeWidth="2.5" rx="2" />}
           </g>
         );
       })}

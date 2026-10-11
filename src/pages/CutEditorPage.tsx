@@ -8,6 +8,7 @@ import { cutRatio } from '../scene/layout';
 import { ENGINE_URL, type EngineCast, type RoughEngine, waitForEngine } from '../engine/bridge';
 import { loadModelFile } from '../storage/db';
 import { CastDialog } from '../components/CastDialog';
+import { PreviewDialog } from '../components/PreviewDialog';
 import type { Character, SlotId } from '../scene/types';
 import { CUT_LETTERS } from '../scene/types';
 
@@ -23,6 +24,8 @@ export function CutEditorPage() {
   const [status, setStatus] = useState<Status>('불러오는 중…');
   const [castOpen, setCastOpen] = useState(false);
   const removeRef = useRef<(index: number) => void>(() => {});
+  const actionRef = useRef<(type: 'save' | 'preview') => void>(() => {});
+  const [preview, setPreview] = useState<{ big: string | null } | null>(null);
 
   /** 엔진에서 지금 장면과 작은 그림을 꺼내 저장. 엔진이 이미 사라졌으면 장면만(또는 아무것도) 저장하지 않는다. */
   const persist = useCallback(async (id: string) => {
@@ -77,12 +80,14 @@ export function CutEditorPage() {
         const models = Object.fromEntries(chosen.map((_, i) => [CUT_LETTERS[i], files[i] ?? undefined]));
         await eng.load({
           ratio: cutRatio(found.cut.rect), models, scene: found.cut.scene, cast,
+          shape: found.cut.poly ? found.cut.poly.map(([x, y]) => [(x - found.cut.rect.x) / found.cut.rect.w, (y - found.cut.rect.y) / found.cut.rect.h] as [number, number]) : null,
           name: `${ms.title}_${found.pageIndex + 1}페이지_컷${found.cutIndex + 1}`,
         });
         if (cancelled) return;
         engineRef.current = eng;
         eng.onAction?.(a => {
           if (a.type === 'cast') setCastOpen(true);
+          else if (a.type === 'save' || a.type === 'preview') actionRef.current(a.type);
           else if (a.type === 'remove') removeRef.current(CUT_LETTERS.indexOf(a.letter as typeof CUT_LETTERS[number]));
         });
         eng.onChange(() => {
@@ -138,6 +143,19 @@ export function CutEditorPage() {
       setApplying(false);
     }
   };
+  // 엔진의 저장 단추(Ctrl+S) · 페이지·컷 미리보기
+  actionRef.current = async (type) => {
+    window.clearTimeout(saveTimer.current);
+    await save();
+    if (type === 'save') {
+      const t = new Date();
+      engineRef.current?.notice?.(`저장했어요 · ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`);
+    } else {
+      let big: string | null = null;
+      try { big = engineRef.current?.thumbnail(1000) ?? null; } catch { big = null; }
+      setPreview({ big });
+    }
+  };
   // 엔진의 ✕ 버튼: 그 자리 인물을 이 컷에서만 뺀다
   removeRef.current = (index: number) => {
     if (!work || index < 0) return;
@@ -158,6 +176,18 @@ export function CutEditorPage() {
         </TopBar>
       </div>
       <iframe key={`${found.cut.id}/${modelKey}`} ref={frameRef} src={ENGINE_URL} title="컷 편집" />
+      {preview && (
+        <PreviewDialog
+          open
+          page={m.pages[found.pageIndex]}
+          pageNumber={found.pageIndex + 1}
+          cut={found.cut}
+          cutNumber={found.cutIndex + 1}
+          style={m.style}
+          big={preview.big}
+          onClose={() => setPreview(null)}
+        />
+      )}
       {work && (
         <CastDialog
           open={castOpen}

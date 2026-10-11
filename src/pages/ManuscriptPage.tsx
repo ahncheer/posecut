@@ -9,8 +9,10 @@ import { useManuscript } from '../storage/useManuscript';
 import { addPage, changePageTemplate, clearCut, findCut, pasteScene, previousCut, removePage, scenesLostByTemplate } from '../scene/manuscript';
 import { PageTemplateDialog } from '../components/PageTemplateDialog';
 import { TemplatePicker } from '../components/TemplatePicker';
-import type { FrameStyle, TemplateId } from '../scene/types';
-import { TEMPLATES, templateOf } from '../scene/layout';
+import type { FrameStyle, Page, TemplateId } from '../scene/types';
+import { templateLabel, templateOf } from '../scene/layout';
+import { applySplit } from '../scene/split';
+import { CutDrawDialog } from '../components/CutDrawDialog';
 import { cutRatio } from '../scene/layout';
 import { copyScene, readClip } from '../storage/clipboard';
 import { downloadJSON, toFile } from '../storage/file-io';
@@ -29,6 +31,8 @@ export function ManuscriptPage() {
   /** 페이지를 추가한 뒤 저장이 반영되면 그 페이지로 이동 */
   const [jumpTo, setJumpTo] = useState<number | null>(null);
   const [note, setNote] = useState('');
+  /** 직접 그리기 창을 연 페이지 번호(0부터) */
+  const [drawFor, setDrawFor] = useState<number | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -142,7 +146,7 @@ export function ManuscriptPage() {
           </details>
 
           <details className="panel fold" aria-label="틀 변경">
-            <summary><h2>틀 변경</h2><span className="fold-sum">{m.format === 'page' ? `${pageIndex + 1}페이지 · ${TEMPLATES.find(t => t.id === templateOf(page, m.template))?.label}` : '웹툰 세로'}</span></summary>
+            <summary><h2>틀 변경</h2><span className="fold-sum">{m.format === 'page' ? `${pageIndex + 1}페이지 · ${templateLabel(templateOf(page, m.template))}` : '웹툰 세로'}</span></summary>
             {m.format === 'page' ? (
               <TemplateChanger
                 key={`${page.id}/${templateOf(page, m.template)}`}
@@ -154,8 +158,10 @@ export function ManuscriptPage() {
                 onApply={async t => {
                   await update(x => changePageTemplate(x, pageIndex, t).manuscript);
                   setSelected(null);
-                  say(`${pageIndex + 1}페이지 틀을 "${TEMPLATES.find(x => x.id === t)?.label}"(으)로 바꿨어요.`);
+                  say(`${pageIndex + 1}페이지 틀을 "${templateLabel(t)}"(으)로 바꿨어요.`);
                 }}
+                customPage={page.split ? page : null}
+                onDraw={() => setDrawFor(pageIndex)}
               />
             ) : (
               <p className="sub">웹툰은 틀 대신 왼쪽 "+ 컷 추가"로 아래에 컷을 더해요.</p>
@@ -177,9 +183,28 @@ export function ManuscriptPage() {
           onConfirm={async t => {
             setJumpTo(m.pages.length);
             await update(x => addPage(x, t));
-            say(`${m.pages.length + 1}페이지를 "${TEMPLATES.find(x => x.id === t)?.label}" 틀로 추가했어요.`);
+            say(t === 'custom' ? `${m.pages.length + 1}페이지를 추가했어요. 선을 그어 컷을 나눠 보세요.` : `${m.pages.length + 1}페이지를 "${templateLabel(t)}" 틀로 추가했어요.`);
             setSelected(null);
             setTplDialog(null);
+            if (t === 'custom') setDrawFor(m.pages.length);
+          }}
+        />
+      )}
+      {m.format === 'page' && drawFor !== null && m.pages[drawFor] && (
+        <CutDrawDialog
+          open
+          page={m.pages[drawFor]}
+          fallback={m.template}
+          style={m.style}
+          ratio={m.pageRatio}
+          title={`${drawFor + 1}페이지 컷 직접 그리기`}
+          onClose={() => setDrawFor(null)}
+          onApply={async root => {
+            const i = drawFor;
+            await update(x => ({ ...x, pages: x.pages.map((p, j) => (j === i ? applySplit(p, root, x.style, x.pageRatio) ?? p : p)) }));
+            setDrawFor(null);
+            setSelected(null);
+            say(`${i + 1}페이지 컷을 직접 그린 틀로 바꿨어요.`);
           }}
         />
       )}
@@ -215,18 +240,19 @@ function TitleInput({ value, onSave }: { value: string; onSave: (v: string) => v
 }
 
 /** 오른쪽 "틀 변경": 지금 페이지의 틀을 골라 적용. 사라질 장면이 있으면 미리 알려준다 */
-function TemplateChanger({ pageNumber, current, style, ratio, lostFor, onApply }: {
+function TemplateChanger({ pageNumber, current, style, ratio, lostFor, onApply, onDraw, customPage }: {
   pageNumber: number; current: TemplateId; style: FrameStyle; ratio: [number, number];
   lostFor: (t: TemplateId) => number; onApply: (t: TemplateId) => void;
+  onDraw: () => void; customPage: Page | null;
 }) {
   const [value, setValue] = useState(current);
   const same = value === current;
   const lost = same ? 0 : lostFor(value);
   return (
     <div className="tplchange">
-      <TemplatePicker name="pageTemplateSide" format="page" style={style} ratio={ratio} value={value} onChange={setValue} showDraw={false} />
+      <TemplatePicker name="pageTemplateSide" format="page" style={style} ratio={ratio} value={value} onChange={t => { if (t !== 'custom') setValue(t); }} onDraw={onDraw} customPage={customPage} />
       <p className="sect-note" role="status" style={lost ? { color: 'var(--danger)' } : undefined}>
-        {same ? `${pageNumber}페이지의 지금 틀이에요.` : lost ? `컷이 모자라서 뒤쪽 장면 ${lost}개가 사라져요.` : '장면은 앞 컷부터 차례로 옮겨져요.'}
+        {same ? (current === 'custom' ? `${pageNumber}페이지는 직접 그린 틀이에요. "직접 그리기"를 누르면 선을 고칠 수 있어요.` : `${pageNumber}페이지의 지금 틀이에요.`) : lost ? `컷이 모자라서 뒤쪽 장면 ${lost}개가 사라져요.` : '장면은 앞 컷부터 차례로 옮겨져요.'}
       </p>
       <button
         type="button"
