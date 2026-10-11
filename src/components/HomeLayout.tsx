@@ -37,9 +37,9 @@ export function HomeLayout({ children }: { children: ReactNode }) {
             {list?.length === 0 && <p className="sub">아직 원고가 없어요.</p>}
             {list?.map(({ m, work }) => (
               <Link key={m.id} to={`/m/${m.id}`} className="msitem">
-                <b>{m.title || '제목 없음'}</b>
+                <span><b className="mswork">{work?.title || '작품 이름 없음'}</b> ({m.title || '제목 없음'})</span>
                 <small>
-                  {work?.title || '작품 이름 없음'} · {m.format === 'page' ? '페이지' : '웹툰'} {m.pages.reduce((n, p) => n + p.cuts.length, 0)}컷 · {ago(m.updatedAt)}
+                  {m.format === 'page' ? '페이지' : '웹툰'} {m.pages.reduce((n, p) => n + p.cuts.length, 0)}컷, {ago(m.updatedAt)}
                 </small>
               </Link>
             ))}

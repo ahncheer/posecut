@@ -26,7 +26,7 @@ export function WorkDialog({ work, open, onClose, onSave }: Props) {
       <form className="dlg" method="dialog" onSubmit={() => onSave(draft)}>
         <h2 id="workDlgTitle">작품 설정</h2>
         <label className="field">작품 제목<input type="text" value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} /></label>
-        <label className="field">시대·장소·분위기<textarea rows={2} value={draft.world} onChange={e => setDraft({ ...draft, world: e.target.value })} /></label>
+        <label className="field">작품 설명<textarea rows={2} value={draft.world} onChange={e => setDraft({ ...draft, world: e.target.value })} /></label>
         <h3>등장인물</h3>
         <CharacterEditor characters={draft.characters} onChange={characters => setDraft({ ...draft, characters })} />
         <div className="actions">

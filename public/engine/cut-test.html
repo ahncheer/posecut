@@ -84,7 +84,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .txt { width: 100%; min-height: 36px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; resize: vertical; }
 .colorin { width: 100%; min-height: 32px; padding: 0 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
 .ai-key, .ai-card { position: relative; display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
-.ai-card h3 { margin: 0; font-size: 14px; font-weight: 600; flex: 1; }
+.ai-card h3 { margin: 0; font-size: 14px; font-weight: 600; flex: 0 1 auto; }
+.ai-head .badge { margin-left: auto; }
 .ai-head { display: flex; align-items: center; gap: 8px; }
 .ai-key summary { cursor: pointer; font-size: 13px; color: var(--accent); }
 .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
@@ -96,7 +97,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .ai-card.unlocked .lock { display: none; }
 .bg-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .bg-grid button { padding: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--surface); cursor: pointer; aspect-ratio: 4 / 3; }
-.cast-row { display: grid; grid-template-columns: 28px 1fr 1fr; gap: 6px; align-items: center; }
+#castRows .cast-row { display: grid; grid-template-columns: 28px 1fr 1fr; gap: 6px; align-items: center; cursor: default; }
 #castRows { display: grid; gap: 6px; }
 .bg-grid img { width: 100%; height: 100%; object-fit: cover; display: block; }
 dialog.pose-edit { border: 0; border-radius: 12px; padding: 14px; max-width: min(92vw, 900px); background: var(--surface); color: var(--ink); }
@@ -130,7 +131,66 @@ select { width: 100%; min-height: 40px; border: 1px solid var(--line); border-ra
 }
 /* 앱 안에서 열릴 때: 모델·컷 비율은 앱(작품 설정·컷 틀)이 정하므로 숨긴다 */
 body.embed .brand, body.embed .top label[for="file"], body.embed #addB, body.embed #swap, body.embed #removeB,
-body.embed #ratio, body.embed #ratioTitle, body.embed #empty { display: none !important; }
+body.embed #ratio, body.embed #ratioTitle, body.embed #empty, body.embed #stripPanel, body.embed .not-embed { display: none !important; }
+body:not(.embed) .embed-only { display: none !important; }
+/* 숫자칸 오른쪽 초기화 버튼 */
+.field { grid-template-columns: 64px minmax(0, 1fr) 54px 26px; gap: 6px; }
+.field label { display: flex; align-items: center; gap: 3px; min-width: 0; }
+.reset { width: 26px; height: 26px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 6px; background: none; color: var(--muted); font-size: 15px; line-height: 1; cursor: pointer; }
+.reset:hover { background: var(--accent-soft); color: var(--accent); }
+.reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* ⓘ 설명 아이콘 + 떠 있는 설명 (마우스를 올리거나 키보드로 고르면 보임) */
+.info { display: inline-grid; place-items: center; flex: none; width: 16px; height: 16px; border: 1.5px solid currentColor; border-radius: 50%; color: var(--muted); font: italic 700 10px/1 Georgia, serif; cursor: help; vertical-align: -3px; opacity: .8; }
+.info::before { content: 'i'; }
+.info:hover, .info:focus-visible { color: var(--accent); opacity: 1; outline: none; }
+.hint { position: fixed; z-index: 50; max-width: 260px; padding: 7px 10px; border-radius: 8px; background: rgba(29, 31, 34, .94); color: #FFFFFF; font-size: 12px; line-height: 1.55; pointer-events: none; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
+.hint.short { white-space: nowrap; }
+.headrow { display: flex; align-items: center; gap: 8px; }
+.headrow h2 { flex: 1; }
+.panel h2 { display: flex; align-items: center; gap: 6px; }
+/* 접고 펴는 구역 */
+.fold { border-top: 1px solid var(--line); }
+.fold:first-child { border-top: 0; }
+.fold > summary { list-style: none; display: flex; align-items: center; gap: 6px; min-height: 40px; cursor: pointer; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::after { content: ''; margin-left: auto; width: 7px; height: 7px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg); margin-right: 4px; transition: transform .15s; }
+.fold[open] > summary::after { transform: rotate(-135deg); }
+.fold > summary h2 { font-size: 14px; color: var(--ink); font-weight: 600; }
+.fold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.foldbody { display: grid; gap: 10px; padding: 2px 0 12px; }
+.subfold { border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; }
+.subfold:first-child { border-top: 1px solid var(--line); }
+.subfold > summary h2 { font-size: 13px; font-weight: 500; }
+/* 관절 목록 (마우스를 올리면 화면의 점이 강조됨) */
+.bonepick { position: relative; }
+.bonebtn { width: 100%; min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.bonebtn:hover { border-color: var(--muted); }
+.bonebtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bonelist { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); max-height: 320px; overflow: auto; margin: 0; padding: 4px; list-style: none; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 8px 24px rgba(0, 0, 0, .14); }
+.bonelist .grp { padding: 6px 8px 2px; font-size: 11px; color: var(--muted); }
+.bonelist [role="option"] { padding: 6px 10px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+.bonelist [role="option"].hot { background: #FDF0C2; color: #6B4E00; }
+.bonelist [role="option"][aria-selected="true"] { font-weight: 600; color: var(--accent); }
+/* 팝업 */
+dialog.popup { border: 0; border-radius: 14px; padding: 0; width: min(92vw, 460px); background: var(--surface); color: var(--ink); }
+dialog.popup.wide { width: min(94vw, 720px); }
+dialog.popup::backdrop { background: rgba(0, 0, 0, .45); }
+.popbody { display: grid; gap: 10px; padding: 18px; }
+.pophead { display: flex; align-items: center; gap: 8px; }
+.pophead h3 { flex: 1; margin: 0; font-size: 17px; }
+.popactions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.searchrow { display: flex; gap: 8px; }
+.searchrow .txt { flex: 1; }
+dialog.popup .bg-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.hud.br { right: 10px; bottom: 10px; pointer-events: none; opacity: .85; }
+.castitem { position: relative; }
+.castitem .cast-row { padding-right: 40px; }
+.castitem .cast-row .meta { flex: 1; }
+.castitem .cast-row[aria-pressed="true"] { padding-right: 39px; }
+.castx { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); width: 28px; height: 28px; border: 0; border-radius: 6px; background: none; color: var(--muted); font-size: 13px; cursor: pointer; }
+.castx:hover { background: #FBE3E1; color: var(--danger); }
+.castx:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (pointer: coarse) { .hud.br { display: none; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
@@ -142,25 +202,32 @@ body.embed #ratio, body.embed #ratioTitle, body.embed #empty { display: none !im
     <button class="btn" id="redo" type="button" aria-label="다시 하기 (Ctrl+Y)" title="Ctrl+Y 또는 Ctrl+Shift+Z">↷ 다시 하기</button>
     <label class="btn" for="file">VRM 불러오기</label>
     <input id="file" class="vh" type="file" accept=".vrm">
-    <button class="btn primary" id="capture" type="button">이 컷 이미지로 저장</button>
+    <label class="btn" for="sceneFile" data-tip="저장해 둔 장면 파일(.json)을 불러와 지금 컷에 적용해요. 자세·표정·카메라·필터가 그대로 돌아와요.">파일 열기</label>
+    <input id="sceneFile" class="vh" type="file" accept=".json,application/json">
+    <button class="btn" id="saveScene" type="button" data-tip="자세·표정·배치·카메라·필터를 장면 파일(.json)로 저장해요. 다른 컷이나 다른 컴퓨터에서 '파일 열기'로 다시 쓸 수 있어요. 모델(VRM)은 파일에 들어가지 않아요.">파일 저장</button>
+    <button class="btn primary" id="capture" type="button">이미지 저장</button>
   </header>
   <p class="status" id="status" role="status" aria-live="polite">VRoid에서 내보낸 .vrm 파일을 불러와 시작해 주세요.</p>
 
   <div class="work">
     <aside class="panel" aria-label="등장인물">
-      <h2>이 컷의 등장인물</h2>
+      <div class="headrow"><h2>이 컷의 등장인물 <span class="info embed-only" tabindex="0" role="img" aria-label="설명" data-tip="'+ 인물 추가'에서 이 컷에 나올 인물을 고르고, 작품 등장인물을 새로 만들거나 이름·모델을 고칠 수 있어요. ✕는 이 컷에서만 빼요."></span></h2></div>
       <div id="cast" style="display: grid; gap: 8px"></div>
+      <p class="empty embed-only" id="castEmpty" hidden>이 컷에 나오는 인물이 없어요.</p>
+      <button class="btn small embed-only" id="castAdd" type="button">+ 인물 추가</button>
       <button class="btn small" id="addB" type="button">+ B 넣기 (VRM 선택)</button>
-      <div style="display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px">
+      <div id="placeBox" style="display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px">
         <h2 id="selName">A 배치</h2>
         <button class="btn small" id="swap" type="button">모델 교체 (포즈 유지)</button>
         <div class="field"><label for="posX">좌우</label><input id="posX" type="range" min="-150" max="150" step="1"><output for="posX" id="posXo"></output></div>
         <div class="field"><label for="posZ">앞뒤</label><input id="posZ" type="range" min="-150" max="150" step="1"><output for="posZ" id="posZo"></output></div>
+        <div class="field"><label for="posY">높이</label><input id="posY" type="range" min="-120" max="120" step="1"><output for="posY" id="posYo"></output></div>
         <div class="field"><label for="rotY">몸 방향</label><input id="rotY" type="range" min="-180" max="180" step="1"><output for="rotY" id="rotYo"></output></div>
-        <div class="field"><label for="presence">존재감</label><input id="presence" type="range" min="10" max="100" step="1"><output for="presence" id="presenceo"></output></div>
+        <div class="field"><label for="presence">존재감 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="낮출수록 인물이 회색으로 바래고 외곽선이 가늘고 옅어져요. 투명해지는 게 아니라, 뒤에 있는 인물이나 배경 인물처럼 덜 눈에 띄게 만드는 거예요. 100이 원래 모습이에요."></span></label><input id="presence" type="range" min="10" max="100" step="1"><output for="presence" id="presenceo"></output></div>
         <button class="btn small ghost" id="removeB" type="button" hidden>B 빼기</button>
       </div>
-      <p class="sub">VRM 파일을 화면 가운데로 끌어다 놓아도 선택한 인물의 모델이 바뀌어요.</p>
+      <p class="sub" id="moveHint">인물 몸을 끌면 바닥 위에서 옮겨져요.</p>
+      <p class="sub not-embed">VRM 파일을 화면 가운데로 끌어다 놓아도 선택한 인물의 모델이 바뀌어요.</p>
     </aside>
 
     <section class="stage" aria-label="컷 화면">
@@ -172,6 +239,7 @@ body.embed #ratio, body.embed #ratioTitle, body.embed #empty { display: none !im
           <button class="gbtn" id="gzRotate" type="button" aria-pressed="false">회전</button>
           <button class="gbtn" id="gzClose" type="button" aria-label="축 닫기 (Esc)">닫기</button>
         </div>
+        <div class="hud br" id="mouseHelp"><span class="pill">왼쪽 끌기: 화면 이동 · 오른쪽 끌기: 돌려 보기 · 휠: 확대</span></div>
         <div class="tip" id="tip" hidden></div>
         <div class="loading" id="loading" hidden>모델 불러오는 중…</div>
         <div class="loading" id="empty" style="background: rgba(248, 247, 242, .92)">
@@ -181,11 +249,17 @@ body.embed #ratio, body.embed #ratioTitle, body.embed #empty { display: none !im
             <label class="btn primary" for="file" style="background: #2F5FBF; border-color: #2F5FBF; color: #FFFFFF">VRM 파일 고르기</label>
           </div>
         </div>
+        <div class="loading" id="emptyEmbed" hidden style="background: rgba(248, 247, 242, .92)">
+          <div style="display: grid; gap: 12px; justify-items: center; text-align: center; padding: 16px; max-width: 360px">
+            <strong style="font-size: 16px">이 컷에 나오는 인물이 없어요</strong>
+            <button class="btn primary" id="emptyAdd" type="button" style="background: #2F5FBF; border-color: #2F5FBF; color: #FFFFFF">+ 인물 추가</button>
+          </div>
+        </div>
         <div class="drop" id="drop" hidden>여기에 놓으면 선택한 인물의 모델이 바뀌어요</div>
       </div>
-      <div class="panel">
+      <div class="panel" id="stripPanel">
         <h2>저장한 컷</h2>
-        <div class="strip" id="strip"><p class="empty" id="stripEmpty">아직 저장한 컷이 없어요. 위의 "이 컷 이미지로 저장"을 눌러보세요.</p></div>
+        <div class="strip" id="strip"><p class="empty" id="stripEmpty">아직 저장한 컷이 없어요.</p></div>
       </div>
     </section>
 
@@ -202,46 +276,54 @@ body.embed #ratio, body.embed #ratioTitle, body.embed #empty { display: none !im
         </div></div>
       </div>
 
-      <section id="p-pose" role="tabpanel" aria-labelledby="t-pose" style="display: grid; gap: 10px">
-        <h2>포즈 프리셋</h2>
-        <div class="chips" id="presets"></div>
-        <h2>관절 돌리기</h2>
-        <label class="vh" for="bone">관절 선택</label>
-        <select id="bone"></select>
-        <div class="field"><label for="rx">앞뒤</label><input id="rx" type="range" min="-180" max="180" step="1"><output for="rx" id="rxo"></output></div>
-        <div class="field"><label for="ry">돌리기</label><input id="ry" type="range" min="-180" max="180" step="1"><output for="ry" id="ryo"></output></div>
-        <div class="field"><label for="rz">옆으로</label><input id="rz" type="range" min="-180" max="180" step="1"><output for="rz" id="rzo"></output></div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap">
-          <button class="btn small" id="resetBone" type="button">이 관절 초기화</button>
-          <button class="btn small" id="resetPose" type="button">전체 초기화</button>
-        </div>
-        <p class="sub">왼쪽·오른쪽은 캐릭터 기준이에요. 화면에서 손·발·팔꿈치·무릎·머리 점을 끌면 자세가 바뀌고, 엉덩이 점을 끌면 바닥 위에서 위치가 옮겨져요. 팔꿈치·무릎은 사람처럼 한쪽으로만 굽고, 손발이 닿지 않으면 상체가 기울다가 몸 전체가 끌려와요.</p>
-        <h2>손가락</h2>
-        <div class="chips" id="handSide"></div>
-        <div class="chips" id="handPresets"></div>
-        <div class="field"><label for="fThumb">엄지</label><input id="fThumb" type="range" min="0" max="100" step="1"><output for="fThumb" id="fThumbo"></output></div>
-        <div class="field"><label for="fIndex">검지</label><input id="fIndex" type="range" min="0" max="100" step="1"><output for="fIndex" id="fIndexo"></output></div>
-        <div class="field"><label for="fMiddle">중지</label><input id="fMiddle" type="range" min="0" max="100" step="1"><output for="fMiddle" id="fMiddleo"></output></div>
-        <div class="field"><label for="fRing">약지</label><input id="fRing" type="range" min="0" max="100" step="1"><output for="fRing" id="fRingo"></output></div>
-        <div class="field"><label for="fLittle">새끼</label><input id="fLittle" type="range" min="0" max="100" step="1"><output for="fLittle" id="fLittleo"></output></div>
-        <div class="field"><label for="fSpread">벌리기</label><input id="fSpread" type="range" min="0" max="100" step="1"><output for="fSpread" id="fSpreado"></output></div>
-        <p class="sub" id="fingerNote">0은 쭉 편 상태, 100은 끝까지 굽힌 상태예요. 손 점을 누르면 그쪽 손이 선택돼요.</p>
+      <section id="p-pose" role="tabpanel" aria-labelledby="t-pose" style="display: grid; gap: 8px">
+        <details class="fold" id="foldPreset" open>
+          <summary><h2>포즈 프리셋</h2><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="누르면 선택한 인물이 그 자세가 돼요. 앉기·무릎 꿇기처럼 몸이 내려가는 자세는 발이 바닥에 닿도록 높이가 자동으로 맞춰져요."></span></summary>
+          <div class="foldbody"><div class="chips" id="presets"></div></div>
+        </details>
+        <details class="fold" id="foldJoint">
+          <summary><h2>관절 돌리기</h2><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="왼쪽·오른쪽은 캐릭터 기준이에요. 화면에서 손·발·팔꿈치·무릎·머리 점을 끌면 자세가 바뀌고, 엉덩이 점이나 몸을 끌면 바닥 위에서 위치가 옮겨져요. 팔꿈치·무릎은 사람처럼 한쪽으로만 굽고, 손발이 닿지 않으면 상체가 기울다가 몸 전체가 끌려와요. 목록에서 관절에 마우스를 올리면 화면의 그 점이 노란색으로 커져요. 지금 고른 관절은 주황색이에요."></span></summary>
+          <div class="foldbody">
+            <div class="bonepick" id="bonePick">
+              <button type="button" class="bonebtn" id="boneBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="관절 선택"><span id="boneLabel">오른팔 위</span><span aria-hidden="true">▾</span></button>
+              <ul class="bonelist" id="boneList" role="listbox" aria-label="관절 목록" tabindex="-1" hidden></ul>
+            </div>
+            <div class="field"><label for="rx">앞뒤</label><input id="rx" type="range" min="-180" max="180" step="1"><output for="rx" id="rxo"></output></div>
+            <div class="field"><label for="ry">돌리기</label><input id="ry" type="range" min="-180" max="180" step="1"><output for="ry" id="ryo"></output></div>
+            <div class="field"><label for="rz">옆으로</label><input id="rz" type="range" min="-180" max="180" step="1"><output for="rz" id="rzo"></output></div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap">
+              <button class="btn small" id="resetBone" type="button">이 관절 초기화</button>
+              <button class="btn small" id="resetPose" type="button">전체 초기화</button>
+            </div>
+          </div>
+        </details>
+        <details class="fold" id="foldHand">
+          <summary><h2>손가락</h2><span class="info" tabindex="0" role="img" aria-label="설명" id="fingerNote" data-tip="0은 쭉 편 상태, 100은 끝까지 굽힌 상태예요. 손 점을 누르면 그쪽 손이 선택돼요."></span></summary>
+          <div class="foldbody">
+            <div class="chips" id="handSide"></div>
+            <div class="chips" id="handPresets"></div>
+            <div class="field"><label for="fThumb">엄지</label><input id="fThumb" type="range" min="0" max="100" step="1"><output for="fThumb" id="fThumbo"></output></div>
+            <div class="field"><label for="fIndex">검지</label><input id="fIndex" type="range" min="0" max="100" step="1"><output for="fIndex" id="fIndexo"></output></div>
+            <div class="field"><label for="fMiddle">중지</label><input id="fMiddle" type="range" min="0" max="100" step="1"><output for="fMiddle" id="fMiddleo"></output></div>
+            <div class="field"><label for="fRing">약지</label><input id="fRing" type="range" min="0" max="100" step="1"><output for="fRing" id="fRingo"></output></div>
+            <div class="field"><label for="fLittle">새끼</label><input id="fLittle" type="range" min="0" max="100" step="1"><output for="fLittle" id="fLittleo"></output></div>
+            <div class="field"><label for="fSpread">벌리기</label><input id="fSpread" type="range" min="0" max="100" step="1"><output for="fSpread" id="fSpreado"></output></div>
+          </div>
+        </details>
       </section>
 
       <section id="p-face" role="tabpanel" aria-labelledby="t-face" hidden style="display: grid; gap: 10px">
         <h2>감정</h2>
         <div class="chips" id="emotions"></div>
         <div class="field"><label for="emoW">세기</label><input id="emoW" type="range" min="0" max="100" step="1"><output for="emoW" id="emoWo"></output></div>
-        <div style="display: flex; align-items: center; gap: 8px"><h2 style="flex: 1">입 모양</h2><button class="chip" id="talk" type="button" aria-pressed="false">말하기 ▶</button></div>
+        <div class="headrow"><h2>입 모양 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="말하기를 켰다가 끄면 그 순간의 입모양이 남아요."></span></h2><button class="chip" id="talk" type="button" aria-pressed="false">말하기 ▶</button></div>
         <div class="chips" id="mouths"></div>
-        <p class="sub">말하기를 켰다가 끄면 그 순간의 입모양이 남아요.</p>
         <div class="field"><label for="blink">눈 감기</label><input id="blink" type="range" min="0" max="100" step="1"><output for="blink" id="blinko"></output></div>
         <h2>고개</h2>
         <div class="field"><label for="hx">숙이기</label><input id="hx" type="range" min="-45" max="45" step="1"><output for="hx" id="hxo"></output></div>
         <div class="field"><label for="hy">좌우</label><input id="hy" type="range" min="-70" max="70" step="1"><output for="hy" id="hyo"></output></div>
         <div class="field"><label for="hz">기울기</label><input id="hz" type="range" min="-40" max="40" step="1"><output for="hz" id="hzo"></output></div>
-        <h2>눈 움직임</h2>
-        <label class="check"><input type="checkbox" id="autoBlink">눈 깜빡이기 <span class="sub">(저장 이미지엔 안 들어가요)</span></label>
+        <h2>눈 움직임 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="점을 끌어 눈동자 방향을 정해요. 캐릭터를 정면에서 본 방향 그대로예요. 두 번 누르면 가운데로 돌아가요. 칸을 누르면 바라보기는 자동으로 꺼져요."></span></h2>
         <label class="check"><input type="checkbox" id="lookCam">카메라 바라보기</label>
         <label class="check"><input type="checkbox" id="lookOther">상대 바라보기</label>
         <div class="eyepads">
@@ -249,7 +331,6 @@ body.embed #ratio, body.embed #ratioTitle, body.embed #empty { display: none !im
           <figure><div class="eyepad" id="padL" tabindex="0" role="slider" aria-label="화면 오른쪽에 보이는 눈의 방향 (방향키로 조절)" aria-valuetext="가운데"><span class="dot"></span></div><figcaption>오른쪽에 보이는 눈</figcaption></figure>
         </div>
         <label class="check"><input type="checkbox" id="eyeLink">두 눈 같이 움직이기</label>
-        <p class="sub">점을 끌어 눈동자 방향을 정해요. 캐릭터를 정면에서 본 방향 그대로예요. 두 번 누르면 가운데로 돌아가요. 칸을 누르면 바라보기는 자동으로 꺼져요.</p>
       </section>
 
       <section id="p-cam" role="tabpanel" aria-labelledby="t-cam" hidden style="display: grid; gap: 10px">
@@ -264,25 +345,35 @@ body.embed #ratio, body.embed #ratioTitle, body.embed #empty { display: none !im
         </select>
         <h2>샷</h2>
         <div class="chips" id="shots"></div>
-        <div class="field"><label for="fov">화각</label><input id="fov" type="range" min="12" max="70" step="1"><output for="fov" id="fovo"></output></div>
-        <h2>카메라 조작</h2>
+        <div class="field"><label for="fov">화각 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="원근감의 세기예요. 숫자가 작을수록 멀리서 망원으로 찍은 듯 원근이 약해지고(평면적), 클수록 가까이서 광각으로 찍은 듯 원근이 강해져요. 바꿔도 인물 크기는 그대로 유지돼요. 0°는 카메라가 무한히 멀어져야 해서 만들 수 없고, 1°가 원근이 거의 없는 가장 평평한 상태예요."></span></label><input id="fov" type="range" min="1" max="90" step="1"><output for="fov" id="fovo"></output></div>
+        <h2>카메라 조작 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="왼쪽 끌기: 화면 이동 · 오른쪽 끌기: 돌려 보기 · 휠: 확대·축소. 인물 몸을 왼쪽으로 끌면 인물이 옮겨져요. 마우스를 멈추면 화면도 바로 멈춰요."></span></h2>
         <div class="field"><label for="sens">민감도</label><input id="sens" type="range" min="5" max="100" step="1"><output for="sens" id="senso"></output></div>
-        <p class="sub">왼쪽 드래그: 회전 · 오른쪽 또는 휠 버튼 드래그: 이동 · 휠: 확대. 마우스를 멈추면 화면도 바로 멈춰요.</p>
-        <h2>앤티앨리어싱</h2>
+        <h2>앤티앨리어싱 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="외곽선과 머리카락 가장자리의 계단 현상을 줄여요. 저장하는 이미지에도 같은 단계가 적용돼요."></span></h2>
         <label class="vh" for="aa">앤티앨리어싱 (계단 현상 줄이기)</label>
         <select id="aa">
           <option value="1">보통</option>
           <option value="1.5">높음 · 선이 더 매끈해요</option>
           <option value="2">아주 높음 · 컴퓨터에 따라 느릴 수 있어요</option>
         </select>
-        <p class="sub">외곽선과 머리카락 가장자리의 계단 현상을 줄여요. 저장하는 이미지에도 같은 단계가 적용돼요.</p>
-        <h2>전체 조명 (필터)</h2>
+        <h2>필터 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="휴대폰 카메라 필터처럼 밝기·대비·채도·색온도와 그림자·밝은 곳의 색을 함께 바꿔 시간대와 분위기를 만들어요(배경 포함). 저장하는 이미지에도 들어가요. 세부 조정에서 하나씩 바꿀 수 있어요."></span></h2>
         <div class="chips" id="filterPresets"></div>
-        <div class="field"><label for="filterColor">색</label><input id="filterColor" type="color" value="#ffffff" style="width: 100%; min-height: 32px; padding: 0 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface)"><span></span></div>
         <div class="field"><label for="filterAmt">세기</label><input id="filterAmt" type="range" min="0" max="100" step="1"><output for="filterAmt" id="filterAmto"></output></div>
-        <p class="sub">컷 전체에 색을 입혀요(배경 포함). 저장하는 이미지에도 들어가요.</p>
+        <details class="fold subfold">
+          <summary><h2>세부 조정</h2></summary>
+          <div class="foldbody">
+            <div class="field"><label for="fxBright">밝기</label><input id="fxBright" type="range" min="-60" max="60" step="1"><output for="fxBright" id="fxBrighto"></output></div>
+            <div class="field"><label for="fxContrast">대비</label><input id="fxContrast" type="range" min="-60" max="60" step="1"><output for="fxContrast" id="fxContrasto"></output></div>
+            <div class="field"><label for="fxSat">채도</label><input id="fxSat" type="range" min="-100" max="60" step="1"><output for="fxSat" id="fxSato"></output></div>
+            <div class="field"><label for="fxTemp">색온도 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="-쪽은 푸르고 차갑게, +쪽은 노랗고 따뜻하게."></span></label><input id="fxTemp" type="range" min="-100" max="100" step="1"><output for="fxTemp" id="fxTempo"></output></div>
+            <div class="field"><label for="fxFade">바램 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="검은 부분을 회색빛으로 띄워 오래된 사진이나 안개 낀 느낌을 줘요."></span></label><input id="fxFade" type="range" min="0" max="60" step="1"><output for="fxFade" id="fxFadeo"></output></div>
+            <div class="field"><label for="fxVig">비네팅 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="컷 가장자리를 어둡게 해서 시선을 가운데로 모아요."></span></label><input id="fxVig" type="range" min="0" max="100" step="1"><output for="fxVig" id="fxVigo"></output></div>
+            <div class="field"><label for="fxGrain">그레인 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="필름 사진 같은 자글자글한 입자를 얹어요."></span></label><input id="fxGrain" type="range" min="0" max="100" step="1"><output for="fxGrain" id="fxGraino"></output></div>
+            <div class="field"><label for="filterColor">색 입히기</label><input id="filterColor" type="color" value="#ffffff" class="colorin"><span></span></div>
+            <div class="field"><label for="fxTint">색 세기</label><input id="fxTint" type="range" min="0" max="100" step="1"><output for="fxTint" id="fxTinto"></output></div>
+          </div>
+        </details>
         <h2>보기</h2>
-        <label class="check"><input type="checkbox" id="showJoints" checked>관절 점 보기 (저장 이미지엔 안 나와요)</label>
+        <label class="check"><input type="checkbox" id="showJoints" checked>관절 점 보기 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="관절 점은 저장 이미지에는 나오지 않아요."></span></label>
         <label class="check"><input type="checkbox" id="showGrid" checked>바닥 격자</label>
         <label class="check"><input type="checkbox" id="transparent">배경 투명으로 저장</label>
       </section>
@@ -297,7 +388,7 @@ body.embed #ratio, body.embed #ratioTitle, body.embed #empty { display: none !im
           <details id="keyBox">
             <summary>API 키 등록·관리</summary>
             <div style="display: grid; gap: 8px; margin-top: 8px">
-              <label class="sub" for="apiKey">Google AI Studio에서 받은 Gemini API 키</label>
+              <label class="sub" for="apiKey">Google AI Studio에서 받은 Gemini API 키 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="키는 이 컴퓨터의 크롬 안에만 저장돼요. 파일·서버에는 남지 않고, 다른 컴퓨터나 브라우저에서는 다시 등록해야 해요. 한도(원)를 넘으면 키를 쓰는 기능이 멈춰요. 금액은 1달러 = 1,400원으로 계산한 예상치예요."></span></label>
               <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="AIza로 시작하는 키를 붙여넣기" class="txt">
               <div style="display: flex; gap: 8px; flex-wrap: wrap">
                 <button class="btn small" id="keySave" type="button">이 컴퓨터에 저장</button>
@@ -305,45 +396,40 @@ body.embed #ratio, body.embed #ratioTitle, body.embed #empty { display: none !im
               </div>
               <div class="field"><label for="aiLimit">월 한도</label><input id="aiLimit" type="range" min="0" max="10000" step="100"><output for="aiLimit" id="aiLimito"></output></div>
               <p class="sub" id="aiUsage">이번 달 사용: 0원 (0회)</p>
-              <p class="sub">키는 이 컴퓨터의 크롬 안에만 저장돼요. 파일·서버에는 남지 않고, 다른 컴퓨터나 브라우저에서는 다시 등록해야 해요. 한도(원)를 넘으면 키를 쓰는 기능이 멈춰요. 금액은 1달러 = 1,400원으로 계산한 예상치예요.</p>
             </div>
           </details>
         </div>
 
         <div class="ai-card">
-          <div class="ai-head"><h3>사진·그림으로 포즈</h3><span class="badge free">무료</span></div>
-          <p class="sub">사진이나 그림을 넣으면 사람 관절을 찾아 선택한 인물에 같은 자세를 적용해요. 적용 전에 점을 끌어 고칠 수 있어요. 사진은 컴퓨터 밖으로 나가지 않아요.</p>
+          <div class="ai-head"><h3>사진·그림으로 포즈</h3><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="사진이나 그림을 넣으면 사람 관절을 찾아 선택한 인물에 같은 자세를 적용해요. 적용 전에 점을 끌어 고칠 수 있어요. 사진은 컴퓨터 밖으로 나가지 않아요."></span><span class="badge free">무료</span></div>
           <label class="btn small" for="photoFile">사진·그림 고르기</label>
           <input id="photoFile" class="vh" type="file" accept="image/*">
         </div>
 
         <div class="ai-card">
-          <div class="ai-head"><h3>비슷한 포즈 레퍼런스 찾기</h3><span class="badge free">무료</span></div>
-          <p class="sub">장면을 적으면 캐릭터 설정을 붙여 검색하고, 새 탭에 사진을 띄워요. 사진 속 자세가 지금 화면 속 인물 자세와 비슷한 순으로 정렬돼요.</p>
-          <p class="sub" style="margin-bottom: -2px">캐릭터 설정 (검색어에 쓰여요)</p>
-          <div id="castRows"></div>
-          <label class="vh" for="refText">장면 설명</label>
-          <textarea id="refText" class="txt" rows="2" placeholder="예: A가 B 손목을 잡아 끌고 간다"></textarea>
-          <button class="btn small primary" id="refRun" type="button">새 탭에서 찾기</button>
-          <p class="sub" id="refNote" role="status"></p>
-        </div>
-
-        <div class="ai-card">
-          <div class="ai-head"><h3>말로 자세·장면 바꾸기</h3><span class="badge free">무료</span></div>
+          <div class="ai-head"><h3>말로 자세·장면 바꾸기</h3><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="'A 오른팔 조금 올리고 고개 왼쪽으로'처럼 적으면 그대로 바꿔요. 아래 예시를 눌러 보세요."></span><span class="badge free">무료</span></div>
           <label class="vh" for="cmdText">명령</label>
           <textarea id="cmdText" class="txt" rows="2" placeholder="A 오른팔 조금 올리고 고개 왼쪽으로"></textarea>
-          <div class="chips" id="cmdExamples"></div>
-          <label class="check"><input type="checkbox" id="cmdUseAI" disabled><span>AI로 해석 (자유로운 문장도 이해 · 1회 약 0.3원 · 키 필요)</span></label>
+          <details class="fold subfold" id="foldCmdEx">
+            <summary><h2>예시</h2><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="예시를 누르면 위 입력칸에 들어가요. 고쳐서 '적용'을 누르세요."></span></summary>
+            <div class="foldbody"><div class="chips" id="cmdExamples"></div></div>
+          </details>
+          <label class="check"><input type="checkbox" id="cmdUseAI" disabled><span>AI로 해석 · 1회 약 0.3원</span><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="자유로운 문장도 이해해요. API 키가 필요해요."></span></label>
           <button class="btn small primary" id="cmdRun" type="button">적용</button>
           <p class="sub" id="cmdResult" role="status"></p>
         </div>
 
         <div class="ai-card">
-          <div class="ai-head"><h3>카메라 앵글 제안</h3><span class="badge free">무료</span></div>
+          <div class="ai-head"><h3>비슷한 포즈 레퍼런스 찾기</h3><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="장면을 적으면 캐릭터 설정(성별·나이대)을 붙여 검색하고, 새 탭에 사진을 띄워요. 사진 속 자세가 지금 화면 속 인물 자세와 비슷한 순으로 정렬돼요."></span><span class="badge free">무료</span></div>
+          <button class="btn small" id="refOpen" type="button">레퍼런스 찾기 열기</button>
+        </div>
+
+        <div class="ai-card">
+          <div class="ai-head"><h3>카메라 앵글 제안</h3><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="'위압감 있게', '쓸쓸하게'처럼 분위기를 적으면 그에 맞는 샷과 화각으로 카메라를 바꿔요."></span><span class="badge free">무료</span></div>
           <label class="vh" for="moodText">장면 분위기</label>
           <input id="moodText" class="txt" placeholder="예: 위압감 있게, 쓸쓸하게, 긴장된 고백">
           <button class="btn small" id="moodRun" type="button">제안 받기</button>
-          <div class="chips" id="moodOut"></div>
+          <p class="sub" id="moodOut" role="status"></p>
         </div>
 
         <div class="ai-card">
@@ -355,21 +441,13 @@ body.embed #ratio, body.embed #ratioTitle, body.embed #empty { display: none !im
         </div>
 
         <div class="ai-card">
-          <div class="ai-head"><h3>세계관 배경 찾기</h3><span class="badge free">무료</span></div>
-          <p class="sub">CC 라이선스 이미지 모음(Openverse)에서 찾아요. 한국어 장소 단어는 영어로 바꿔 검색해요.</p>
-          <label class="vh" for="worldText">검색어 또는 세계관 설명</label>
-          <input id="worldText" class="txt" placeholder="예: 비 오는 밤 골목, 교실, 카페">
-          <div style="display: flex; gap: 8px; flex-wrap: wrap">
-            <button class="btn small" id="worldSearch" type="button">검색</button>
-            <button class="btn small" id="worldAI" type="button" disabled title="API 키 필요">세계관 설명으로 검색어 만들기 · 약 0.2원</button>
-          </div>
-          <div class="bg-grid" id="worldResults"></div>
-          <p class="sub" id="worldCredit"></p>
+          <div class="ai-head"><h3>세계관 배경 찾기</h3><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="CC 라이선스 이미지 모음(Openverse)에서 배경으로 쓸 사진을 찾아요. 한국어 장소 단어는 영어로 바꿔 검색해요."></span><span class="badge free">무료</span></div>
+          <button class="btn small" id="worldOpen" type="button">배경 찾기 열기</button>
+          <p class="sub" id="worldNow"></p>
         </div>
 
         <div class="ai-card keyed">
-          <div class="ai-head"><h3>구도 맞춤 배경 생성</h3><span class="badge cost">1장 약 55원</span></div>
-          <p class="sub">지금 카메라 구도(높이·각도·원근)에 맞는 배경 그림을 만들어요. 인물은 그리지 않아요.</p>
+          <div class="ai-head"><h3>구도 맞춤 배경 생성</h3><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="지금 카메라 구도(높이·각도·원근)에 맞는 배경 그림을 만들어요. 인물은 그리지 않아요."></span><span class="badge cost">1장 약 55원</span></div>
           <label class="vh" for="genText">배경 설명</label>
           <input id="genText" class="txt" placeholder="예: 해 질 녘 학교 옥상, 만화풍 선화">
           <button class="btn small primary" id="genRun" type="button">배경 만들기</button>
@@ -378,14 +456,44 @@ body.embed #ratio, body.embed #ratioTitle, body.embed #empty { display: none !im
         </div>
 
         <div class="ai-card keyed">
-          <div class="ai-head"><h3>콘티 → 컷 나누기</h3><span class="badge cost">1회 약 0.5원</span></div>
-          <p class="sub">시나리오 글을 넣으면 컷을 나누고 컷마다 등장인물·샷을 제안해요. 여러 컷을 다루는 원고 화면용 기능이라 이 테스트(컷 하나)에서는 목록만 보여드려요.</p>
+          <div class="ai-head"><h3>콘티 → 컷 나누기</h3><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="시나리오 글을 넣으면 컷을 나누고 컷마다 등장인물·샷을 제안해요. 여러 컷을 다루는 원고 화면용 기능이에요."></span><span class="badge cost">1회 약 0.5원</span></div>
           <div class="lock"><span>API 키 등록 후 사용 가능<br><small>원고 화면에서 제공 예정</small></span><button class="btn small" type="button" data-open-key>키 등록하기</button></div>
         </div>
       </section>
     </aside>
   </div>
 </div>
+
+<dialog class="popup" id="refDlg" aria-labelledby="refDlgTitle">
+  <div class="popbody">
+    <div class="pophead"><h3 id="refDlgTitle">비슷한 포즈 레퍼런스 찾기</h3><button class="btn small ghost" type="button" data-close aria-label="닫기">✕</button></div>
+    <p class="sub">장면을 적으면 캐릭터 설정을 붙여 검색하고, 새 탭에 사진을 띄워요. 지금 자세와 비슷한 순으로 정렬돼요.</p>
+    <p class="sub" style="margin-bottom: -2px">캐릭터 설정 (검색어에 쓰여요)</p>
+    <div id="castRows"></div>
+    <label class="sub" for="refText">장면 설명</label>
+    <textarea id="refText" class="txt" rows="3" placeholder="예: A가 B 손목을 잡아 끌고 간다"></textarea>
+    <p class="sub" id="refNote" role="status"></p>
+    <div class="popactions"><button class="btn" type="button" data-close>닫기</button><button class="btn primary" id="refRun" type="button">새 탭에서 찾기</button></div>
+  </div>
+</dialog>
+
+<dialog class="popup wide" id="worldDlg" aria-labelledby="worldDlgTitle">
+  <div class="popbody">
+    <div class="pophead"><h3 id="worldDlgTitle">세계관 배경 찾기</h3><button class="btn small ghost" type="button" data-close aria-label="닫기">✕</button></div>
+    <p class="sub">CC 라이선스 이미지 모음(Openverse)에서 찾아요. 사진을 누르면 이 컷의 배경이 돼요.</p>
+    <label class="vh" for="worldText">검색어 또는 세계관 설명</label>
+    <div class="searchrow">
+      <input id="worldText" class="txt" placeholder="예: 비 오는 밤 골목, 교실, 카페">
+      <button class="btn primary" id="worldSearch" type="button">검색</button>
+    </div>
+    <button class="btn small" id="worldAI" type="button" disabled title="API 키 필요">세계관 설명으로 검색어 만들기 · 약 0.2원</button>
+    <div class="bg-grid" id="worldResults"></div>
+    <p class="sub" id="worldCredit"></p>
+    <div class="popactions"><button class="btn" type="button" data-close>닫기</button></div>
+  </div>
+</dialog>
+
+<div class="hint" id="hint" role="tooltip" hidden></div>
 
 <dialog class="pose-edit" id="poseDlg" aria-labelledby="poseDlgTitle">
   <div style="display: grid; gap: 10px">
@@ -464,7 +572,43 @@ const PRESETS = [
   ['만세', { leftUpperArm: { x: 0, y: 0, z: 70 }, rightUpperArm: { x: 0, y: 0, z: -70 }, head: { x: -8, y: 0, z: 0 } }],
   ['걷기', { leftUpperArm: { x: 18, y: 0, z: -72 }, rightUpperArm: { x: -18, y: 0, z: 72 }, leftLowerArm: { x: 0, y: 0, z: -8 }, rightLowerArm: { x: 0, y: 0, z: 8 }, leftUpperLeg: { x: -24, y: 0, z: 0 }, leftLowerLeg: { x: 6, y: 0, z: 0 }, rightUpperLeg: { x: 18, y: 0, z: 0 }, rightLowerLeg: { x: 30, y: 0, z: 0 }, spine: { x: 0, y: 4, z: 0 } }],
   ['고개 숙이기', { ...ARMS_DOWN, neck: { x: 10, y: 0, z: 0 }, head: { x: 20, y: 0, z: 0 } }],
+  ...EXTRA_PRESETS(),
 ];
+// 왼쪽 기준 값을 주면 오른쪽은 y·z 부호를 뒤집어 같은 동작을 만든다
+function mirrorPose(p) {
+  const out = {};
+  for (const [k, r] of Object.entries(p)) {
+    const m = k.startsWith('left') ? 'right' + k.slice(4) : k.startsWith('right') ? 'left' + k.slice(5) : k;
+    out[m] = k === m ? r : { x: r.x, y: -r.y, z: -r.z };
+  }
+  return out;
+}
+function both(p) { return { ...p, ...mirrorPose(Object.fromEntries(Object.entries(p).filter(([k]) => k.startsWith('left')))) }; }
+function EXTRA_PRESETS() {
+  const R = (x, y, z) => ({ x, y, z });
+  const fist = { thumb: 75, index: 100, middle: 100, ring: 100, little: 100, spread: 0 };
+  const point = { thumb: 70, index: 0, middle: 100, ring: 100, little: 100, spread: 0 };
+  const grip = { thumb: 45, index: 55, middle: 60, ring: 62, little: 65, spread: 10 };
+  const open = { thumb: 0, index: 0, middle: 0, ring: 0, little: 0, spread: 60 };
+  return [
+    // 팔 값은 손·팔꿈치 목표 위치에 맞춰 계산한 값 (?debug 의 evalPose로 찾음)
+    ['팔짱', { leftUpperArm: R(-9, -63, -65), leftLowerArm: R(0, -99, -11), rightUpperArm: R(-14, 66, 70), rightLowerArm: R(0, 83, 10) }, { hands: { left: grip, right: grip } }],
+    ['허리에 손', both({ leftUpperArm: R(69, -39, -22), leftLowerArm: R(0, -89, -1), leftHand: R(0, 0, 15) })],
+    ['가리키기', { leftUpperArm: R(0, 0, -72), leftLowerArm: R(0, 0, -6), rightUpperArm: R(-82, 0, 84), rightLowerArm: R(0, 0, 0), chest: R(0, -6, 0), head: R(0, -6, 0) }, { hands: { right: point } }],
+    ['생각하기', { leftUpperArm: R(-10, -60, -70), leftLowerArm: R(0, -92, -15), rightUpperArm: R(-47, 21, 95), rightLowerArm: R(0, 136, 12), head: R(8, 0, 6) }, { hands: { left: grip, right: { ...grip, index: 30 } } }],
+    ['전화하기', { leftUpperArm: R(0, 0, -72), leftLowerArm: R(0, 0, -6), rightUpperArm: R(-91, 10, 77), rightLowerArm: R(0, 150, 2), head: R(0, 0, -8) }, { hands: { right: grip } }],
+    ['손 내밀기', { leftUpperArm: R(0, 0, -72), leftLowerArm: R(0, 0, -6), rightUpperArm: R(-45, 0, 72), rightLowerArm: R(0, 28, 0), spine: R(4, 0, 0) }],
+    ['놀람', both({ leftUpperArm: R(-16, -10, -67), leftLowerArm: R(0, -130, -2), head: R(-8, 0, 0), spine: R(-6, 0, 0) }), { hands: { left: open, right: open } }],
+    ['인사', { ...ARMS_DOWN, spine: R(22, 0, 0), chest: R(16, 0, 0), neck: R(6, 0, 0), head: R(10, 0, 0) }],
+    ['기지개', both({ leftUpperArm: R(0, 0, 82), leftLowerArm: R(0, 0, 4), head: R(-16, 0, 0), chest: R(-8, 0, 0) })],
+    ['뒤돌아보기', { ...ARMS_DOWN, spine: R(0, 18, 0), chest: R(0, 22, 0), neck: R(0, 22, 0), head: R(0, 30, 0) }],
+    ['뛰기', { leftUpperArm: R(38, 0, -76), leftLowerArm: R(0, -88, 0), rightUpperArm: R(-42, 0, 76), rightLowerArm: R(0, 88, 0), leftUpperLeg: R(-48, 0, 0), leftLowerLeg: R(34, 0, 0), rightUpperLeg: R(26, 0, 0), rightLowerLeg: R(86, 0, 0), spine: R(10, 0, 0), head: R(-6, 0, 0) }, { hands: { left: fist, right: fist } }],
+    ['의자에 앉기', both({ leftUpperArm: R(-23, -12, -82), leftLowerArm: R(0, -30, -12), leftHand: R(0, 0, -15), leftUpperLeg: R(-88, 0, 0), leftLowerLeg: R(88, 0, 0) })],
+    ['쪼그려 앉기', both({ leftUpperArm: R(-48, 0, -70), leftLowerArm: R(0, -34, 0), leftUpperLeg: R(-122, 0, -6), leftLowerLeg: R(142, 0, 0), leftFoot: R(-18, 0, 0), spine: R(26, 0, 0), chest: R(8, 0, 0), head: R(-18, 0, 0) })],
+    ['무릎 꿇기', both({ leftUpperArm: R(-6, 0, -74), leftLowerArm: R(0, -10, 0), leftUpperLeg: R(-4, 0, 0), leftLowerLeg: R(92, 0, 0), leftFoot: R(30, 0, 0) })],
+    ['한쪽 무릎', { leftUpperArm: R(-20, 0, -74), leftLowerArm: R(0, -50, 0), rightUpperArm: R(0, 0, 74), rightLowerArm: R(0, 10, 0), leftUpperLeg: R(-88, 0, 0), leftLowerLeg: R(88, 0, 0), rightUpperLeg: R(4, 0, 0), rightLowerLeg: R(92, 0, 0), rightFoot: R(30, 0, 0) }],
+  ];
+}
 const EMOTIONS = [['neutral', '기본'], ['happy', '기쁨'], ['angry', '화남'], ['sad', '슬픔'], ['relaxed', '편안'], ['surprised', '놀람']];
 const MOUTHS = [['none', '없음'], ['aa', '아'], ['ih', '이'], ['ou', '우'], ['ee', '에'], ['oh', '오']];
 const MOUTH_KEYS = ['aa', 'ih', 'ou', 'ee', 'oh'];
@@ -483,8 +627,8 @@ camera.position.set(0, 1.35, 2.2);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 1.25, 0);
 controls.enableDamping = false; // 관성 없음: 마우스가 멈추면 화면도 즉시 멈춤
-// 왼쪽 드래그: 회전 · 가운데(휠) 버튼 드래그: 화면 이동 · 오른쪽 드래그: 화면 이동 · 휠: 확대
-controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.PAN };
+// 왼쪽 드래그: 화면 이동 · 오른쪽 드래그: 돌려 보기 · 가운데(휠) 버튼 드래그: 화면 이동 · 휠: 확대
+controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE };
 renderer.domElement.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); }); // 휠 클릭 자동 스크롤 막기
 let sens = 35;
 { const v = Number(store.get('rough.camSens', '')); if (v >= 5 && v <= 100) sens = v; }
@@ -597,30 +741,97 @@ function applyAA() {
 }
 applyAA();
 
-// ---------- 전체 조명(필터): 화면 전체에 색을 곱해서 입힘 ----------
+// ---------- 필터: 휴대폰 카메라 필터처럼 밝기·대비·채도·색온도·그림자/밝은 곳 색·바램·비네팅·그레인 ----------
+// 그린 화면을 텍스처로 복사한 뒤 셰이더로 한 번에 보정한다. 저장 이미지에도 똑같이 적용된다.
+const FILTER_KEYS = ['bright', 'contrast', 'sat', 'temp', 'fade', 'vig', 'grain', 'tintAmt'];
+const NO_FILTER = { bright: 0, contrast: 0, sat: 0, temp: 0, fade: 0, vig: 0, grain: 0, tint: '#ffffff', tintAmt: 0, shadow: '#808080', high: '#808080', split: 0, mono: 0 };
+// [키, 이름, 설정]  shadow·high: 그림자·밝은 곳에 섞을 색, split: 그 세기
 const FILTER_PRESETS = [
-  ['none', '없음', '#ffffff', 0],
-  ['sunset', '노을', '#ff9a5c', 45],
-  ['night', '밤', '#5b74b8', 55],
-  ['sepia', '회상', '#c9a27a', 50],
-  ['fluor', '형광등', '#d6ecff', 30],
-  ['cloudy', '흐린 날', '#b9bdc2', 35],
-  ['horror', '공포', '#8fb58a', 50],
+  ['none', '없음', {}],
+  ['dawn', '새벽', { bright: -8, contrast: -12, sat: -30, temp: -45, fade: 14, shadow: '#3c4a8c', high: '#e8b4c8', split: 45, vig: 25 }],
+  ['morning', '아침', { contrast: -8, sat: 10, temp: 28, fade: 4, high: '#ffe2a8', shadow: '#6f8fc4', split: 45 }],
+  ['noon', '점심', { contrast: 18, sat: 24, high: '#fffbea', shadow: '#4f6f9e', split: 20 }],
+  ['evening', '저녁', { bright: -4, contrast: 8, sat: 12, temp: 60, shadow: '#5b3d7a', high: '#ffb066', split: 55, vig: 30 }],
+  ['night', '밤', { bright: -34, contrast: 6, sat: -40, temp: -60, shadow: '#16224d', high: '#9fb4e8', split: 50, vig: 45 }],
+  ['blue', '푸른색', { contrast: 4, sat: -10, temp: -60, tint: '#8fb4ff', tintAmt: 35, shadow: '#1f4f9a', high: '#cfe6ff', split: 40 }],
+  ['red', '붉은색', { contrast: 12, sat: 10, temp: 40, tint: '#ff5a4a', tintAmt: 30, shadow: '#6a0f1a', split: 35, vig: 35 }],
+  ['dark', '어둠', { bright: -48, contrast: 22, sat: -55, temp: -10, shadow: '#0b0d14', split: 30, vig: 70 }],
+  ['mono', '흑백', { contrast: 18, mono: 1 }],
+  ['memory', '회상', { bright: 4, contrast: -14, sat: -55, temp: 45, fade: 22, shadow: '#5a4632', high: '#f3dfbf', split: 40, vig: 40, grain: 25 }],
+  ['film', '필름', { contrast: -8, sat: -12, temp: 10, fade: 16, shadow: '#2f5a5a', high: '#f2d6a6', split: 35, grain: 40 }],
+  ['dreamy', '몽환', { bright: 6, contrast: -26, sat: -10, temp: -6, fade: 24, tint: '#ffc4e6', tintAmt: 25, high: '#ffd6ec', shadow: '#8a7ac4', split: 50 }],
+  ['vivid', '선명', { contrast: 20, sat: 40 }],
+  ['horror', '공포', { bright: -18, contrast: 26, sat: -50, temp: -10, tint: '#8fb58a', tintAmt: 45, vig: 60, grain: 30 }],
 ];
-const filter = { preset: 'none', color: '#ffffff', amt: 0 };
+const filter = { preset: 'none', amt: 100, ...NO_FILTER };
+function setFilterPreset(k) {
+  const p = FILTER_PRESETS.find(x => x[0] === k) || FILTER_PRESETS[0];
+  Object.assign(filter, NO_FILTER, p[2], { preset: p[0], amt: 100 });
+}
+const filterActive = () => filter.amt > 0 && (filter.mono || filter.split || FILTER_KEYS.some(k => filter[k]));
 const filterScene = new THREE.Scene();
 const filterCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-const filterMat = new THREE.MeshBasicMaterial({
-  color: 0xffffff, depthTest: false, depthWrite: false, toneMapped: false,
-  blending: THREE.CustomBlending, blendEquation: THREE.AddEquation,
-  blendSrc: THREE.ZeroFactor, blendDst: THREE.SrcColorFactor,       // 결과 = 화면색 × 필터색 (곱하기)
-  blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,   // 투명 배경은 그대로
+let filterTex = null;
+const filterMat = new THREE.ShaderMaterial({
+  depthTest: false, depthWrite: false, toneMapped: false, blending: THREE.NoBlending,
+  uniforms: {
+    tMap: { value: null }, res: { value: new THREE.Vector2(1, 1) }, frame: { value: new THREE.Vector4(0, 0, 1, 1) },
+    amt: { value: 1 }, bright: { value: 0 }, contrast: { value: 0 }, sat: { value: 0 }, temp: { value: 0 },
+    fade: { value: 0 }, vig: { value: 0 }, grain: { value: 0 }, tint: { value: new THREE.Color(1, 1, 1) }, tintAmt: { value: 0 },
+    shadow: { value: new THREE.Color(0.5, 0.5, 0.5) }, high: { value: new THREE.Color(0.5, 0.5, 0.5) }, split: { value: 0 }, mono: { value: 0 }, grainScale: { value: 1 },
+  },
+  vertexShader: 'void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader: `
+    uniform sampler2D tMap; uniform vec2 res; uniform vec4 frame;
+    uniform float amt, bright, contrast, sat, temp, fade, vig, grain, tintAmt, split, mono, grainScale;
+    uniform vec3 tint, shadow, high;
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main() {
+      vec2 uv = gl_FragCoord.xy / res;
+      vec4 c = texture2D(tMap, uv);
+      float a = c.a;
+      vec3 o = a > 0.0001 ? c.rgb / a : c.rgb;
+      vec3 x = o;
+      x *= 1.0 + bright;
+      x += vec3(0.10, 0.02, -0.10) * temp;
+      float l = dot(x, vec3(0.299, 0.587, 0.114));
+      x = mix(vec3(l), x, 1.0 + sat);
+      if (mono > 0.5) x = vec3(l);
+      x = (x - 0.5) * (1.0 + contrast) + 0.5;
+      l = clamp(dot(x, vec3(0.299, 0.587, 0.114)), 0.0, 1.0);
+      x += (shadow - 0.5) * split * (1.0 - l) * (1.0 - l) * 0.9;
+      vec3 hn = high / max(max(high.r, high.g), max(high.b, 0.001)); // 밝은 곳은 그 색 쪽으로 곱해서 (흰 종이도 물듦)
+      x *= mix(vec3(1.0), hn, split * l * l * 0.8);
+      x = mix(x, x * tint, tintAmt);
+      x = fade + x * (1.0 - fade);
+      vec2 p = (uv - (frame.xy + frame.zw * 0.5)) / (frame.zw * 0.5);
+      x *= 1.0 - vig * smoothstep(0.45, 1.45, length(p));
+      x += (hash(floor(gl_FragCoord.xy / grainScale)) - 0.5) * grain;
+      x = mix(o, clamp(x, 0.0, 1.0), amt);
+      gl_FragColor = vec4(x * a, a);
+    }`,
 });
 filterScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), filterMat));
-const WHITE = new THREE.Color(0xffffff), _filterTint = new THREE.Color();
+const _dbs = new THREE.Vector2();
 function renderFilter() {
-  if (filter.amt <= 0) return;
-  filterMat.color.copy(WHITE).lerp(_filterTint.set(filter.color), filter.amt / 100);
+  if (!filterActive()) return;
+  renderer.getDrawingBufferSize(_dbs);
+  if (!filterTex || filterTex.image.width !== _dbs.x || filterTex.image.height !== _dbs.y) {
+    if (filterTex) filterTex.dispose();
+    filterTex = new THREE.FramebufferTexture(_dbs.x, _dbs.y);
+  }
+  renderer.copyFramebufferToTexture(filterTex);
+  const u = filterMat.uniforms, pr = renderer.getPixelRatio();
+  const vw = renderer.domElement.width / pr, vh = renderer.domElement.height / pr;
+  u.tMap.value = filterTex;
+  u.res.value.set(_dbs.x, _dbs.y);
+  u.frame.value.set(frameRect.x / vw, 1 - (frameRect.y + frameRect.h) / vh, frameRect.w / vw, frameRect.h / vh);
+  u.amt.value = filter.amt / 100;
+  u.bright.value = filter.bright / 100; u.contrast.value = filter.contrast / 100; u.sat.value = filter.sat / 100;
+  u.temp.value = filter.temp / 100; u.fade.value = filter.fade / 100 * 0.5; u.vig.value = filter.vig / 100 * 0.85;
+  u.grain.value = filter.grain / 100 * 0.22; u.grainScale.value = Math.max(1, pr);
+  u.tint.value.set(filter.tint); u.tintAmt.value = filter.tintAmt / 100;
+  u.shadow.value.set(filter.shadow); u.high.value.set(filter.high); u.split.value = filter.split / 100; u.mono.value = filter.mono;
   const ac = renderer.autoClear;
   renderer.autoClear = false;
   renderer.render(filterScene, filterCam);
@@ -688,11 +899,16 @@ function applyFingers(slot) {
   }
 }
 
+const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+const MAX_SLOTS = LETTERS.length;
+const nextLetter = () => LETTERS.find(l => !slots.some(s => s.letter === l));
+// 여러 명을 겹치지 않게 가로로 벌려 세울 때의 위치(cm)
+const spreadX = (i, n) => Math.round((i - (n - 1) / 2) * Math.min(80, 260 / Math.max(1, n - 1)));
 function makeSlot(letter, x) {
-  return { letter, x, z: 0, rot: 0, presence: 100, vrm: null, file: '', pose: JSON.parse(JSON.stringify(ARMS_DOWN)), hands: { left: relaxedHand(), right: relaxedHand() }, expr: blankExpr(), look: 'camera',
-    eyes: { r: { x: 0, y: 0 }, l: { x: 0, y: 0 }, link: true }, autoBlink: true, blinkNext: 2 + Math.random() * 3, blinkT: -1, markers: [] };
+  return { letter, label: letter, x, y: 0, z: 0, rot: 0, presence: 100, vrm: null, file: '', pose: JSON.parse(JSON.stringify(ARMS_DOWN)), hands: { left: relaxedHand(), right: relaxedHand() }, expr: blankExpr(), look: 'manual',
+    eyes: { r: { x: 0, y: 0 }, l: { x: 0, y: 0 }, link: true }, autoBlink: false, blinkNext: 2 + Math.random() * 3, blinkT: -1, markers: [] };
 }
-const snapshot = () => JSON.stringify(slots.map(s => ({ x: s.x, z: s.z, rot: s.rot, presence: s.presence, pose: s.pose, hands: s.hands, expr: s.expr, look: s.look, eyes: s.eyes, autoBlink: s.autoBlink })));
+const snapshot = () => JSON.stringify(slots.map(s => ({ x: s.x, y: s.y || 0, z: s.z, rot: s.rot, presence: s.presence, pose: s.pose, hands: s.hands, expr: s.expr, look: s.look, eyes: s.eyes })));
 // 되돌리기 / 다시 하기: history 맨 위가 지금 상태, future는 되돌린 상태들
 const future = [];
 function pushHistory() {
@@ -703,7 +919,7 @@ function pushHistory() {
   syncUndoButtons();
 }
 function restoreSnap(json) {
-  JSON.parse(json).forEach((p, i) => { if (slots[i]) Object.assign(slots[i], JSON.parse(JSON.stringify(p))); });
+  JSON.parse(json).forEach((p, i) => { if (slots[i]) Object.assign(slots[i], JSON.parse(JSON.stringify(p)), { autoBlink: false }); });
   slots.forEach(applyAll);
   syncUI();
   if (typeof refreshGizmo === 'function') refreshGizmo();
@@ -749,6 +965,7 @@ async function loadInto(slot, source, label) {
     slot.file = label;
     scene.add(vrm.scene);
     buildMarkers(slot);
+    measureBody(slot);
     applyAll(slot);
     syncUI();
     return true;
@@ -763,6 +980,36 @@ async function loadInto(slot, source, label) {
 }
 
 const isVRM0 = (vrm) => vrm.meta && vrm.meta.metaVersion === '0';
+// 차렷 기준으로 발목 높이와 머리 꼭대기(머리카락 포함)가 머리 관절보다 얼마나 위인지 재 둔다
+const GROUND_BONES = ['leftFoot', 'rightFoot', 'leftToes', 'rightToes', 'leftLowerLeg', 'rightLowerLeg'];
+function boneY(slot, b) { const n = slot.vrm.humanoid.getRawBoneNode(b); return n ? n.getWorldPosition(tmp).y : null; }
+function measureBody(slot) {
+  const vrm = slot.vrm;
+  vrm.scene.position.set(0, 0, 0);
+  vrm.humanoid.resetNormalizedPose(); vrm.humanoid.update(); vrm.scene.updateMatrixWorld(true);
+  slot.rest = {};
+  GROUND_BONES.forEach(b => { const y = boneY(slot, b); if (y !== null) slot.rest[b] = y; });
+  const box = new THREE.Box3();
+  vrm.scene.traverse(o => { if (o.isMesh && o.geometry) { o.geometry.computeBoundingBox(); box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); } });
+  const head = boneY(slot, 'head');
+  slot.topOff = Number.isFinite(box.max.y) && head !== null ? Math.max(0.12, Math.min(0.5, box.max.y - head)) : 0.24;
+}
+// 자세를 바꾼 뒤 가장 낮은 발(또는 꿇은 무릎)이 바닥에 닿도록 높이를 맞춘다
+function groundSlot(slot) {
+  if (!slot.vrm || !slot.rest) return;
+  slot.y = 0; applyPlacement(slot);
+  slot.vrm.humanoid.update(); slot.vrm.scene.updateMatrixWorld(true);
+  let lift = Infinity;
+  for (const [b, restY] of Object.entries(slot.rest)) {
+    const y = boneY(slot, b); if (y === null) continue;
+    const floor = b.endsWith('LowerLeg') ? 0.07 : restY; // 무릎은 바닥에서 조금 위가 관절 중심
+    lift = Math.min(lift, y - floor);
+  }
+  if (!Number.isFinite(lift)) return;
+  slot.y = Math.round(-lift * 100);
+  if (Math.abs(slot.y) <= 1) slot.y = 0;
+  applyPlacement(slot);
+}
 function applyPose(slot) {
   const vrm = slot.vrm; if (!vrm) return;
   vrm.humanoid.resetNormalizedPose();
@@ -775,7 +1022,7 @@ function applyPose(slot) {
 }
 function applyPlacement(slot) {
   const vrm = slot.vrm; if (!vrm) return;
-  vrm.scene.position.set(slot.x / 100, 0, slot.z / 100);
+  vrm.scene.position.set(slot.x / 100, (slot.y || 0) / 100, slot.z / 100);
   vrm.scene.rotation.y = (vrm.scene.userData.baseRotY || 0) + D(slot.rot);
 }
 // 존재감: 투명하게 만들지 않고, 색을 회색 쪽으로 바래게 + 외곽선을 가늘고 옅게 (공기원근법 느낌)
@@ -823,7 +1070,8 @@ function applyPresence(slot) {
 }
 function applyLook(slot) {
   const vrm = slot.vrm; if (!vrm || !vrm.lookAt) return;
-  const other = slots.find(s => s !== slot && s.vrm);
+  const others = slots.filter(s => s !== slot && s.vrm);
+  const other = others.sort((a, b) => Math.hypot(a.x - slot.x, a.z - slot.z) - Math.hypot(b.x - slot.x, b.z - slot.z))[0];
   if (slot.look === 'camera') vrm.lookAt.target = camera;
   else if (slot.look === 'other' && other) vrm.lookAt.target = other.vrm.humanoid.getRawBoneNode('head');
   else { vrm.lookAt.target = null; vrm.lookAt.yaw = 0; vrm.lookAt.pitch = 0; }
@@ -872,7 +1120,13 @@ function updateSlot(s, dt, still) {
   s.vrm.update(dt);
   applyManualEyes(s);
 }
-function applyAll(slot) { applyPose(slot); applyPlacement(slot); applyPresence(slot); applyLook(slot); }
+// 머리카락·옷 흔들림(스프링 본)을 지금 자세에서 가만히 있는 상태로 (순간 이동 뒤 머리가 날리지 않게)
+function settleSprings(slot) {
+  const sb = slot.vrm && slot.vrm.springBoneManager; if (!sb) return;
+  slot.vrm.humanoid.update(); slot.vrm.scene.updateMatrixWorld(true);
+  sb.reset(); // 처음 모양으로 되돌리고, 지금 위치 기준으로 흔들림을 다시 시작
+}
+function applyAll(slot) { applyPose(slot); applyPlacement(slot); applyPresence(slot); applyLook(slot); settleSprings(slot); }
 
 function applyExpressions(slot, dt, still) {
   const em = slot.vrm && slot.vrm.expressionManager; if (!em) return;
@@ -889,7 +1143,7 @@ function applyExpressions(slot, dt, still) {
     slot.liveMouth = mouth;
   }
   MOUTH_KEYS.forEach(k => set(k, mouth[k] || 0));
-  const auto = still ? 0 : autoBlinkValue(slot, dt);
+  const auto = still || !slot.autoBlink ? 0 : autoBlinkValue(slot, dt);
   set('blink', Math.max(slot.expr.blink / 100, auto));
 }
 
@@ -912,6 +1166,7 @@ const tmp = new THREE.Vector3();
 // 점은 줌과 상관없이 화면에서 항상 같은 크기(반지름 px). 누르는 범위도 이 크기에 맞춤.
 const DOT_PX = 6, DOT_PX_ACTIVE = 8, PICK_PX = 15;
 let hoverMarker = null;
+let listHotBone = null; // 관절 목록에서 마우스를 올린 관절 (선택한 인물)
 function updateMarkers() {
   const show = $('showJoints').checked;
   const hPx = Math.max(1, renderer.domElement.clientHeight);
@@ -920,10 +1175,11 @@ function updateMarkers() {
     m.visible = show;
     m.userData.node.getWorldPosition(m.position);
     const active = i === sel && m.userData.bone === bone;
-    const hov = m === hoverMarker;
+    const hov = m === hoverMarker || (i === sel && m.userData.bone === listHotBone);
     const dist = camera.position.distanceTo(m.position);
-    m.scale.setScalar((active || hov ? DOT_PX_ACTIVE : DOT_PX) * dist * k);
-    m.material.color.set(active ? 0xd2541f : hov ? 0x1b3f8f : (i === sel ? 0x2f5fbf : 0x8a8d92));
+    const listHot = i === sel && m.userData.bone === listHotBone;
+    m.scale.setScalar((listHot ? DOT_PX_ACTIVE + 3 : active || hov ? DOT_PX_ACTIVE : DOT_PX) * dist * k);
+    m.material.color.set(listHot ? 0xf2b705 : active ? 0xd2541f : hov ? 0x1b3f8f : (i === sel ? 0x2f5fbf : 0x8a8d92));
     m.material.opacity = i === sel ? 0.95 : 0.55;
   }));
 }
@@ -1171,11 +1427,25 @@ function rayAt(e) {
   raycaster.setFromCamera(_ndc, camera);
   return raycaster.ray.intersectPlane(dragPlane, _hit);
 }
+// 화면의 그 자리에 보이는 인물 (몸 메시에 광선을 쏴서 찾음)
+function pickBody(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  _ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+  raycaster.setFromCamera(_ndc, camera);
+  let best = null;
+  slots.forEach(s => {
+    if (!s.vrm) return;
+    const hits = raycaster.intersectObject(s.vrm.scene, true);
+    if (hits.length && (!best || hits[0].distance < best.dist)) best = { slot: s, dist: hits[0].distance, point: hits[0].point.clone() };
+  });
+  return best;
+}
 function selectMarker(m) {
   stopTalk(true);
   sel = slots.indexOf(m.userData.slot);
   bone = m.userData.bone;
-  if (bone === 'leftHand' || bone === 'rightHand') handSel = bone === 'leftHand' ? 'left' : 'right';
+  if (bone === 'leftHand' || bone === 'rightHand') { handSel = bone === 'leftHand' ? 'left' : 'right'; $('foldHand').open = true; }
+  $('foldJoint').open = true;
   selectTab('pose');
   syncUI();
 }
@@ -1219,7 +1489,7 @@ tc.addEventListener('mouseUp', () => {
   if (!gizmo) return;
   pushHistory(); syncUI();
   refreshGizmo();
-  say(`${gizmo.slot.letter}의 ${BONE_NAME[gizmo.bone]}을(를) ${gizmo.mode === 'rotate' ? '돌렸어요' : '옮겼어요'}. 되돌리기로 취소할 수 있어요.`);
+  say(`${gizmo.slot.label}의 ${BONE_NAME[gizmo.bone]}을(를) ${gizmo.mode === 'rotate' ? '돌렸어요' : '옮겼어요'}. 되돌리기로 취소할 수 있어요.`);
 });
 function refreshGizmo() {
   // 실제 관절 위치로 화살표를 다시 맞춘다 (범위 제한 때문에 덜 움직였을 수 있음)
@@ -1246,13 +1516,13 @@ function openGizmo(m, mode) {
     tc.attach(node);
   }
   $('gizmoBar').hidden = false;
-  $('gizmoName').textContent = `${slot.letter} · ${BONE_NAME[b] || b}`;
+  $('gizmoName').textContent = `${slot.label} · ${BONE_NAME[b] || b}`;
   $('gzMove').hidden = !canMove(b);
   $('gzMove').setAttribute('aria-pressed', String(mode === 'move'));
   $('gzRotate').setAttribute('aria-pressed', String(mode === 'rotate'));
   say(mode === 'move'
-    ? `${slot.letter}의 ${BONE_NAME[b]}: 빨강(X)·초록(Y)·파랑(Z) 화살표를 끌면 그 방향으로만 움직여요. Esc나 빈 곳을 누르면 닫혀요.`
-    : `${slot.letter}의 ${BONE_NAME[b]}: 고리를 끌어 돌려요. 사람이 움직일 수 있는 범위까지만 돌아가요. Esc나 빈 곳을 누르면 닫혀요.`);
+    ? `${slot.label}의 ${BONE_NAME[b]}: 빨강(X)·초록(Y)·파랑(Z) 화살표를 끌면 그 방향으로만 움직여요. Esc나 빈 곳을 누르면 닫혀요.`
+    : `${slot.label}의 ${BONE_NAME[b]}: 고리를 끌어 돌려요. 사람이 움직일 수 있는 범위까지만 돌아가요. Esc나 빈 곳을 누르면 닫혀요.`);
 }
 function closeGizmo() {
   if (!gizmo) return;
@@ -1278,7 +1548,17 @@ viewport.addEventListener('pointerdown', e => {
   if (gizmoHit(e)) return;                  // 화살표·고리를 누른 경우 → 기즈모가 처리
   const rect = renderer.domElement.getBoundingClientRect();
   const m = $('showJoints').checked ? pickMarker(e.clientX - rect.left, e.clientY - rect.top) : null;
-  if (!m) { emptyDown = [e.clientX, e.clientY]; return; } // 빈 곳 → 카메라 조작
+  if (!m) {
+    const body = pickBody(e);
+    if (!body) { emptyDown = [e.clientX, e.clientY]; return; } // 빈 곳 → 카메라 조작(화면 이동)
+    // 몸을 누름 → 그 인물을 바닥과 평행하게 끌어서 옮김
+    e.stopPropagation(); e.preventDefault();
+    dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), body.point);
+    drag = { body: true, slot: body.slot, bone: 'hips', x0: e.clientX, y0: e.clientY, moved: false, startX: body.slot.x, startZ: body.slot.z, start: body.point };
+    document.body.classList.add('dragging');
+    renderer.domElement.setPointerCapture && renderer.domElement.setPointerCapture(e.pointerId);
+    return;
+  }
   e.stopPropagation(); e.preventDefault();
   const { slot, bone: b } = m.userData;
   const pos = m.position.clone();
@@ -1319,11 +1599,14 @@ window.addEventListener('pointerup', e => {
   if (d.moved) {
     pushHistory(); syncUI(); refreshGizmo();
     const what = d.bone === 'hips' ? '위치를 옮겼어요' : `${BONE_NAME[d.bone]}을(를) 끌어서 자세를 바꿨어요`;
-    say(`${d.slot.letter}의 ${what}. 되돌리기로 취소할 수 있어요.`);
+    say(`${d.slot.label}의 ${what}. 되돌리기로 취소할 수 있어요.`);
+  } else if (d.body) {
+    stopTalk(true); sel = slots.indexOf(d.slot); syncUI();
+    say(`${d.slot.label}을(를) 선택했어요. 몸을 끌면 바닥 위에서 옮겨져요.`);
   } else {
     selectMarker(d.marker);
     if (gizmo && (gizmo.slot !== d.slot || gizmo.bone !== d.bone)) openGizmo(d.marker, gizmo.mode);
-    else if (!gizmo) say(`${slots[sel].letter}의 ${BONE_NAME[bone]}을(를) 선택했어요. ${canMove(d.bone) ? '끌어서 움직이거나, ' : ''}두 번 누르면 X·Y·Z 축이 나와요.`);
+    else if (!gizmo) say(`${slots[sel].label}의 ${BONE_NAME[bone]}을(를) 선택했어요. ${canMove(d.bone) ? '끌어서 움직이거나, ' : ''}두 번 누르면 X·Y·Z 축이 나와요.`);
   }
 });
 viewport.addEventListener('dblclick', e => {
@@ -1333,18 +1616,23 @@ viewport.addEventListener('dblclick', e => {
   if (m) openGizmo(m);
 });
 // 점에 마우스를 올리면 관절 이름 표시 + 커서 모양
+let bodyHover = false, bodyHoverAt = 0;
 renderer.domElement.addEventListener('pointermove', e => {
   if (drag || tc.dragging) return;
   const rect = renderer.domElement.getBoundingClientRect();
   const m = $('showJoints').checked && !gizmoHit(e) ? pickMarker(e.clientX - rect.left, e.clientY - rect.top) : null;
   hoverMarker = m;
-  viewport.style.cursor = m ? (canMove(m.userData.bone) ? 'grab' : 'pointer') : '';
+  if (!m) {
+    const now = performance.now();
+    if (now - (bodyHoverAt || 0) > 70) { bodyHoverAt = now; bodyHover = !!pickBody(e); }
+  }
+  viewport.style.cursor = m ? (canMove(m.userData.bone) ? 'grab' : 'pointer') : bodyHover ? 'move' : '';
   const tip = $('tip');
   if (!m) { tip.hidden = true; return; }
   const vr = viewport.getBoundingClientRect();
   tip.style.left = (e.clientX - vr.left) + 'px';
   tip.style.top = (e.clientY - vr.top) + 'px';
-  tip.textContent = `${m.userData.slot.letter} · ${BONE_NAME[m.userData.bone] || m.userData.bone}${canMove(m.userData.bone) ? ' — 끌기 가능' : ''} · 더블클릭: 축`;
+  tip.textContent = `${m.userData.slot.label} · ${BONE_NAME[m.userData.bone] || m.userData.bone}${canMove(m.userData.bone) ? ' — 끌기 가능' : ''} · 더블클릭: 축`;
   tip.hidden = false;
 });
 renderer.domElement.addEventListener('pointerleave', () => { hoverMarker = null; $('tip').hidden = true; });
@@ -1371,15 +1659,17 @@ function focusPoint() {
   const x = live.reduce((a, s) => a + s.x / 100, 0) / live.length;
   const s = slots[sel].vrm ? slots[sel] : live[0];
   s.vrm.humanoid.getRawBoneNode('head').getWorldPosition(tmp);
-  return { x, head: tmp.y };
+  const top = Math.max(...live.map(l => l.vrm.humanoid.getRawBoneNode('head').getWorldPosition(new THREE.Vector3()).y + (l.topOff || 0.24)));
+  return { x, head: tmp.y, top };
 }
 function shot(kind) {
-  const { x, head } = focusPoint();
+  const { x, head, top } = focusPoint();
+  const hair = Math.max(0.2, top - head) + 0.04; // 머리 관절 위로 머리카락 꼭대기까지 + 여유
   const spread = Math.max(0, ...slots.filter(s => s.vrm).map(s => Math.abs(s.x / 100 - x)));
   // vertical span of the body to fit inside the cut: [bottom, top]
   const span = {
-    full: [-0.05, head + 0.2], bust: [head - 0.62, head + 0.16], close: [head - 0.24, head + 0.13],
-    low: [head - 0.75, head + 0.2], high: [head - 0.8, head + 0.18],
+    full: [-0.05, head + hair], bust: [head - 0.62, head + hair], close: [head - 0.24, head + hair],
+    low: [head - 0.75, head + hair], high: [head - 0.8, head + hair],
   }[kind];
   const ty = (span[0] + span[1]) / 2;
   const vp = viewport.clientHeight, wp = viewport.clientWidth;
@@ -1390,16 +1680,41 @@ function shot(kind) {
   const tilt = kind === 'low' ? -0.45 : kind === 'high' ? 0.5 : 0;
   controls.target.set(x, ty, 0);
   camera.position.set(x, ty + d * tilt, d * Math.sqrt(1 - Math.min(tilt * tilt, 0.5)));
+  updateClip();
   controls.update();
   shotSel = kind;
   syncUI();
 }
 let shotSel = 'bust';
+// 카메라가 아주 멀어져도(화각이 작을 때) 잘리지 않게 앞뒤 그리는 범위를 맞춘다
+function updateClip() {
+  const d = camera.position.distanceTo(controls.target);
+  camera.near = Math.max(0.01, d * 0.02);
+  camera.far = Math.max(50, d * 6);
+  camera.updateProjectionMatrix();
+}
+// 화각을 바꿔도 인물 크기는 그대로: 카메라를 그만큼 앞뒤로 움직인다 (원근감만 바뀜)
+function setFov(v) {
+  const old = camera.fov;
+  if (old === v) return;
+  const d = camera.position.distanceTo(controls.target);
+  const nd = d * Math.tan(D(old) / 2) / Math.tan(D(v) / 2);
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  camera.position.copy(controls.target).addScaledVector(dir, nd);
+  camera.fov = v;
+  updateClip();
+  controls.update();
+}
 
 // ---------- 저장 ----------
 let downloads = null;
+let notifyChange = () => {}; // 앱 안에서는 바뀐 걸 앱에 알림 (아래 '앱 연결'에서 채움)
+let castRemoveHook = null;     // 앱 안에서만: 인물 줄의 ✕ → 앱에 "이 컷에서 빼기" 부탁
+const EMBED_MODE = new URLSearchParams(location.search).has('embed');
 if (window.claude && window.claude.use) window.claude.use('downloads').then(d => { downloads = d; }).catch(() => {});
 let cutNo = 0;
+let cutName = '컷'; // 앱이 알려준 "1페이지 컷2" 같은 이름 (파일 이름에 씀)
+const fileBase = () => cutName.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_') || '컷';
 // 컷 틀 안쪽만 그려서 캔버스로 돌려준다 (저장·AI 배경 생성에 공통 사용)
 // hideBackground: 배경 대신 종이색 + 바닥 격자 (AI에게 원근을 알려주는 참고용)
 function renderCut({ scale, transparent, withFilter, hideBackground }) {
@@ -1430,11 +1745,18 @@ async function capture() {
   const out = renderCut({ scale: 2 * aaLevel, transparent: $('transparent').checked, withFilter: true, hideBackground: false });
   const blob = await new Promise(r => out.toBlob(r, 'image/png'));
   cutNo += 1;
-  const name = `컷_${String(cutNo).padStart(2, '0')}.png`;
+  const name = `${fileBase()}_${String(cutNo).padStart(2, '0')}.png`;
   addThumb(blob, name);
   offerSave(blob, name);
 }
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
 async function offerSave(blob, name) {
+  if (!downloads && EMBED_MODE) { downloadBlob(blob, name); say(`${name}을(를) 내려받았어요.`); return; }
   if (!downloads) { say(`${name}을(를) 만들었어요. 이 화면에서는 바로 저장할 수 없으니 아래 미리보기를 길게 누르거나 우클릭해서 저장해 주세요.`); return; }
   try { await downloads.save({ filename: name, data: blob }); say(`${name}을(를) 저장했어요.`); }
   catch (e) {
@@ -1475,9 +1797,14 @@ const pressRow = (el, key) => el.querySelectorAll('.chip').forEach(c => c.setAtt
 
 chipRow($('presets'), PRESETS.map(([n], i) => [String(i), n]), (i) => {
   const s = slots[sel];
-  s.pose = JSON.parse(JSON.stringify(PRESETS[i][1]));
-  applyPose(s); pushHistory(); syncUI();
-  say(`${s.letter}에게 "${PRESETS[i][0]}" 포즈를 적용했어요.`);
+  const [name, pose, opt] = PRESETS[i];
+  s.pose = JSON.parse(JSON.stringify(pose));
+  s.hands = { left: { ...((opt && opt.hands && opt.hands.left) || relaxedHand()) }, right: { ...((opt && opt.hands && opt.hands.right) || relaxedHand()) } };
+  const oldY = s.y || 0;
+  applyPose(s); groundSlot(s); settleSprings(s);
+  if (Math.abs((s.y || 0) - oldY) > 10) shot(shotSel); // 앉거나 일어나서 키가 크게 바뀌면 같은 샷으로 다시 맞춤
+  pushHistory(); syncUI();
+  say(`${s.label}에게 "${name}" 포즈를 적용했어요.`);
 });
 chipRow($('emotions'), EMOTIONS, (k) => { slots[sel].expr.emotion = k; pushHistory(); syncUI(); });
 chipRow($('mouths'), MOUTHS, (k) => {
@@ -1489,7 +1816,6 @@ chipRow($('mouths'), MOUTHS, (k) => {
 function setLook(k) { const s = slots[sel]; s.look = k; applyLook(s); pushHistory(); syncUI(); }
 $('lookCam').addEventListener('change', e => setLook(e.target.checked ? 'camera' : 'manual'));
 $('lookOther').addEventListener('change', e => setLook(e.target.checked ? 'other' : 'manual'));
-$('autoBlink').addEventListener('change', e => { slots[sel].autoBlink = e.target.checked; pushHistory(); });
 $('eyeLink').addEventListener('change', e => {
   const s = slots[sel]; s.eyes.link = e.target.checked;
   if (s.eyes.link) s.eyes.l = { ...s.eyes.r };
@@ -1542,10 +1868,62 @@ function syncEyePads() {
 });
 chipRow($('shots'), SHOTS, (k) => shot(k));
 
-$('bone').innerHTML = BONES.map(([k, n]) => `<option value="${k}">${n}</option>`).join('');
-$('bone').addEventListener('change', e => { bone = e.target.value; syncUI(); });
+const BONE_GROUPS = [
+  ['몸통', ['hips', 'spine', 'chest', 'neck', 'head']],
+  ['왼팔', ['leftShoulder', 'leftUpperArm', 'leftLowerArm', 'leftHand']],
+  ['오른팔', ['rightShoulder', 'rightUpperArm', 'rightLowerArm', 'rightHand']],
+  ['왼다리', ['leftUpperLeg', 'leftLowerLeg', 'leftFoot']],
+  ['오른다리', ['rightUpperLeg', 'rightLowerLeg', 'rightFoot']],
+];
+const boneList = $('boneList'), boneBtn = $('boneBtn');
+BONE_GROUPS.forEach(([g, list]) => {
+  const head = document.createElement('li'); head.className = 'grp'; head.textContent = g; head.setAttribute('role', 'presentation');
+  boneList.append(head);
+  list.forEach(b => {
+    const li = document.createElement('li');
+    li.setAttribute('role', 'option'); li.dataset.bone = b; li.id = 'bopt-' + b; li.textContent = BONE_NAME[b];
+    boneList.append(li);
+  });
+});
+const boneOpts = () => [...boneList.querySelectorAll('[role="option"]')];
+function setHot(b) {
+  listHotBone = b;
+  boneOpts().forEach(o => o.classList.toggle('hot', o.dataset.bone === b));
+  if (b) { const o = $('bopt-' + b); boneList.setAttribute('aria-activedescendant', o.id); o.scrollIntoView({ block: 'nearest' }); }
+}
+function openBoneList() {
+  boneList.hidden = false; boneBtn.setAttribute('aria-expanded', 'true');
+  setHot(bone); boneList.focus();
+}
+function closeBoneList(pick) {
+  if (pick) { bone = pick; if (bone === 'leftHand' || bone === 'rightHand') handSel = bone === 'leftHand' ? 'left' : 'right'; syncUI(); }
+  boneList.hidden = true; boneBtn.setAttribute('aria-expanded', 'false'); setHot(null);
+  if (pick !== undefined) boneBtn.focus();
+}
+boneBtn.addEventListener('click', () => (boneList.hidden ? openBoneList() : closeBoneList()));
+boneList.addEventListener('pointerover', e => { const o = e.target.closest('[role="option"]'); if (o) setHot(o.dataset.bone); });
+boneList.addEventListener('pointerleave', () => setHot(null));
+boneList.addEventListener('click', e => { const o = e.target.closest('[role="option"]'); if (o) closeBoneList(o.dataset.bone); });
+boneList.addEventListener('keydown', e => {
+  const opts = boneOpts().map(o => o.dataset.bone);
+  const i = Math.max(0, opts.indexOf(listHotBone || bone));
+  if (e.key === 'ArrowDown') { e.preventDefault(); setHot(opts[Math.min(opts.length - 1, i + 1)]); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); setHot(opts[Math.max(0, i - 1)]); }
+  else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeBoneList(listHotBone || bone); }
+  else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); closeBoneList(null); }
+});
+document.addEventListener('pointerdown', e => { if (!boneList.hidden && !$('bonePick').contains(e.target)) closeBoneList(); });
 
 // 슬라이더 + 숫자 입력칸. 숫자를 직접 입력해도 바로 적용돼요.
+// 초기화 버튼이 돌려놓을 값 (함수면 그때그때 계산)
+const RESET_TO = {
+  rx: () => (ARMS_DOWN[bone] || { x: 0 }).x, ry: () => (ARMS_DOWN[bone] || { y: 0 }).y, rz: () => (ARMS_DOWN[bone] || { z: 0 }).z,
+  emoW: 100, presence: 100, fov: 28, sens: 35, filterAmt: 100, aiLimit: 3000,
+  fThumb: () => relaxedHand().thumb, fIndex: () => relaxedHand().index, fMiddle: () => relaxedHand().middle,
+  fRing: () => relaxedHand().ring, fLittle: () => relaxedHand().little, fSpread: () => relaxedHand().spread,
+  fxBright: () => presetValue('bright'), fxContrast: () => presetValue('contrast'), fxSat: () => presetValue('sat'), fxTemp: () => presetValue('temp'),
+  fxFade: () => presetValue('fade'), fxVig: () => presetValue('vig'), fxGrain: () => presetValue('grain'), fxTint: () => presetValue('tintAmt'),
+};
 function bindRange(id, read, write, commit = true) {
   const el = $(id), old = $(id + 'o');
   const num = document.createElement('input');
@@ -1566,6 +1944,16 @@ function bindRange(id, read, write, commit = true) {
   num.addEventListener('input', () => fromNum(false));
   num.addEventListener('change', () => fromNum(true));
   num.addEventListener('keydown', (e) => { if (e.key === 'Enter') { num.blur(); } });
+  const reset = document.createElement('button');
+  reset.type = 'button'; reset.className = 'reset'; reset.textContent = '↻';
+  reset.dataset.tip = '초기화'; reset.setAttribute('aria-label', label + ' 초기화');
+  reset.addEventListener('click', () => {
+    const d = RESET_TO[id]; const v = clamp(typeof d === 'function' ? d() : (d ?? 0));
+    el.value = v; write(v); num.value = round1(v);
+    if (commit) pushHistory();
+    syncUI();
+  });
+  num.after(reset);
   return () => { const v = read(); el.value = v; if (document.activeElement !== num) num.value = round1(v); };
 }
 const getRot = (name) => slots[sel].pose[name] || { x: 0, y: 0, z: 0 };
@@ -1581,34 +1969,37 @@ const syncers = [
   bindRange('blink', () => slots[sel].expr.blink, v => { slots[sel].expr.blink = v; }),
   bindRange('posX', () => slots[sel].x, v => { slots[sel].x = v; applyPlacement(slots[sel]); }),
   bindRange('posZ', () => slots[sel].z, v => { slots[sel].z = v; applyPlacement(slots[sel]); }),
+  bindRange('posY', () => slots[sel].y || 0, v => { slots[sel].y = v; applyPlacement(slots[sel]); }),
   bindRange('rotY', () => slots[sel].rot, v => { slots[sel].rot = v; applyPlacement(slots[sel]); }),
   bindRange('presence', () => slots[sel].presence, v => { slots[sel].presence = v; applyPresence(slots[sel]); }),
-  bindRange('fov', () => camera.fov, v => { camera.fov = v; camera.updateProjectionMatrix(); }, false),
+  bindRange('fov', () => camera.fov, v => setFov(v), false),
   bindRange('sens', () => sens, v => { sens = v; applySens(); }, false),
-  bindRange('filterAmt', () => filter.amt, v => { filter.amt = v; filter.preset = matchFilterPreset(); syncFilterUI(); }, false),
+  bindRange('filterAmt', () => filter.amt, v => { filter.amt = v; }, false),
+  ...[['fxBright', 'bright'], ['fxContrast', 'contrast'], ['fxSat', 'sat'], ['fxTemp', 'temp'], ['fxFade', 'fade'], ['fxVig', 'vig'], ['fxGrain', 'grain'], ['fxTint', 'tintAmt']].map(([id, k]) =>
+    bindRange(id, () => filter[k], v => { filter[k] = v; filter.preset = matchFilterPreset(); syncFilterUI(); }, false)),
   ...[['fThumb', 'thumb'], ['fIndex', 'index'], ['fMiddle', 'middle'], ['fRing', 'ring'], ['fLittle', 'little'], ['fSpread', 'spread']].map(([id, k]) =>
     bindRange(id, () => slots[sel].hands[handSel][k], v => { slots[sel].hands[handSel][k] = v; applyFingers(slots[sel]); })),
 ];
 // 앤티앨리어싱 · 전체 조명 UI
 $('aa').value = String(aaLevel);
 $('aa').addEventListener('change', e => { aaLevel = Number(e.target.value); applyAA(); layout(); say(`앤티앨리어싱을 "${e.target.selectedOptions[0].textContent.split(' · ')[0]}"으로 바꿨어요.`); });
+function presetValue(k) { const p = FILTER_PRESETS.find(x => x[0] === filter.preset); return (p && p[2][k] !== undefined ? p[2][k] : NO_FILTER[k]); }
 function matchFilterPreset() {
-  const p = FILTER_PRESETS.find(([, , c, a]) => c === filter.color.toLowerCase() && a === filter.amt);
-  return p ? p[0] : (filter.amt === 0 ? 'none' : '');
+  const p = FILTER_PRESETS.find(([, , v]) => Object.keys(NO_FILTER).every(k => String((v[k] ?? NO_FILTER[k])).toLowerCase() === String(filter[k]).toLowerCase()));
+  return p ? p[0] : '';
 }
 function syncFilterUI() {
   pressRow($('filterPresets'), filter.preset);
-  if ($('filterColor').value.toLowerCase() !== filter.color.toLowerCase()) $('filterColor').value = filter.color;
+  if ($('filterColor').value.toLowerCase() !== filter.tint.toLowerCase()) $('filterColor').value = filter.tint;
 }
 chipRow($('filterPresets'), FILTER_PRESETS.map(([k, n]) => [k, n]), (k) => {
-  const p = FILTER_PRESETS.find(x => x[0] === k);
-  filter.preset = k; filter.color = p[2]; filter.amt = p[3];
-  syncUI();
-  say(k === 'none' ? '전체 조명을 껐어요.' : `전체 조명을 "${p[1]}"(으)로 바꿨어요. 색과 세기는 아래에서 바꿀 수 있어요.`);
+  setFilterPreset(k);
+  syncUI(); notifyChange();
+  say(k === 'none' ? '필터를 껐어요.' : `필터를 "${FILTER_PRESETS.find(x => x[0] === k)[1]}"(으)로 바꿨어요. 세기와 세부 조정은 아래에서 바꿀 수 있어요.`);
 });
 $('filterColor').addEventListener('input', e => {
-  filter.color = e.target.value;
-  if (filter.amt === 0) filter.amt = 40; // 색을 고르면 바로 보이게
+  filter.tint = e.target.value;
+  if (!filter.tintAmt) filter.tintAmt = 40; // 색을 고르면 바로 보이게
   filter.preset = matchFilterPreset();
   syncUI();
 });
@@ -1618,11 +2009,11 @@ chipRow($('handPresets'), HAND_PRESETS.map(([n], i) => [String(i), n]), (i) => {
   const s = slots[sel];
   s.hands[handSel] = { ...HAND_PRESETS[i][1] };
   applyFingers(s); pushHistory(); syncUI();
-  say(`${s.letter}의 ${handSel === 'left' ? '왼손' : '오른손'}을 "${HAND_PRESETS[i][0]}" 모양으로 바꿨어요.`);
+  say(`${s.label}의 ${handSel === 'left' ? '왼손' : '오른손'}을 "${HAND_PRESETS[i][0]}" 모양으로 바꿨어요.`);
 });
 
 $('resetBone').addEventListener('click', () => { delete slots[sel].pose[bone]; applyPose(slots[sel]); pushHistory(); syncUI(); });
-$('resetPose').addEventListener('click', () => { slots[sel].pose = {}; applyPose(slots[sel]); pushHistory(); syncUI(); say('T자 기본 자세로 돌렸어요.'); });
+$('resetPose').addEventListener('click', () => { slots[sel].pose = {}; applyPose(slots[sel]); groundSlot(slots[sel]); pushHistory(); syncUI(); say('T자 기본 자세로 돌렸어요.'); });
 
 function stopTalk(keep) {
   if (!talking) return;
@@ -1637,6 +2028,35 @@ $('talk').addEventListener('click', () => {
   talking = true; talkT = Math.random() * 5;
   $('talk').setAttribute('aria-pressed', 'true');
   $('talk').textContent = '멈추기 ❚❚';
+});
+
+const hint = $('hint');
+let hintFor = null;
+function showHint(el) {
+  const text = el.dataset.tip; if (!text) return;
+  hintFor = el;
+  hint.textContent = text;
+  hint.classList.toggle('short', text.length <= 12);
+  hint.hidden = false;
+  const r = el.getBoundingClientRect(), hw = hint.offsetWidth, hh = hint.offsetHeight;
+  let x = r.left + r.width / 2 - hw / 2, y = r.bottom + 6;
+  x = Math.max(8, Math.min(innerWidth - hw - 8, x));
+  if (y + hh > innerHeight - 8) y = r.top - hh - 6;
+  hint.style.left = x + 'px'; hint.style.top = y + 'px';
+}
+function hideHint(el) { if (!el || el === hintFor) { hint.hidden = true; hintFor = null; } }
+document.addEventListener('pointerover', e => { const el = e.target.closest && e.target.closest('[data-tip]'); if (el) showHint(el); });
+document.addEventListener('pointerout', e => { const el = e.target.closest && e.target.closest('[data-tip]'); if (el && !el.contains(e.relatedTarget)) hideHint(el); });
+document.addEventListener('focusin', e => { if (e.target.dataset && e.target.dataset.tip) showHint(e.target); });
+document.addEventListener('focusout', e => hideHint(e.target));
+document.addEventListener('scroll', () => hideHint(), true);
+// ⓘ를 눌러도(휴대폰) 설명만 보이게: 구역이 접히거나 옆 입력칸으로 넘어가지 않게
+document.querySelectorAll('.info').forEach(i => i.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); i.focus(); showHint(i); }));
+// 접고 편 상태 기억
+document.querySelectorAll('details.fold[id]').forEach(d => {
+  const k = 'rough.fold.' + d.id, v = store.get(k, null);
+  if (v !== null) d.open = v === '1';
+  d.addEventListener('toggle', () => store.set(k, d.open ? '1' : '0'));
 });
 
 function selectTab(name) {
@@ -1655,6 +2075,45 @@ $('ratio').addEventListener('change', e => {
 });
 $('showGrid').addEventListener('change', e => { grid.visible = e.target.checked; });
 $('capture').addEventListener('click', capture);
+// 장면 파일: 자세·표정·배치·카메라·필터 (모델 파일은 들어가지 않음)
+function sceneData() {
+  return {
+    v: 1,
+    slots: JSON.parse(snapshot()),
+    camera: { pos: camera.position.toArray(), target: controls.target.toArray(), fov: camera.fov },
+    shot: shotSel,
+    aa: aaLevel,
+    filter: { ...filter },
+  };
+}
+function applySceneData(data) {
+  if (!data || data.v !== 1 || !Array.isArray(data.slots)) throw new Error('러프 도구 장면 파일이 아니에요.');
+  restoreSnap(JSON.stringify(data.slots.slice(0, slots.length)));
+  camera.fov = data.camera.fov;
+  camera.position.fromArray(data.camera.pos);
+  controls.target.fromArray(data.camera.target);
+  updateClip();
+  controls.update();
+  shotSel = data.shot || shotSel;
+  if (data.aa && data.aa !== aaLevel) { $('aa').value = String(data.aa); $('aa').dispatchEvent(new Event('change')); }
+  Object.assign(filter, NO_FILTER, { preset: 'none', amt: 100 }, data.filter || {});
+  syncUI();
+}
+$('saveScene').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify({ kind: 'rough-scene', ...sceneData() }, null, 1)], { type: 'application/json' });
+  downloadBlob(blob, `${fileBase()}_장면.json`);
+  say('장면 파일을 내려받았어요. "파일 열기"로 다른 컷에도 같은 장면을 불러올 수 있어요.');
+});
+$('sceneFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    applySceneData(data);
+    pushHistory();
+    say(`${f.name}의 장면을 불러왔어요. 되돌리기로 취소할 수 있어요.`);
+  } catch (err) { say(err instanceof SyntaxError ? '열 수 없는 파일이에요. 러프 도구에서 저장한 장면 파일(.json)을 골라 주세요.' : err.message); }
+});
 $('undo').addEventListener('click', undo);
 $('redo').addEventListener('click', redo);
 window.addEventListener('keydown', e => {
@@ -1673,7 +2132,7 @@ async function loadFile(s, f) {
   if (!(await loadInto(s, f, f.name))) return false;
   $('empty').hidden = true;
   if (first || !hadModel) { shot(shotSel); pushHistory(); }
-  say(hadModel ? `${s.letter}의 모델을 ${f.name}(으)로 바꿨어요. 포즈와 표정은 그대로예요.` : `${s.letter}에 ${f.name}을(를) 넣었어요. 관절 점을 눌러 자세를 잡아보세요.`);
+  say(hadModel ? `${s.label}의 모델을 ${f.name}(으)로 바꿨어요. 포즈와 표정은 그대로예요.` : EMBED_MODE ? '관절 점을 끌어 자세를 잡고, 몸을 끌어 위치를 옮겨 보세요.' : `${s.letter}에 ${f.name}을(를) 넣었어요. 관절 점을 눌러 자세를 잡아보세요.`);
   return true;
 }
 $('file').addEventListener('change', async e => {
@@ -1681,13 +2140,12 @@ $('file').addEventListener('change', async e => {
   const target = fileTarget === null ? sel : fileTarget;
   fileTarget = null;
   if (!f) return;
-  if (target === 'new' && slots.length < 2) {
-    const b = makeSlot('B', 45);
+  if (target === 'new' && slots.length < MAX_SLOTS) {
+    const b = makeSlot(nextLetter(), 45);
     b.rot = -20;
     slots.push(b);
-    slots[0].x = Math.min(slots[0].x, -35);
-    applyPlacement(slots[0]);
-    sel = 1;
+    slots.forEach((s, i) => { s.x = spreadX(i, slots.length); applyPlacement(s); });
+    sel = slots.length - 1;
     syncUI();
     if (!(await loadFile(b, f))) { slots.pop(); sel = 0; syncUI(); }
     return;
@@ -1698,18 +2156,17 @@ $('file').addEventListener('click', () => { if (!$('file').dataset.keep) fileTar
 $('swap').addEventListener('click', () => { fileTarget = sel; $('file').dataset.keep = '1'; $('file').click(); });
 
 $('addB').addEventListener('click', () => {
-  if (slots.length > 1) return;
+  if (slots.length >= MAX_SLOTS) return;
   if (!slots[0].vrm) { say('먼저 A의 모델을 불러와 주세요.'); return; }
   fileTarget = 'new'; $('file').dataset.keep = '1'; $('file').click();
 });
 $('removeB').addEventListener('click', () => {
-  const b = slots[1]; if (!b) return;
+  const b = sel > 0 ? slots[sel] : null; if (!b) return;
   if (b.vrm) { scene.remove(b.vrm.scene); VRMUtils.deepDispose(b.vrm.scene); }
   b.markers.forEach(m => overlay.remove(m));
-  slots.pop(); sel = 0;
-  slots[0].look = slots[0].look === 'other' ? 'camera' : slots[0].look;
-  applyLook(slots[0]); pushHistory(); syncUI();
-  say('B를 뺐어요.');
+  slots.splice(sel, 1); sel = 0;
+  slots.forEach(applyLook); pushHistory(); syncUI();
+  say(`${b.label}을(를) 뺐어요.`);
 });
 
 // drag & drop
@@ -1725,26 +2182,42 @@ function renderCast() {
   const el = $('cast');
   el.innerHTML = '';
   slots.forEach((s, i) => {
+    if (EMBED_MODE && !s.vrm) return;
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'cast-row';
     b.setAttribute('aria-pressed', String(i === sel));
     const av = document.createElement('span'); av.className = 'avatar'; av.textContent = s.letter;
     const meta = document.createElement('span'); meta.className = 'meta';
-    const n = document.createElement('span'); n.textContent = s.letter;
+    const n = document.createElement('span'); n.textContent = s.label || s.letter;
     const f = document.createElement('span'); f.textContent = s.file || '모델 없음';
     meta.append(n, f); b.append(av, meta);
     b.addEventListener('click', () => { stopTalk(true); sel = i; syncUI(); });
-    el.append(b);
+    if (!castRemoveHook) { el.append(b); return; }
+    // 앱 안: 줄마다 ✕ (이 컷에서만 빼기)
+    const wrap = document.createElement('div'); wrap.className = 'castitem';
+    const x = document.createElement('button');
+    x.type = 'button'; x.className = 'castx'; x.textContent = '✕';
+    x.dataset.tip = '이 컷에서 빼기'; x.setAttribute('aria-label', `${s.label}을(를) 이 컷에서 빼기`);
+    x.addEventListener('click', () => castRemoveHook(s.letter, s.label));
+    wrap.append(b, x); el.append(wrap);
   });
 }
 function syncUI() {
   const s = slots[sel];
   renderCast();
-  $('selName').textContent = `${s.letter} 배치`;
-  $('tabOwner').textContent = `${s.letter}에게 적용`;
-  $('addB').hidden = slots.length > 1;
-  $('removeB').hidden = !(slots.length > 1 && sel === 1);
-  $('bone').value = bone;
+  $('selName').textContent = `${s.label || s.letter} 배치`;
+  $('tabOwner').textContent = `${s.label || s.letter}에게 적용`;
+  const live = slots.filter(x => x.vrm).length;
+  $('castEmpty').hidden = live > 0;
+  $('placeBox').hidden = EMBED_MODE && live === 0;
+  $('moveHint').hidden = live === 0;
+  $('castAdd').hidden = live >= MAX_SLOTS;
+  $('addB').hidden = slots.length >= MAX_SLOTS;
+  $('addB').textContent = `+ ${nextLetter() || ''} 넣기 (VRM 선택)`;
+  $('removeB').hidden = !(slots.length > 1 && sel > 0);
+  $('removeB').textContent = `${s.label} 빼기`;
+  $('boneLabel').textContent = BONE_NAME[bone] || bone;
+  boneOpts().forEach(o => o.setAttribute('aria-selected', String(o.dataset.bone === bone)));
   syncers.forEach(f => f());
   pressRow($('emotions'), s.expr.emotion);
   const mk = Object.keys(s.expr.mouth).find(k => s.expr.mouth[k] > 0.05);
@@ -1753,14 +2226,13 @@ function syncUI() {
   $('lookCam').checked = s.look === 'camera';
   $('lookOther').checked = s.look === 'other';
   $('lookOther').disabled = slots.length < 2;
-  $('autoBlink').checked = !!s.autoBlink;
   $('eyeLink').checked = !!s.eyes.link;
   syncEyePads();
   pressRow($('handSide'), handSel);
   const hp = HAND_PRESETS.findIndex(([, v]) => FINGERS.every(([k]) => v[k] === s.hands[handSel][k]) && v.spread === s.hands[handSel].spread);
   pressRow($('handPresets'), hp >= 0 ? String(hp) : '');
   const hasFingers = !s.vrm || !!s.vrm.humanoid.getNormalizedBoneNode(handSel + 'IndexProximal');
-  $('fingerNote').textContent = hasFingers ? '0은 쭉 편 상태, 100은 끝까지 굽힌 상태예요. 손 점을 누르면 그쪽 손이 선택돼요.' : '이 모델에는 손가락 관절이 없어서 손가락을 움직일 수 없어요.';
+  $('fingerNote').dataset.tip = hasFingers ? '0은 쭉 편 상태, 100은 끝까지 굽힌 상태예요. 손 점을 누르면 그쪽 손이 선택돼요.' : '이 모델에는 손가락 관절이 없어서 손가락을 움직일 수 없어요.';
   pressRow($('shots'), shotSel);
   syncFilterUI();
   syncUndoButtons();
@@ -1902,7 +2374,7 @@ const FX_FOR_EMOTION = {
 $('fxRecommend').addEventListener('click', () => {
   const s = slots[sel], [type, color, why] = FX_FOR_EMOTION[s.expr.emotion] || FX_FOR_EMOTION.neutral;
   applyFx(type, color);
-  $('fxNote').textContent = `${s.letter}의 표정 기준: ${why}`;
+  $('fxNote').textContent = `${s.label}의 표정 기준: ${why}`;
   say(`배경을 "${FX_NAME[type]}"(으)로 추천해서 바꿨어요.`);
 });
 
@@ -1922,18 +2394,18 @@ function suggestCamera(text) {
   return { matched: hits.length > 0, list: list.slice(0, 3) };
 }
 function applyCameraSuggestion(m) {
-  camera.fov = m.fov; camera.updateProjectionMatrix();
+  camera.fov = m.fov; updateClip();
   shot(m.shot);
   syncers.forEach(f => f());
   say(`${SHOT_NAME[m.shot]} · 화각 ${m.fov}°로 바꿨어요. ${m.why}`);
 }
 $('moodRun').addEventListener('click', () => {
-  const { matched, list } = suggestCamera($('moodText').value);
-  const out = $('moodOut');
-  out.innerHTML = '';
-  list.forEach(m => { const b = makeChip(`${SHOT_NAME[m.shot]} · ${m.fov}°`, () => applyCameraSuggestion(m)); b.title = m.why; out.append(b); });
+  const text = $('moodText').value.trim();
+  if (!text) { $('moodOut').textContent = '어떤 분위기인지 적어 주세요.'; return; }
+  const { matched, list } = suggestCamera(text);
+  if (!matched) { $('moodOut').textContent = '분위기 단어를 못 찾았어요. "위압감", "쓸쓸함", "긴장", "대화" 같은 단어를 넣어 보세요.'; return; }
   applyCameraSuggestion(list[0]);
-  if (!matched) say('분위기 단어를 못 찾아서 기본 추천(바스트·전신)을 보여드려요. "위압감", "쓸쓸함", "긴장" 같은 단어를 넣어 보세요.');
+  $('moodOut').textContent = `${SHOT_NAME[list[0].shot]}(으)로 바꿨어요. ${list[0].why}`;
 });
 
 // ---------- 3) 한국어 명령 해석 (무료) ----------
@@ -1967,7 +2439,11 @@ const AMOUNT = (t) => {
 };
 const sideOf = (t) => (/왼쪽|왼편|좌측/.test(t) ? 'left' : /오른쪽|오른편|우측/.test(t) ? 'right' : null);
 function whoOf(t, prev) {
-  if (/둘다|둘이|모두|두사람|둘은|둘을|다같이/.test(t)) return 'all';
+  if (/둘다|둘이|모두|두사람|둘은|둘을|다같이|다들|전부|셋다|세사람/.test(t)) return 'all';
+  const named = slots.find(s => s.vrm && s.label && s.label !== s.letter && t.includes(s.label.replace(/\s+/g, '')));
+  if (named) return named.letter;
+  const m2 = t.match(/(^|[^가-힣A-Za-z])([C-F])(?=가|는|의|를|도|만|한테|에게|이|\s|$|[^가-힣A-Za-z])/i);
+  if (m2) return m2[2].toUpperCase();
   const m = t.match(/(^|[^가-힣A-Za-z])(A|B|에이|비)(?=가|는|의|를|도|만|한테|에게|이|\s|$|[^가-힣A-Za-z])/i);
   if (m) return /^(a|에이)$/i.test(m[2]) ? 'A' : 'B';
   return prev;
@@ -2062,7 +2538,7 @@ function tryArrange(t) {
   let text;
   if (/마주|서로봐|서로보/.test(t)) { a.x = -35; b.x = 35; a.rot = 90; b.rot = -90; a.look = b.look = 'other'; text = 'A와 B가 마주 보게'; }
   else if (/등돌|등지/.test(t)) { a.x = -25; b.x = 25; a.rot = -90; b.rot = 90; text = 'A와 B가 등지게'; }
-  else if (/나란히/.test(t)) { a.x = -30; b.x = 30; a.rot = 0; b.rot = 0; text = 'A와 B를 나란히'; }
+  else if (/나란히/.test(t)) { const live = slots.filter(s => s.vrm); live.forEach((s, i) => { s.x = spreadX(i, live.length); s.z = 0; s.rot = 0; }); text = `${live.map(s => s.label).join('·')}를 나란히`; }
   else if (/가까이/.test(t)) { a.x = Math.min(-12, a.x + 10); b.x = Math.max(12, b.x - 10); text = 'A와 B를 더 가까이'; }
   else { a.x = clampPos(a.x - 15); b.x = clampPos(b.x + 15); text = 'A와 B를 더 멀리'; }
   slots.forEach(applyAll);
@@ -2227,6 +2703,7 @@ async function useWorldImage(i) {
   }
   if (!img) { $('worldCredit').textContent = '이 이미지는 원본 사이트가 막아서 배경으로 쓸 수 없어요. 다른 이미지를 골라 주세요.'; return; }
   try { setBackground({ kind: 'image', img }); } catch (e) { $('worldCredit').textContent = '이 이미지는 배경으로 쓸 수 없어요. 다른 이미지를 골라 주세요.'; return; }
+  $('worldNow').textContent = '지금 배경: 찾은 사진 · 만화 효과 배경에서 "없음"을 누르면 종이색으로 돌아가요.';
   fxSel = 'none'; pressRow($('fxChips'), '');
   const lic = r.license ? `CC ${String(r.license).toUpperCase()} ${r.license_version || ''}`.trim() : '라이선스 확인 필요';
   const credit = `배경: "${r.title || '제목 없음'}" — ${r.creator || '작가 미상'} · ${lic} (Openverse)`;
@@ -2324,7 +2801,7 @@ $('photoFile').addEventListener('change', async (e) => {
 function openPoseEditor(img, lm2d, world) {
   photo = { img, points: lm2d.map(p => ({ x: p.x, y: p.y })), orig: lm2d.map(p => ({ x: p.x, y: p.y })), world: world.map(p => ({ x: p.x, y: p.y, z: p.z })) };
   $('poseImg').src = img.src;
-  $('poseApply').textContent = `${slots[sel].letter}에게 적용`;
+  $('poseApply').textContent = `${slots[sel].label}에게 적용`;
   drawPoseSvg();
   $('poseDlg').showModal();
 }
@@ -2365,7 +2842,7 @@ $('poseApply').addEventListener('click', () => {
   retargetFromLandmarks(slots[sel], world, $('poseMirror').checked);
   $('poseDlg').close();
   pushHistory(); syncUI();
-  say(`${slots[sel].letter}에게 사진 속 자세를 적용했어요. 되돌리기로 취소할 수 있어요.`);
+  say(`${slots[sel].label}에게 사진 속 자세를 적용했어요. 되돌리기로 취소할 수 있어요.`);
 });
 // MediaPipe 월드 좌표(미터, 엉덩이 중심, y 아래) → 캐릭터 관절 회전
 function retargetFromLandmarks(slot, world, mirror) {
@@ -2439,6 +2916,7 @@ function retargetFromLandmarks(slot, world, mirror) {
 // ---------- 7) 비슷한 포즈 레퍼런스 찾기 (무료: 단어 사전 + Openverse + 브라우저 안 관절 비교) ----------
 // 캐릭터 설정: 원고 설정과 연결하기 전까지는 이 컴퓨터에만 저장
 const CAST_KEY = 'rough.cast';
+const profileOf = (l) => castProfile[l] || (castProfile[l] = { gender: '', age: 'adult' });
 const castProfile = (() => {
   const d = { A: { gender: '', age: 'adult' }, B: { gender: '', age: 'adult' } };
   try { return { ...d, ...JSON.parse(store.get(CAST_KEY, '{}')) }; } catch (e) { return d; }
@@ -2448,9 +2926,13 @@ const AGES = [['adult', '성인'], ['teen', '청소년'], ['child', '아이'], [
 function buildCastRows() {
   const box = $('castRows');
   box.textContent = '';
-  ['A', 'B'].forEach(letter => {
+  (EMBED_MODE ? slots.map(x => x.letter) : ['A', 'B']).forEach(letter => {
+    const slot = slots.find(x => x.letter === letter);
+    profileOf(letter);
+    if (EMBED_MODE && !(slot && slot.vrm)) return; // 앱에서는 이 컷에 나오는 인물만
     const row = document.createElement('div'); row.className = 'cast-row';
     const av = document.createElement('span'); av.className = 'avatar'; av.textContent = letter;
+    av.title = slot ? slot.label : letter;
     row.append(av);
     [['gender', GENDERS, '성별'], ['age', AGES, '나이대']].forEach(([key, list, name]) => {
       const sel_ = document.createElement('select');
@@ -2463,6 +2945,11 @@ function buildCastRows() {
   });
 }
 buildCastRows();
+document.querySelectorAll('dialog.popup [data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
+document.querySelectorAll('dialog.popup').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); })); // 바깥을 누르면 닫기
+$('refOpen').addEventListener('click', () => { buildCastRows(); $('refDlg').showModal(); $('refText').focus(); });
+$('worldOpen').addEventListener('click', () => { $('worldDlg').showModal(); $('worldText').focus(); });
+$('worldText').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) $('worldSearch').click(); });
 
 // 사람 부르는 말 (영어 검색어)
 const NOUN = {
@@ -2471,9 +2958,11 @@ const NOUN = {
   '': { adult: 'person', teen: 'teenager', child: 'child', old: 'elderly person' },
 };
 const PLURAL = { man: 'men', woman: 'women', boy: 'boys', girl: 'girls', person: 'people', child: 'children', teenager: 'teenagers' };
+const COUNT_WORD = ['', 'one', 'two', 'three', 'four', 'five', 'six'];
 function peopleWords(letters) {
-  const n = letters.map(l => NOUN[castProfile[l].gender][castProfile[l].age]);
+  const n = letters.map(l => NOUN[profileOf(l).gender][profileOf(l).age]);
   if (n.length < 2) return n[0] || 'person';
+  if (n.length > 2) return `group of ${COUNT_WORD[n.length] || 'several'} ${n.every(x => x === n[0]) ? (PLURAL[n[0]] || n[0] + 's') : 'people'}`;
   if (n[0] === n[1]) return `two ${PLURAL[n[0]] || n[0] + 's'}`;
   return `${n[0]} and ${n[1]}`;
 }
@@ -2499,9 +2988,14 @@ const KO_POSE = [
   [/서\s*있|서서/, 'standing'],
 ];
 function sceneLetters(text) {
-  const named = ['A', 'B'].filter(l => new RegExp(`(?<![a-zA-Z])${l}(?![a-zA-Z])`).test(text) || (l === 'A' ? /에이/ : /(^|\s)비(가|는|를|의|와|랑|에게)/).test(text));
+  const live = slots.filter(s => s.vrm);
+  const named = live.filter(s => new RegExp(`(?<![a-zA-Z])${s.letter}(?![a-zA-Z])`).test(text) || (s.label && s.label !== s.letter && text.includes(s.label))
+    || (s.letter === 'A' && /에이/.test(text)) || (s.letter === 'B' && /(^|\s)비(가|는|를|의|와|랑|에게)/.test(text))).map(s => s.letter);
   if (named.length) return named;
-  if (/둘|두\s*사람|두\s*명|서로|함께|같이/.test(text)) return ['A', 'B'];
+  const NUM = [[/셋|세\s*사람|세\s*명/, 3], [/넷|네\s*사람|네\s*명/, 4], [/다섯/, 5], [/여섯/, 6], [/둘|두\s*사람|두\s*명|서로/, 2]];
+  const hit = NUM.find(([re]) => re.test(text));
+  if (hit) return (live.length ? live : slots).slice(0, hit[1]).map(s => s.letter);
+  if (/모두|다\s*같이|함께|같이|여럿/.test(text) && live.length) return live.map(s => s.letter);
   const loaded = slots.filter(s => s.vrm).map(s => s.letter);
   return loaded.length ? loaded : ['A'];
 }
@@ -2829,6 +3323,15 @@ if (new URLSearchParams(location.search).has('debug')) {
     refQueries(text) { return referenceQueries(text); },
     mockDetector(byName) { poseLandmarker = { detect(img) { const k = Object.keys(byName).find(n => img.src.includes(n)); const ps = k ? byName[k] : []; return { landmarks: ps.map(p => p.lm), worldLandmarks: ps.map(p => p.world) }; } }; },
     photoOpen() { return $('poseDlg').open; },
+    /** 자세를 적용하고 관절 위치를 돌려준다 (자세 표 만들기용) */
+    evalPose(letter, pose) {
+      const s = slots.find(x => x.letter === letter); s.pose = pose; applyPose(s);
+      s.vrm.humanoid.update(); s.vrm.scene.updateMatrixWorld(true);
+      const out = {};
+      for (const b of [...MARKER_BONES, 'leftShoulder', 'rightShoulder', 'upperChest']) { const n = s.vrm.humanoid.getRawBoneNode(b); if (n) { const v = n.getWorldPosition(new THREE.Vector3()); out[b] = [v.x - s.x / 100, v.y - (s.y || 0) / 100, v.z - s.z / 100]; } }
+      return out;
+    },
+    applyNow(letter) { const s = slots.find(x => x.letter === letter); applyPose(s); groundSlot(s); syncUI(); },
   };
 }
 
@@ -2843,47 +3346,60 @@ if (EMBED) {
     clearTimeout(changeTimer);
     changeTimer = setTimeout(() => changeCb(), 300);
   };
-  const exportScene = () => ({
-    v: 1,
-    slots: JSON.parse(snapshot()),
-    camera: { pos: camera.position.toArray(), target: controls.target.toArray(), fov: camera.fov },
-    shot: shotSel,
-    aa: aaLevel,
-  });
+  notifyChange = notify;
+  const exportScene = sceneData;
   function importScene(data) {
-    if (!data || data.v !== 1) return;
-    restoreSnap(JSON.stringify(data.slots.slice(0, slots.length)));
-    camera.fov = data.camera.fov; camera.updateProjectionMatrix();
-    camera.position.fromArray(data.camera.pos);
-    controls.target.fromArray(data.camera.target);
-    controls.update();
-    shotSel = data.shot || shotSel;
-    if (data.aa && data.aa !== aaLevel) { $('aa').value = String(data.aa); $('aa').dispatchEvent(new Event('change')); }
+    try { applySceneData(data); } catch (e) { return; }
     history.length = 0; future.length = 0; pushHistory();
-    syncUI();
   }
-  async function addSecond(file) {
-    const b = makeSlot('B', 45);
-    b.rot = -20;
+  let actionCb = null;
+  const ask = (type) => { if (actionCb) actionCb({ type }); };
+  $('castAdd').addEventListener('click', () => ask('cast'));
+  $('emptyAdd').addEventListener('click', () => ask('cast'));
+  castRemoveHook = (letter, label) => {
+    if (!confirm(`${label}을(를) 이 컷에서 뺄까요? 작품 등장인물에서는 지워지지 않아요.`)) return;
+    if (actionCb) actionCb({ type: 'remove', letter });
+  };
+  async function addSlot(letter, file, lbl) {
+    const b = makeSlot(letter, 0);
+    b.label = lbl || letter;
     slots.push(b);
-    slots[0].x = Math.min(slots[0].x, -35);
-    applyPlacement(slots[0]);
     if (!(await loadFile(b, file))) { slots.pop(); return false; }
     return true;
   }
   window.roughEngine = {
     /** ratio: [가로, 세로], models: { A?: File, B?: File }, scene: 저장된 장면 또는 null */
-    async load({ ratio, models, scene }) {
+    async load({ ratio, models, scene, cast, name }) {
+      if (name) cutName = name;
+      // cast: [{ letter, name, gender, age }] — 이름은 화면에, 성별·나이대는 레퍼런스 검색에 쓴다
+      (cast || []).forEach(c => { if (c.gender !== undefined) castProfile[c.letter] = { gender: c.gender || '', age: c.age || 'adult' }; });
       // 앱 창에서 만든 File은 이 창의 File과 달라서(instanceof 실패) 이 창의 File로 다시 감싼다
       const own = (f) => (f ? new File([f], f.name) : null);
-      models = { A: own(models.A), B: own(models.B) };
+      models = Object.fromEntries(LETTERS.map(l => [l, own(models[l])]));
       cutRatio = ratio;
       $('frameLabel').textContent = `컷 ${ratio[0]}:${ratio[1]}`;
       layout();
+      const label = (l) => ((cast || []).find(c => c.letter === l) || {}).name || l;
+      slots[0].label = label('A');
       if (models.A) await loadFile(slots[0], models.A);
-      if (models.A && models.B) await addSecond(models.B);
-      if (scene) importScene(scene); else shot(shotSel);
-      sel = 0; syncUI();
+      if (models.A) for (const l of LETTERS.slice(1)) if (models[l]) await addSlot(l, models[l], label(l));
+      // 처음엔 가로로 벌려 세우고(뒤 사람일수록 살짝 안쪽을 보게), 저장된 장면이 있으면 그 배치로
+      const n = slots.length;
+      slots.forEach((s, i) => { s.x = spreadX(i, n); s.rot = n > 1 ? Math.round((spreadX(i, n) < 0 ? 15 : spreadX(i, n) > 0 ? -15 : 0)) : 0; applyPlacement(s); });
+      const savedArr = scene && Array.isArray(scene.slots) ? scene.slots : [];
+      const saved = savedArr.filter(Boolean).length;
+      if (scene) importScene(scene);
+      // 저장된 장면에 없던 인물(새로 들어온 사람)은 기존 인물 오른쪽에 겹치지 않게
+      if (saved > 0) {
+        const kept = slots.filter((_, i) => savedArr[i]);
+        let right = Math.max(...kept.map(s => s.x));
+        slots.forEach((s, i) => { if (!savedArr[i]) { right += 70; s.x = clampPos(right); s.rot = 0; applyPlacement(s); } });
+      }
+      slots.forEach(settleSprings);
+      if (!scene || saved < slots.filter(x => x.vrm).length) shot(shotSel);
+      $('emptyEmbed').hidden = !!models.A;
+      if (!models.A) say('이 컷에 나오는 인물이 없어요. "+ 인물 추가"를 눌러 넣어 주세요.');
+      sel = 0; buildCastRows(); syncUI();
       return { loaded: slots.filter(s => s.vrm).map(s => s.letter) };
     },
     exportScene,
@@ -2894,6 +3410,8 @@ if (EMBED) {
       return renderCut({ scale, transparent: false, withFilter: true, hideBackground: false }).toDataURL('image/jpeg', 0.82);
     },
     onChange(cb) { changeCb = cb; },
+    /** 엔진 안 버튼이 앱에 부탁하는 일 (예: { type: 'cast' } = 등장인물 추가·수정 창 열기) */
+    onAction(cb) { actionCb = cb; },
   };
   // 바뀔 수 있는 모든 경로: 되돌리기 기록, 카메라 조작, 패널 입력
   const basePush = pushHistory;

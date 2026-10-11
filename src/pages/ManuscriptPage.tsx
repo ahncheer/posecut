@@ -6,11 +6,16 @@ import { PageView } from '../components/PageView';
 import { WorkDialog } from '../components/WorkDialog';
 import { exportSvgAsPng } from '../components/exportPage';
 import { useManuscript } from '../storage/useManuscript';
-import { addPage, clearCut, findCut, pasteScene, previousCut, removePage } from '../scene/manuscript';
+import { addPage, changePageTemplate, clearCut, findCut, pasteScene, previousCut, removePage, scenesLostByTemplate } from '../scene/manuscript';
+import { PageTemplateDialog } from '../components/PageTemplateDialog';
+import { TemplatePicker } from '../components/TemplatePicker';
+import type { FrameStyle, TemplateId } from '../scene/types';
+import { TEMPLATES, templateOf } from '../scene/layout';
 import { cutRatio } from '../scene/layout';
 import { copyScene, readClip } from '../storage/clipboard';
 import { downloadJSON, toFile } from '../storage/file-io';
 import { deleteManuscript } from '../storage/db';
+import { ExportDialog, type ExportKind } from '../components/ExportDialog';
 
 export function ManuscriptPage() {
   const { msId } = useParams();
@@ -19,10 +24,26 @@ export function ManuscriptPage() {
   const [pageIndex, setPageIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [workOpen, setWorkOpen] = useState(false);
+  const [tplDialog, setTplDialog] = useState<'add' | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  /** 페이지를 추가한 뒤 저장이 반영되면 그 페이지로 이동 */
+  const [jumpTo, setJumpTo] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { if (m && pageIndex >= m.pages.length) setPageIndex(m.pages.length - 1); }, [m, pageIndex]);
+  useEffect(() => {
+    if (!m) return;
+    if (jumpTo !== null) {
+      if (m.pages.length > jumpTo) { setPageIndex(jumpTo); setJumpTo(null); }
+      return;
+    }
+    if (pageIndex >= m.pages.length) setPageIndex(m.pages.length - 1);
+  }, [m, pageIndex, jumpTo]);
+  // 기본으로 지금 페이지의 첫 컷을 고른 상태 (고른 컷이 이 페이지에 없으면 첫 컷으로)
+  useEffect(() => {
+    const pg = m?.pages[Math.min(pageIndex, m.pages.length - 1)];
+    if (pg && !pg.cuts.some(c => c.id === selected)) setSelected(pg.cuts[0]?.id ?? null);
+  }, [m, pageIndex, selected]);
 
   if (loading) return <><TopBar /><p className="sub" style={{ padding: 16 }}>불러오는 중…</p></>;
   if (!m) return <><TopBar /><div style={{ padding: 16 }} className="panel"><p>원고를 찾을 수 없어요.</p><Link to="/" className="btn">내 원고로</Link></div></>;
@@ -36,22 +57,10 @@ export function ManuscriptPage() {
 
   return (
     <>
-      <TopBar>
+      <TopBar right={<button type="button" className="btn primary" onClick={() => setExportOpen(true)}>내보내기</button>}>
         <Link to="/" className="btn small ghost">← 내 원고</Link>
         <TitleInput value={m.title} onSave={title => update(x => ({ ...x, title }))} />
         <span className="sub">{work?.title || '작품 이름 없음'} · 자동 저장됨</span>
-        <button type="button" className="btn small" onClick={() => setWorkOpen(true)} disabled={!work}>작품 설정</button>
-        <button type="button" className="btn small" onClick={() => work && downloadJSON(`${m.title || '원고'}.rough.json`, toFile(work, m))}>원고 파일로 저장</button>
-        <button
-          type="button"
-          className="btn small"
-          onClick={async () => {
-            const svg = canvasRef.current?.querySelector('svg');
-            if (svg) await exportSvgAsPng(svg, `${m.title || '원고'}_${pageIndex + 1}페이지.png`);
-          }}
-        >
-          페이지 PNG (미리보기 화질)
-        </button>
       </TopBar>
 
       <div className="msview">
@@ -63,9 +72,9 @@ export function ManuscriptPage() {
               <span>{i + 1}</span>
             </button>
           ))}
-          <button type="button" className="btn small" onClick={() => update(addPage)}>
-            {m.format === 'page' ? '+ 같은 틀 페이지' : '+ 컷 추가'}
-          </button>
+          {m.format === 'page'
+            ? <button type="button" className="btn small" onClick={() => setTplDialog('add')}>+ 페이지 추가</button>
+            : <button type="button" className="btn small" onClick={() => update(x => addPage(x))}>+ 컷 추가</button>}
           {m.format === 'page' && m.pages.length > 1 && (
             <button
               type="button"
@@ -113,42 +122,80 @@ export function ManuscriptPage() {
             {note && <p className="sub" role="status">{note}</p>}
           </section>
 
-          <section className="panel" aria-label="등장인물">
-            <div style={{ display: 'flex', alignItems: 'center' }}><h2 style={{ flex: 1 }}>등장인물</h2><button type="button" className="btn small ghost" onClick={() => setWorkOpen(true)}>수정</button></div>
-            {work?.characters.map(c => (
-              <div key={c.slot} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span className="avatar" aria-hidden="true">{c.slot}</span>
-                <span>{c.name}<br /><small className="sub">{c.model ? (c.model.kind === 'sample' ? '샘플 캐릭터' : c.model.name) : '모델 없음'}{c.role ? ` · ${c.role}` : ''}</small></span>
-              </div>
-            ))}
-          </section>
-
-          <section className="panel" aria-label="원고 설정">
-            <h2>원고 설정</h2>
+          <details className="panel fold" aria-label="작품 설정">
+            <summary><h2>작품 설정</h2><span className="fold-sum">{work?.title || '작품 이름 없음'} · 등장인물 {work?.characters.length ?? 0}명</span></summary>
             <dl className="stat">
-              <dt>형식</dt><dd>{m.format === 'page' ? `페이지 만화 · ${m.pageRatio[0]}:${m.pageRatio[1]}` : '웹툰 세로'}</dd>
-              <dt>컷 사이 여백</dt><dd>{m.style.gutter}</dd>
-              <dt>바깥 여백</dt><dd>{m.style.margin}</dd>
+              <dt>작품 제목</dt><dd>{work?.title || '없음'}</dd>
+              <dt>작품 설명</dt><dd className="clamp">{work?.world || '없음'}</dd>
+              <dt>등장인물</dt><dd>{work?.characters.map(c => `${c.name || c.slot}${c.model ? '' : '(모델 없음)'}`).join(', ')}</dd>
             </dl>
-            <div className="nums" style={{ gridTemplateColumns: '1fr 1fr' }}>
-              <label className="field">테두리 굵기
-                <input type="number" min={0} max={10} value={m.style.border.width} onChange={e => update(x => ({ ...x, style: { ...x.style, border: { ...x.style.border, width: Math.min(10, Math.max(0, Number(e.target.value) || 0)) } } }))} />
-              </label>
-              <label className="field">테두리 색
-                <input type="color" value={m.style.border.color} onChange={e => update(x => ({ ...x, style: { ...x.style, border: { ...x.style.border, color: e.target.value } } }))} style={{ width: '100%', height: 36, border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)' }} />
-              </label>
+            <div className="btnrow">
+              <button type="button" className="btn small" onClick={() => setWorkOpen(true)} disabled={!work}>작품 설정 고치기</button>
+              <button
+                type="button"
+                className="btn small ghost danger"
+                onClick={async () => { if (confirm(`이 원고(${m.title})를 지울까요? 되돌릴 수 없어요.`)) { await deleteManuscript(m.id); navigate('/'); } }}
+              >
+                이 원고({m.title}) 지우기
+              </button>
             </div>
-            <button
-              type="button"
-              className="btn small ghost danger"
-              onClick={async () => { if (confirm('이 원고를 지울까요? 되돌릴 수 없어요.')) { await deleteManuscript(m.id); navigate('/'); } }}
-            >
-              원고 지우기
-            </button>
-          </section>
+          </details>
+
+          <details className="panel fold" aria-label="틀 변경">
+            <summary><h2>틀 변경</h2><span className="fold-sum">{m.format === 'page' ? `${pageIndex + 1}페이지 · ${TEMPLATES.find(t => t.id === templateOf(page, m.template))?.label}` : '웹툰 세로'}</span></summary>
+            {m.format === 'page' ? (
+              <TemplateChanger
+                key={`${page.id}/${templateOf(page, m.template)}`}
+                pageNumber={pageIndex + 1}
+                current={templateOf(page, m.template)}
+                style={m.style}
+                ratio={m.pageRatio}
+                lostFor={t => scenesLostByTemplate(m, pageIndex, t)}
+                onApply={async t => {
+                  await update(x => changePageTemplate(x, pageIndex, t).manuscript);
+                  setSelected(null);
+                  say(`${pageIndex + 1}페이지 틀을 "${TEMPLATES.find(x => x.id === t)?.label}"(으)로 바꿨어요.`);
+                }}
+              />
+            ) : (
+              <p className="sub">웹툰은 틀 대신 왼쪽 "+ 컷 추가"로 아래에 컷을 더해요.</p>
+            )}
+          </details>
         </aside>
       </div>
 
+      {m.format === 'page' && (
+        <PageTemplateDialog
+          open={tplDialog !== null}
+          mode="add"
+          pageNumber={m.pages.length + 1}
+          initial={templateOf(m.pages[m.pages.length - 1], m.template)}
+          style={m.style}
+          ratio={m.pageRatio}
+          lostFor={t => scenesLostByTemplate(m, pageIndex, t)}
+          onClose={() => setTplDialog(null)}
+          onConfirm={async t => {
+            setJumpTo(m.pages.length);
+            await update(x => addPage(x, t));
+            say(`${m.pages.length + 1}페이지를 "${TEMPLATES.find(x => x.id === t)?.label}" 틀로 추가했어요.`);
+            setSelected(null);
+            setTplDialog(null);
+          }}
+        />
+      )}
+      <ExportDialog
+        open={exportOpen}
+        pageNumber={pageIndex + 1}
+        onClose={() => setExportOpen(false)}
+        onExport={async (kind: ExportKind) => {
+          if (kind === 'file') { if (work) downloadJSON(`${work.title || '작품'}_${m.title || '원고'}.rough.json`, toFile(work, m)); }
+          else {
+            const svg = canvasRef.current?.querySelector('svg');
+            if (svg) await exportSvgAsPng(svg, `${work?.title || '작품'}_${m.title || '원고'}_${pageIndex + 1}페이지.png`);
+          }
+          setExportOpen(false);
+        }}
+      />
       {work && <WorkDialog work={work} open={workOpen} onClose={() => setWorkOpen(false)} onSave={w => { updateWork(w); setWorkOpen(false); }} />}
     </>
   );
@@ -164,5 +211,31 @@ function TitleInput({ value, onSave }: { value: string; onSave: (v: string) => v
       <label className="vh" htmlFor="msTitle">원고 제목</label>
       <input id="msTitle" type="text" value={text} onChange={e => setText(e.target.value)} onBlur={commit} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} style={{ maxWidth: 220 }} />
     </>
+  );
+}
+
+/** 오른쪽 "틀 변경": 지금 페이지의 틀을 골라 적용. 사라질 장면이 있으면 미리 알려준다 */
+function TemplateChanger({ pageNumber, current, style, ratio, lostFor, onApply }: {
+  pageNumber: number; current: TemplateId; style: FrameStyle; ratio: [number, number];
+  lostFor: (t: TemplateId) => number; onApply: (t: TemplateId) => void;
+}) {
+  const [value, setValue] = useState(current);
+  const same = value === current;
+  const lost = same ? 0 : lostFor(value);
+  return (
+    <div className="tplchange">
+      <TemplatePicker name="pageTemplateSide" format="page" style={style} ratio={ratio} value={value} onChange={setValue} showDraw={false} />
+      <p className="sect-note" role="status" style={lost ? { color: 'var(--danger)' } : undefined}>
+        {same ? `${pageNumber}페이지의 지금 틀이에요.` : lost ? `컷이 모자라서 뒤쪽 장면 ${lost}개가 사라져요.` : '장면은 앞 컷부터 차례로 옮겨져요.'}
+      </p>
+      <button
+        type="button"
+        className={`btn small ${lost ? 'danger' : 'primary'}`}
+        disabled={same}
+        onClick={() => { if (!lost || confirm(`장면 ${lost}개가 사라져요. 바꿀까요?`)) onApply(value); }}
+      >
+        {lost ? `장면 ${lost}개 지우고 ${pageNumber}페이지에 적용` : `${pageNumber}페이지에 적용`}
+      </button>
+    </div>
   );
 }

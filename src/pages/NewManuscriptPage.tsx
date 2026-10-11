@@ -1,12 +1,15 @@
-// 새 원고: 1단계 원고 틀 → 2단계 작품 설정 → 만들기
+// 새 원고: ① 작품 설정(작품 제목·작품 설명·등장인물) → ② 원고 틀 → 만들기. 원고 이름은 그 작품의 n화로 자동
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { HomeLayout } from '../components/HomeLayout';
 import { PageView } from '../components/PageView';
 import { CharacterEditor } from '../components/CharacterEditor';
-import { DEFAULT_PAGE_RATIO, DEFAULT_STYLE, TEMPLATES, describeTemplate, makePage } from '../scene/layout';
-import { newManuscript, newWork, nextTempName } from '../scene/manuscript';
+import { TemplatePicker } from '../components/TemplatePicker';
+import { Stepper } from '../components/Stepper';
+import { Info } from '../components/Info';
+import { DEFAULT_PAGE_RATIO, DEFAULT_STYLE, describeTemplate, makePage } from '../scene/layout';
+import { newManuscript, newWork, nextEpisodeTitle, nextTempName, resolveTitle } from '../scene/manuscript';
 import type { Format, FrameStyle, TemplateId, Work } from '../scene/types';
 import { db, sampleAvailable, saveManuscript, saveWork } from '../storage/db';
 
@@ -15,13 +18,15 @@ const clampNum = (v: string, lo: number, hi: number) => Math.min(hi, Math.max(lo
 export function NewManuscriptPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<1 | 2>(1);
+  // ① 작품 설정
+  const [draft, setDraft] = useState<Work>(() => newWork());
+  const [existingId, setExistingId] = useState<string | null>(null); // null = 새 작품
+  // ② 원고 틀
   const [format, setFormat] = useState<Format>('page');
   const [template, setTemplate] = useState<TemplateId>('four');
   const [style, setStyle] = useState<FrameStyle>(DEFAULT_STYLE);
-  const [mode, setMode] = useState<'new' | 'existing'>('new');
-  const [draft, setDraft] = useState<Work>(() => newWork());
-  const [existingId, setExistingId] = useState('');
-  const [title, setTitle] = useState('');
+  const [ratio, setRatio] = useState<[number, number]>(DEFAULT_PAGE_RATIO);
+
   const works = useLiveQuery(() => db.works.orderBy('updatedAt').reverse().toArray(), []);
 
   // 샘플 파일이 없으면 A의 기본 모델을 비운다
@@ -31,125 +36,165 @@ export function NewManuscriptPage() {
     });
   }, []);
 
-  const preview = useMemo(() => makePage(format, template, style, DEFAULT_PAGE_RATIO), [format, template, style]);
-  const existing = works?.find(w => w.id === existingId) ?? null;
-  const autoWorkTitle = nextTempName(works?.map(w => w.title) ?? []);
+  const preview = useMemo(() => makePage(format, template, style, ratio), [format, template, style, ratio]);
+  const existing = existingId ? works?.find(w => w.id === existingId) ?? null : null;
+  const workHint = nextTempName(works?.map(w => w.title) ?? []);
 
-  /** quick = 작품 설정을 건너뛰고 임시 작품으로 바로 만들기. 제목·설명은 나중에 원고 화면 "작품 설정"에서 */
-  async function create(quick = false) {
+  async function create() {
     let work: Work;
-    if (!quick && mode === 'existing' && existing) work = existing;
+    if (existing) work = existing;
     else {
-      const base = quick ? { ...newWork(), characters: draft.characters } : draft;
-      const allTitles = (await db.works.toArray()).map(w => w.title);
-      work = { ...base, title: base.title.trim() || nextTempName(allTitles) };
+      const workTitles = (await db.works.toArray()).map(w => w.title);
+      work = { ...draft, title: resolveTitle(draft.title, workTitles) };
       await saveWork(work);
     }
-    const count = (await db.manuscripts.where('workId').equals(work.id).count()) + 1;
-    const m = newManuscript({ title: (quick ? '' : title.trim()) || `${count}화`, work, format, template, style, pageRatio: DEFAULT_PAGE_RATIO });
+    const inWork = (await db.manuscripts.where('workId').equals(work.id).toArray()).map(x => x.title);
+    const m = newManuscript({ title: nextEpisodeTitle(inWork), work, format, template, style, pageRatio: ratio });
     await saveManuscript(m);
     navigate(`/m/${m.id}`);
   }
 
   return (
     <HomeLayout>
-      <section className="panel">
-        <div className="steps" aria-label="단계">
-          {step === 1 ? <b>1. 원고 틀</b> : <span>1. 원고 틀</span>}<span aria-hidden="true">›</span>
-          {step === 2 ? <b>2. 작품 설정</b> : <span>2. 작품 설정</span>}
-        </div>
+      <div className="np">
+        <header className="np-head">
+          <h1 className="np-title">새 원고</h1>
+          <Stepper steps={['작품 설정', '원고 틀']} current={step - 1} onGo={i => { if (i === 0) setStep(1); }} />
+        </header>
 
         {step === 1 && (
-          <div className="wizard">
-            <div style={{ display: 'grid', gap: 16 }}>
-              <fieldset style={{ border: 0, padding: 0, margin: 0, display: 'grid', gap: 8 }}>
-                <legend><h2>형식</h2></legend>
-                <div className="choices">
-                  <button type="button" className="choice" aria-pressed={format === 'page'} onClick={() => setFormat('page')}>
-                    <b>페이지 만화</b><small>정해진 페이지 안에 컷 배치</small>
+          <div className="np-main">
+            <section className="sect" aria-labelledby="sTitle">
+              <div className="sect-head">
+                <h2 className="sect-title" id="sTitle">작품 제목</h2>
+                <Info text={existing ? '이 작품의 다음 화로 만들어져요. 작품 설명과 등장인물을 그대로 이어서 써요.' : `비워 두면 "${workHint}"(으)로 저장돼요. 같은 제목이 있으면 뒤에 숫자가 하나씩 붙어요. 원고는 이 작품의 1화, 2화…로 이름이 붙어요.`} />
+                <span className="spacer" />
+                {existing === null && (
+                  <button
+                    type="button"
+                    className="linkbtn"
+                    disabled={!works?.length}
+                    title={works?.length ? '이미 만든 작품의 다음 화로 만들어요' : '아직 만든 작품이 없어요'}
+                    onClick={() => works?.[0] && setExistingId(works[0].id)}
+                  >
+                    기존 작품 불러오기
                   </button>
-                  <button type="button" className="choice" aria-pressed={format === 'webtoon'} onClick={() => setFormat('webtoon')}>
-                    <b>웹툰 세로</b><small>컷이 아래로 계속 이어짐</small>
-                  </button>
-                </div>
-              </fieldset>
-              <fieldset style={{ border: 0, padding: 0, margin: 0, display: 'grid', gap: 8 }}>
-                <legend><h2>컷 틀</h2></legend>
-                <div className="choices">
-                  {TEMPLATES.map(t => (
-                    <button key={t.id} type="button" className="choice" aria-pressed={template === t.id} onClick={() => setTemplate(t.id)}>
-                      <b>{t.label}</b>
-                    </button>
-                  ))}
-                  <button type="button" className="choice" disabled title="다음 단계에서 만들어요">
-                    <b>✎ 직접 그리기</b><small>준비 중</small>
-                  </button>
-                </div>
-              </fieldset>
-              <div style={{ display: 'grid', gap: 8 }}>
-                <h2>여백과 테두리</h2>
-                <div className="nums">
-                  <label className="field">컷 사이 여백<input type="number" min={0} max={40} value={style.gutter} onChange={e => setStyle({ ...style, gutter: clampNum(e.target.value, 0, 40) })} /></label>
-                  <label className="field">바깥 여백<input type="number" min={0} max={60} value={style.margin} onChange={e => setStyle({ ...style, margin: clampNum(e.target.value, 0, 60) })} /></label>
-                  <label className="field">테두리 굵기<input type="number" min={0} max={10} value={style.border.width} onChange={e => setStyle({ ...style, border: { ...style.border, width: clampNum(e.target.value, 0, 10) } })} /></label>
-                </div>
-                <p className="sub">처음 고른 틀은 나중에 바꿀 수 없어요. 테두리 굵기·색은 원고 화면에서도 고칠 수 있어요.</p>
+                )}
+                {existing && <button type="button" className="linkbtn" onClick={() => setExistingId(null)}>새 작품으로</button>}
               </div>
+              {existing ? (
+                    <select className="rowin full field-solo" aria-labelledby="sTitle" value={existing.id} onChange={e => setExistingId(e.target.value)}>
+                      {works?.map(w => <option key={w.id} value={w.id}>{w.title || '작품 이름 없음'}</option>)}
+                    </select>
+                  ) : (
+                    <input className="rowin full field-solo" type="text" aria-labelledby="sTitle" value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} placeholder={workHint} />
+                  )}
+            </section>
+
+            {!existing && (
+              <section className="sect" aria-labelledby="sWork">
+                <div className="sect-head">
+                  <h2 className="sect-title" id="sWork">작품 설명</h2>
+                  <Info text="시대·장소·분위기 등을 자유롭게 적어요. 비워 둬도 되고, 원고 화면의 '작품 설정'에서 나중에 적을 수 있어요." />
+                </div>
+                <textarea className="rowarea field-solo" rows={3} aria-labelledby="sWork" value={draft.world} onChange={e => setDraft({ ...draft, world: e.target.value })} placeholder="예: 현대 한국, 대학가 골목의 작은 카페. 잔잔한 일상물" />
+              </section>
+            )}
+
+            {!existing && (
+              <section className="sect" aria-labelledby="sCast">
+                <div className="sect-head">
+                  <h2 className="sect-title" id="sCast">등장인물</h2>
+                  <Info text="모델을 바꾸면 그 인물이 나오는 모든 컷에 반영돼요. 추가 설정의 성별·나이대는 포즈 레퍼런스 검색에 쓰여요." />
+                </div>
+                <CharacterEditor characters={draft.characters} onChange={characters => setDraft({ ...draft, characters })} />
+              </section>
+            )}
+
+            <div className="np-actions">
               <div className="actions">
-                <button type="button" className="btn" onClick={() => create(true)} title="작품 이름은 임시 이름으로 정하고, 제목·설명·등장인물은 나중에 적어요">설정 건너뛰고 바로 만들기</button>
-                <button type="button" className="btn primary" onClick={() => setStep(2)}>다음: 작품 설정</button>
+                <span className="quick">
+                  <button type="button" className="btn" onClick={create}>기본 틀로 바로 만들기</button>
+                  <Info text="페이지 만화 9:19, 기본 4컷으로 만들어요. 원고 화면에서 페이지마다 틀을 바꿀 수 있어요." />
+                </span>
+                <button type="button" className="btn primary" onClick={() => setStep(2)}>다음: 원고 틀</button>
               </div>
-              <p className="sub" style={{ textAlign: 'right' }}>건너뛰면 작품 이름이 "{autoWorkTitle}"처럼 자동으로 붙어요. 원고 화면의 "작품 설정"에서 언제든 바꿀 수 있어요.</p>
-            </div>
-            <div className="preview">
-              <h3>미리보기</h3>
-              <PageView page={preview} style={style} width={format === 'page' ? 180 : 200} showNumbers={false} label="원고 틀 미리보기" />
-              <p className="sub">{describeTemplate(format, template, DEFAULT_PAGE_RATIO)}</p>
             </div>
           </div>
         )}
 
         {step === 2 && (
-          <div style={{ display: 'grid', gap: 16 }}>
-            <label className="field">원고 제목 (비우면 "n화")<input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="비워 두면 1화, 2화…" /></label>
-            <div className="choices">
-              <button type="button" className="choice" aria-pressed={mode === 'new'} onClick={() => setMode('new')}>
-                <b>새 작품 만들기</b><small>세계관과 등장인물을 새로 입력해요</small>
-              </button>
-              <button type="button" className="choice" aria-pressed={mode === 'existing'} disabled={!works?.length} onClick={() => { setMode('existing'); if (!existingId && works?.[0]) setExistingId(works[0].id); }}>
-                <b>기존 작품 이어서</b><small>{works?.length ? '세계관과 등장인물이 자동으로 채워져요' : '아직 만든 작품이 없어요'}</small>
-              </button>
+          <div className="np-body">
+            <div className="np-main">
+              <section className="sect" aria-labelledby="sFormat">
+                <div className="sect-head">
+                  <h2 className="sect-title" id="sFormat">형식</h2>
+                  <span className="notice-blue" id="formatNote">만든 뒤에는 형식과 페이지 비율을 바꿀 수 없어요</span>
+                </div>
+                <div className="grouped">
+                  <div className="row">
+                    <label className="row-choice">
+                      <input type="radio" name="format" checked={format === 'page'} onChange={() => setFormat('page')} />
+                      <span className="row-text"><span className="row-label">페이지 만화</span><span className="row-desc">비율 고정</span></span>
+                    </label>
+                    {format === 'page' && (
+                      <span className="ratio" role="group" aria-label="페이지 비율 (가로:세로)">
+                        {(ratio[0] !== DEFAULT_PAGE_RATIO[0] || ratio[1] !== DEFAULT_PAGE_RATIO[1]) && (
+                          <button type="button" className="linkbtn" onClick={() => setRatio(DEFAULT_PAGE_RATIO)}>기본값</button>
+                        )}
+                        <input className="num" type="number" min={1} max={50} step={0.1} aria-label="가로" value={ratio[0]} onChange={e => setRatio([clampNum(e.target.value, 1, 50), ratio[1]])} />
+                        <span className="ratio-sep" aria-hidden="true">:</span>
+                        <input className="num" type="number" min={1} max={50} step={0.1} aria-label="세로" value={ratio[1]} onChange={e => setRatio([ratio[0], clampNum(e.target.value, 1, 50)])} />
+                      </span>
+                    )}
+                  </div>
+                  <div className="row">
+                    <label className="row-choice">
+                      <input type="radio" name="format" checked={format === 'webtoon'} onChange={() => setFormat('webtoon')} />
+                      <span className="row-text"><span className="row-label">웹툰 세로</span><span className="row-desc">컷이 아래로 계속 이어짐</span></span>
+                    </label>
+                  </div>
+                </div>
+              </section>
+
+              <section className="sect" aria-labelledby="sTpl">
+                <div className="sect-head">
+                  <h2 className="sect-title" id="sTpl">{format === 'page' ? '첫 페이지 컷 틀' : '처음 컷 구성'}</h2>
+                  <Info text={format === 'page' ? '페이지를 추가할 때 다른 틀을 고를 수 있고, 원고 화면에서 페이지마다 바꿀 수도 있어요.' : '이 컷 수로 시작하고, 원고 화면에서 컷을 더할 수 있어요.'} />
+                </div>
+                <TemplatePicker name="template" format={format} style={style} ratio={ratio} value={template} onChange={setTemplate} labelledBy="sTpl" />
+              </section>
+
+              <section className="sect" aria-labelledby="sStyle">
+                <div className="sect-head">
+                  <h2 className="sect-title" id="sStyle">여백과 테두리</h2>
+                  <Info text="테두리 굵기·색은 원고 화면에서도 고칠 수 있어요." />
+                </div>
+                <div className="grouped">
+                  <label className="row"><span className="row-label">컷 사이 여백</span><input className="num" type="number" min={0} max={40} value={style.gutter} onChange={e => setStyle({ ...style, gutter: clampNum(e.target.value, 0, 40) })} /></label>
+                  <label className="row"><span className="row-label">바깥 여백</span><input className="num" type="number" min={0} max={60} value={style.margin} onChange={e => setStyle({ ...style, margin: clampNum(e.target.value, 0, 60) })} /></label>
+                  <label className="row"><span className="row-label">테두리 굵기</span><input className="num" type="number" min={0} max={10} value={style.border.width} onChange={e => setStyle({ ...style, border: { ...style.border, width: clampNum(e.target.value, 0, 10) } })} /></label>
+                </div>
+              </section>
+
+              <div className="np-actions">
+                <div className="actions">
+                  <button type="button" className="btn" onClick={() => setStep(1)}>이전</button>
+                  <button type="button" className="btn primary" onClick={create}>만들기</button>
+                </div>
+              </div>
             </div>
 
-            {mode === 'existing' && works && (
-              <label className="field">작품
-                <select value={existingId} onChange={e => setExistingId(e.target.value)}>
-                  {works.map(w => <option key={w.id} value={w.id}>{w.title || '작품 이름 없음'}</option>)}
-                </select>
-              </label>
-            )}
-
-            {mode === 'new' && (
-              <>
-                <div style={{ display: 'grid', gap: 8 }}>
-                  <h2>세계관 <small className="sub">모두 비워도 돼요 · 나중에 적기</small></h2>
-                  <label className="field">작품 제목<input type="text" value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} placeholder={`비워 두면 "${autoWorkTitle}"`} /></label>
-                  <label className="field">시대·장소·분위기<textarea rows={2} value={draft.world} onChange={e => setDraft({ ...draft, world: e.target.value })} placeholder="예: 현대 한국, 대학가 골목의 작은 카페. 잔잔하고 따뜻한 일상물" /></label>
-                </div>
-                <div style={{ display: 'grid', gap: 8 }}>
-                  <h2>등장인물</h2>
-                  <CharacterEditor characters={draft.characters} onChange={characters => setDraft({ ...draft, characters })} />
-                </div>
-              </>
-            )}
-
-            <div className="actions">
-              <button type="button" className="btn" onClick={() => setStep(1)}>이전</button>
-              <button type="button" className="btn primary" onClick={() => create()} disabled={mode === 'existing' && !existing}>만들기</button>
-            </div>
+            <aside className="np-side" aria-label="미리보기">
+              <h2 className="sect-title">미리보기</h2>
+              <div className="preview-card">
+                <PageView page={preview} style={style} width={format === 'page' ? 150 : 170} showNumbers={false} label="원고 틀 미리보기" />
+              </div>
+              <p className="sect-note" style={{ textAlign: 'center' }}>{describeTemplate(format, template, ratio)}</p>
+            </aside>
           </div>
         )}
-      </section>
+      </div>
     </HomeLayout>
   );
 }

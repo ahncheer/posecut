@@ -3,22 +3,26 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { TopBar } from '../components/TopBar';
 import { useManuscript } from '../storage/useManuscript';
-import { findCut, neighbourCutId, updateCut } from '../scene/manuscript';
+import { castForCut, findCut, neighbourCutId, remapSceneSlots, updateCut } from '../scene/manuscript';
 import { cutRatio } from '../scene/layout';
-import { ENGINE_URL, type RoughEngine, waitForEngine } from '../engine/bridge';
+import { ENGINE_URL, type EngineCast, type RoughEngine, waitForEngine } from '../engine/bridge';
 import { loadModelFile } from '../storage/db';
+import { CastDialog } from '../components/CastDialog';
+import type { Character, SlotId } from '../scene/types';
+import { CUT_LETTERS } from '../scene/types';
 
 type Status = '불러오는 중…' | '자동 저장됨' | '저장 중…' | string;
 
 export function CutEditorPage() {
   const { msId, cutId } = useParams();
   const navigate = useNavigate();
-  const { loading, manuscript: m, work, update } = useManuscript(msId);
+  const { loading, manuscript: m, work, update, updateWork } = useManuscript(msId);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const engineRef = useRef<RoughEngine | null>(null);
   const saveTimer = useRef(0);
   const [status, setStatus] = useState<Status>('불러오는 중…');
-  const [missing, setMissing] = useState(false);
+  const [castOpen, setCastOpen] = useState(false);
+  const removeRef = useRef<(index: number) => void>(() => {});
 
   /** 엔진에서 지금 장면과 작은 그림을 꺼내 저장. 엔진이 이미 사라졌으면 장면만(또는 아무것도) 저장하지 않는다. */
   const persist = useCallback(async (id: string) => {
@@ -42,7 +46,15 @@ export function CutEditorPage() {
   const latest = useRef({ m, work });
   latest.current = { m, work };
   const ready = !!m && !!work;
-  const modelKey = JSON.stringify(work?.characters.map(c => c.model) ?? []);
+  const cutNow = m && cutId ? findCut(m, cutId) : null;
+  const castNow: Character[] = work && cutNow ? castForCut(work.characters, cutNow.cut.cast) : [];
+  // 이 컷에 나오는 인물(자리·모델·이름·성별·나이)이 바뀌면 엔진을 다시 띄운다
+  const liveKey = JSON.stringify(castNow.map(c => [c.slot, c.model, c.name, c.gender, c.age]));
+  // 등장인물 창에서 작품·컷을 차례로 고치는 동안에는 엔진을 다시 띄우지 않고, 다 고친 뒤 한 번만 띄운다
+  const [applying, setApplying] = useState(false);
+  const frozenKey = useRef(liveKey);
+  if (!applying) frozenKey.current = liveKey;
+  const modelKey = frozenKey.current;
 
   // 엔진 준비 → 모델·장면 넣기. 컷이나 모델이 바뀌면 다시 불러온다 (iframe도 key로 새로 뜬다).
   useEffect(() => {
@@ -57,12 +69,22 @@ export function CutEditorPage() {
     (async () => {
       try {
         const eng = await waitForEngine(frame);
-        const [A, B] = await Promise.all(w.characters.map(c => loadModelFile(c.model)));
+        // 이 컷에 고른 인물(안 골랐으면 모델이 있는 앞의 2명)을 A, B, C … 자리에
+        const chosen = castForCut(w.characters, found.cut.cast);
+        const files = await Promise.all(chosen.map(c => loadModelFile(c.model)));
         if (cancelled) return;
-        setMissing(!A);
-        await eng.load({ ratio: cutRatio(found.cut.rect), models: { A: A ?? undefined, B: B ?? undefined }, scene: found.cut.scene });
+        const cast: EngineCast[] = chosen.map((c, i) => ({ letter: CUT_LETTERS[i], name: c.name || c.slot, gender: c.gender, age: c.age }));
+        const models = Object.fromEntries(chosen.map((_, i) => [CUT_LETTERS[i], files[i] ?? undefined]));
+        await eng.load({
+          ratio: cutRatio(found.cut.rect), models, scene: found.cut.scene, cast,
+          name: `${ms.title}_${found.pageIndex + 1}페이지_컷${found.cutIndex + 1}`,
+        });
         if (cancelled) return;
         engineRef.current = eng;
+        eng.onAction?.(a => {
+          if (a.type === 'cast') setCastOpen(true);
+          else if (a.type === 'remove') removeRef.current(CUT_LETTERS.indexOf(a.letter as typeof CUT_LETTERS[number]));
+        });
         eng.onChange(() => {
           window.clearTimeout(saveTimer.current);
           saveTimer.current = window.setTimeout(save, 600);
@@ -98,6 +120,32 @@ export function CutEditorPage() {
   const next = neighbourCutId(m, found.cut.id, 1);
   const go = (id: string | null) => { if (id) void leave(`/m/${m.id}/cut/${id}`); };
 
+  /** 등장인물 창에서 적용: 지금 장면을 먼저 저장하고, 작품 등장인물·이 컷의 인물을 바꾼다 (엔진은 다시 뜬다) */
+  const applyCast = async (next: { characters: Character[]; cast: SlotId[] }) => {
+    setCastOpen(false);
+    setApplying(true);
+    try {
+      window.clearTimeout(saveTimer.current);
+      await persist(found.cut.id);
+      engineRef.current = null;
+      if (work && JSON.stringify(next.characters) !== JSON.stringify(work.characters)) await updateWork({ ...work, characters: next.characters, updatedAt: Date.now() });
+      const oldCast = castNow.map(c => c.slot);
+      await update(x => {
+        const cur = findCut(x, found.cut.id);
+        return updateCut(x, found.cut.id, { cast: next.cast, scene: remapSceneSlots(cur?.cut.scene ?? null, oldCast, next.cast) });
+      });
+    } finally {
+      setApplying(false);
+    }
+  };
+  // 엔진의 ✕ 버튼: 그 자리 인물을 이 컷에서만 뺀다
+  removeRef.current = (index: number) => {
+    if (!work || index < 0) return;
+    const who = castNow[index];
+    if (!who) return;
+    void applyCast({ characters: work.characters, cast: castNow.map(c => c.slot).filter((_, i) => i !== index) });
+  };
+
   return (
     <div className="editor">
       <div>
@@ -108,14 +156,17 @@ export function CutEditorPage() {
           <button type="button" className="btn small" disabled={!next} onClick={() => go(next)}>다음 컷 ›</button>
           <span className="sub" role="status">{status}</span>
         </TopBar>
-        {missing && (
-          <div className="notice" role="alert">
-            A의 모델이 없어요. 원고 화면의 "작품 설정"에서 VRM 파일을 넣어 주세요.
-            <Link to={`/m/${m.id}`} className="btn small">원고 화면으로</Link>
-          </div>
-        )}
       </div>
       <iframe key={`${found.cut.id}/${modelKey}`} ref={frameRef} src={ENGINE_URL} title="컷 편집" />
+      {work && (
+        <CastDialog
+          open={castOpen}
+          characters={work.characters}
+          cast={castNow.map(c => c.slot)}
+          onClose={() => setCastOpen(false)}
+          onSave={next => void applyCast(next)}
+        />
+      )}
     </div>
   );
 }

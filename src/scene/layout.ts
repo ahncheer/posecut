@@ -71,8 +71,24 @@ const emptyCut = (rect: Rect): Cut => ({ id: newId(), rect, scene: null, thumb: 
 
 export function makePage(format: Format, template: TemplateId, style: FrameStyle, ratio: [number, number]): Page {
   const { height, rects } = layout(format, template, style, ratio);
-  return { id: newId(), height, cuts: rects.map(emptyCut) };
+  return { id: newId(), template, height, cuts: rects.map(emptyCut) };
 }
+
+/**
+ * 페이지의 컷 틀 바꾸기. 장면은 앞 컷부터 새 컷에 차례로 옮기고, 자리가 모자라 남는 장면 수를 lost로 알려준다.
+ */
+export function retemplatePage(page: Page, template: TemplateId, style: FrameStyle, ratio: [number, number]): { page: Page; lost: number } {
+  const { height, rects } = pageLayout(template, style, ratio);
+  const filled = page.cuts.filter(c => c.scene);
+  const cuts = rects.map((rect, i) => {
+    const src = filled[i];
+    return src ? { ...src, rect } : emptyCut(rect);
+  });
+  return { page: { ...page, template, height, cuts }, lost: Math.max(0, filled.length - rects.length) };
+}
+
+/** 이 페이지의 컷 틀 (예전 원고는 원고의 틀) */
+export const templateOf = (page: Page, fallback: TemplateId): TemplateId => page.template ?? fallback;
 
 /** 웹툰 페이지 맨 아래에 컷 하나를 더한다 (원본은 바꾸지 않음) */
 export function appendWebtoonCut(page: Page, style: FrameStyle): Page {

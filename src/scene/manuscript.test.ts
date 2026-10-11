@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addPage, allCuts, clearCut, findCut, neighbourCutId, newManuscript, newWork, nextTempName, pasteScene, previousCut, updateCut } from './manuscript';
+import { remapSceneSlots, addCharacter, addPage, allCuts, blankCharacters, castForCut, nextEpisodeTitle, removeCharacter, changePageTemplate, clearCut, findCut, neighbourCutId, newManuscript, newWork, nextTempName, pasteScene, resolveTitle, uniqueTitle, previousCut, updateCut } from './manuscript';
 import { DEFAULT_PAGE_RATIO, DEFAULT_STYLE } from './layout';
 import type { EngineScene } from './types';
 
@@ -47,5 +47,82 @@ describe('자동 이름', () => {
     expect(nextTempName([])).toBe('임시1');
     expect(nextTempName(['카페', '임시1', '임시 3'])).toBe('임시4');
     expect(nextTempName(['임시작품'])).toBe('임시1');
+  });
+});
+
+describe('페이지마다 컷 틀', () => {
+  const sc = (n: number): EngineScene => ({ ...scene, shot: `s${n}` });
+  it('새 페이지는 바로 앞 페이지 틀, 틀을 주면 그 틀', () => {
+    let m = make();
+    m = addPage(m, 'three');
+    expect(m.pages[1].template).toBe('three');
+    expect(m.pages[1].cuts).toHaveLength(3);
+    m = addPage(m);
+    expect(m.pages[2].template).toBe('three');
+  });
+
+  it('틀을 바꾸면 장면을 앞에서부터 옮기고, 남는 장면 수를 알려준다', () => {
+    let m = make();
+    m.pages[0].cuts.forEach((c, i) => { if (i !== 1) c.scene = sc(i); }); // 1·3·4번 컷에 장면 (2번은 빈 컷)
+    const r = changePageTemplate(m, 0, 'bigTwo');
+    expect(r.lost).toBe(0);
+    expect(r.manuscript.pages[0].cuts.map(c => c.scene?.shot)).toEqual(['s0', 's2', 's3']);
+    const r2 = changePageTemplate(m, 0, 'one');
+    expect(r2.lost).toBe(2);
+    expect(r2.manuscript.pages[0].cuts).toHaveLength(1);
+    expect(m.pages[0].cuts).toHaveLength(4); // 원본 그대로
+  });
+});
+
+describe('제목 겹치지 않게', () => {
+  it('같은 제목이 있으면 숫자를 하나씩 올린다', () => {
+    expect(uniqueTitle('카페', [])).toBe('카페');
+    expect(uniqueTitle('카페', ['카페'])).toBe('카페2');
+    expect(uniqueTitle('카페', ['카페', '카페2'])).toBe('카페3');
+    expect(uniqueTitle('임시1', ['임시1'])).toBe('임시2');
+  });
+  it('비우면 임시N', () => {
+    expect(resolveTitle('  ', ['임시1'])).toBe('임시2');
+    expect(resolveTitle(' 카페 ', ['카페'])).toBe('카페2');
+  });
+});
+
+describe('등장인물 추가·삭제', () => {
+  it('다음 글자로 추가하고, 지워도 최소 1명은 남는다', () => {
+    let cs = addCharacter(blankCharacters());
+    expect(cs.map(c => c.slot)).toEqual(['A', 'B', 'C']);
+    cs = removeCharacter(cs, 'B');
+    expect(addCharacter(cs).map(c => c.slot)).toEqual(['A', 'C', 'B']);
+    expect(removeCharacter([cs[0]], cs[0].slot)).toHaveLength(1);
+  });
+  it('컷에는 모델 있는 앞의 2명', () => {
+    const cs = addCharacter(blankCharacters()).map((c, i) => ({ ...c, model: i === 1 ? null : { kind: 'sample' as const } }));
+    expect(castForCut(cs).map(c => c.slot)).toEqual(['A', 'C']);
+  });
+  it('컷마다 고른 인물 순서대로, 모델 없는 사람은 빼고, 비우면 아무도 없음', () => {
+    const cs = addCharacter(blankCharacters()).map((c, i) => ({ ...c, model: i === 1 ? null : { kind: 'sample' as const } }));
+    const [a, x, y] = cs.map(c => c.slot);
+    expect(castForCut(cs, [y, a]).map(c => c.slot)).toEqual([y, a]);
+    expect(castForCut(cs, [x, y]).map(c => c.slot)).toEqual([y]);
+    expect(castForCut(cs, [])).toEqual([]);
+    expect(castForCut(cs, ['없는사람', a]).map(c => c.slot)).toEqual([a]);
+  });
+  it('인물을 빼거나 순서를 바꾸면 장면의 자세도 따라 옮겨진다', () => {
+    const scene = { v: 1 as const, slots: ['A자세', 'B자세', 'C자세'], camera: { pos: [0, 0, 0], target: [0, 0, 0], fov: 28 }, shot: 'bust', aa: 1 };
+    expect(remapSceneSlots(scene, ['a', 'b', 'c'], ['a', 'c'])?.slots).toEqual(['A자세', 'C자세']);
+    expect(remapSceneSlots(scene, ['a', 'b', 'c'], ['c', 'x'])?.slots).toEqual(['C자세', null]);
+    expect(remapSceneSlots(null, ['a'], [])).toBeNull();
+  });
+  it('한 컷에 여러 명 (최대 6명)', () => {
+    let cs = blankCharacters();
+    for (let i = 0; i < 7; i++) cs = addCharacter(cs);
+    cs = cs.map(c => ({ ...c, model: { kind: 'sample' as const } }));
+    expect(castForCut(cs, cs.map(c => c.slot))).toHaveLength(6);
+    expect(castForCut(cs)).toHaveLength(2);
+  });
+  it('다음 화 이름', () => {
+    expect(nextEpisodeTitle([])).toBe('1화');
+    expect(nextEpisodeTitle(['1화', '2화'])).toBe('3화');
+    expect(nextEpisodeTitle(['1화', '외전'])).toBe('3화');
   });
 });
