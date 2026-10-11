@@ -75,4 +75,16 @@ export async function deleteManuscript(id: string): Promise<void> {
     await db.manuscripts.delete(id);
     if (m && (await db.manuscripts.where('workId').equals(m.workId).count()) === 0) await db.works.delete(m.workId);
   });
+  await pruneModels();
+}
+
+/** 어느 작품도 쓰지 않는 VRM 파일을 지운다 (브라우저 저장 공간 정리) */
+export async function pruneModels(): Promise<number> {
+  return db.transaction('rw', db.works, db.models, async () => {
+    const used = new Set<string>();
+    (await db.works.toArray()).forEach(w => w.characters.forEach(c => { if (c.model?.kind === 'stored') used.add(c.model.id); }));
+    const unused = (await db.models.toCollection().primaryKeys()).filter(id => !used.has(id));
+    await db.models.bulkDelete(unused);
+    return unused.length;
+  });
 }

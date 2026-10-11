@@ -102,6 +102,15 @@ export function CutEditorPage() {
     return () => { cancelled = true; };
   }, [ready, cutId, modelKey, save]);
 
+  // 컷 편집 화면에서 Ctrl+S: 브라우저의 '페이지 저장' 대신 이 컷을 저장 (엔진 안에서 누르면 엔진이 처리)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); actionRef.current('save'); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   // 브라우저 뒤로 가기 등으로 나갈 때의 마지막 저장 (버튼으로 나갈 때는 leave()가 먼저 저장한다)
   useEffect(() => () => {
     window.clearTimeout(saveTimer.current);

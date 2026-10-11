@@ -20,6 +20,8 @@ export function useThumb(ref: ModelRef | null) {
     setUrl(null);
     modelThumbnail(ref).then(u => { if (alive) setUrl(u); });
     return () => { alive = false; };
+    // ref 객체는 렌더마다 새로 만들어지므로, 모델이 실제로 바뀔 때(key)만 다시 읽는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   return url;
 }

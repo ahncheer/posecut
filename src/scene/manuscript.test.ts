@@ -62,7 +62,7 @@ describe('페이지마다 컷 틀', () => {
   });
 
   it('틀을 바꾸면 장면을 앞에서부터 옮기고, 남는 장면 수를 알려준다', () => {
-    let m = make();
+    const m = make();
     m.pages[0].cuts.forEach((c, i) => { if (i !== 1) c.scene = sc(i); }); // 1·3·4번 컷에 장면 (2번은 빈 컷)
     const r = changePageTemplate(m, 0, 'bigTwo');
     expect(r.lost).toBe(0);
