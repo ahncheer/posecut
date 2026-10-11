@@ -436,6 +436,8 @@ body.embed .top { flex-wrap: nowrap; }
               <option value="9:19">9:19 · 페이지 한 장</option>
             </select>
             <div class="chips" id="shots"></div>
+            <div class="field"><label for="camRoll">기울기 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="화면 기울기: 화면 전체를 시계·반시계 방향으로 기울여요(더치 앵글). 바닥이 비스듬하게 보여 불안·긴장·역동적인 느낌을 줘요. +는 시계 방향이에요."></span></label><input id="camRoll" type="range" min="-180" max="180" step="1"><output for="camRoll" id="camRollo"></output></div>
+            <div class="chips" id="rollChips"></div>
             <div class="field"><label for="fov">화각 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="원근감의 세기예요. 숫자가 작을수록 멀리서 망원으로 찍은 듯 원근이 약해지고(평면적), 클수록 가까이서 광각으로 찍은 듯 원근이 강해져요. 바꿔도 인물 크기는 그대로 유지돼요. 0°는 카메라가 무한히 멀어져야 해서 만들 수 없고, 1°가 원근이 거의 없는 가장 평평한 상태예요."></span></label><input id="fov" type="range" min="1" max="90" step="1"><output for="fov" id="fovo"></output></div>
           </div>
         </details>
@@ -478,7 +480,7 @@ body.embed .top { flex-wrap: nowrap; }
             <div class="field"><label for="comicMin">검정 기준 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="이보다 어두운 곳은 새까맣게 칠해요. (VRoid: Min Threshold)"></span></label><input id="comicMin" type="range" min="0" max="100" step="1"><output for="comicMin" id="comicMino"></output></div>
             <div class="field"><label for="comicMax">흰색 기준 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="이보다 밝은 곳은 하얗게 비워요. 그 사이는 스크린톤이 돼요. (VRoid: Max Threshold)"></span></label><input id="comicMax" type="range" min="0" max="100" step="1"><output for="comicMax" id="comicMaxo"></output></div>
             <div class="field"><label for="comicAngle">톤 각도</label><input id="comicAngle" type="range" min="0" max="180" step="1"><output for="comicAngle" id="comicAngleo"></output></div>
-            <div class="field"><label for="comicSize">톤 크기</label><input id="comicSize" type="range" min="3" max="20" step="1"><output for="comicSize" id="comicSizeo"></output></div>
+            <div class="field"><label for="comicSize">톤 크기</label><input id="comicSize" type="range" min="1" max="20" step="0.5"><output for="comicSize" id="comicSizeo"></output></div>
             <div class="field"><label for="comicOil">뭉개기 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="0~3. 자잘한 무늬를 뭉개서 붓으로 칠한 듯 단순하게 해요. (VRoid: Oil Painting)"></span></label><input id="comicOil" type="range" min="0" max="3" step="1"><output for="comicOil" id="comicOilo"></output></div>
           </div>
         </details>
@@ -844,6 +846,9 @@ camera.position.set(0, 1.35, 2.2);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 1.25, 0);
 controls.enableDamping = false; // 관성 없음: 마우스가 멈추면 화면도 즉시 멈춤
+// 화면 기울기(더치 앵글): 카메라가 대상을 본 뒤 시선 축으로 한 번 더 돌린다. 어디서 update를 불러도 같이 적용
+let camRoll = 0;
+{ const baseUpdate = controls.update.bind(controls); controls.update = (...a) => { const r = baseUpdate(...a); if (camRoll) camera.rotateZ(THREE.MathUtils.degToRad(camRoll)); return r; }; }
 // 왼쪽 드래그: 화면 이동 · 오른쪽 드래그: 돌려 보기 · 가운데(휠) 버튼 드래그: 화면 이동 · 휠: 확대
 controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE };
 renderer.domElement.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); }); // 휠 클릭 자동 스크롤 막기
@@ -1156,7 +1161,7 @@ const stylize = postPass(`
       float d = length(fract(p) - 0.5);
       float t = clamp((l - minT) / max(0.001, maxT - minT), 0.0, 1.0);
       float rad = sqrt(1.0 - t) * 0.62;
-      float aa = 0.9 / (cell * pr);
+      float aa = min(0.45, 0.9 / (cell * pr));
       float ink = 1.0 - smoothstep(rad - aa, rad + aa, d);
       float g = l <= minT ? 0.0 : (l >= maxT ? 1.0 : 1.0 - ink);
       c = mix(vec3(g), c * (0.35 + 0.65 * g), colorRatio);
@@ -2320,6 +2325,21 @@ function bindRange(id, read, write, commit = true) {
   num.addEventListener('input', () => fromNum(false));
   num.addEventListener('change', () => fromNum(true));
   num.addEventListener('keydown', (e) => { if (e.key === 'Enter') { num.blur(); } });
+  // 숫자칸·슬라이더 위에서 휠: 한 칸씩 (Shift는 10칸씩). 패널은 스크롤되지 않음
+  let wheelTimer = 0;
+  const onWheel = (e) => {
+    if (el.disabled) return;
+    e.preventDefault();
+    const st = Number(el.step) || 1, k = e.shiftKey ? 10 : 1;
+    const dir = (e.deltaY || e.deltaX) < 0 ? 1 : -1;
+    const v = clamp(Math.round((Number(el.value) + dir * st * k) / st) * st);
+    el.value = v; write(v); num.value = round1(v);
+    clearTimeout(wheelTimer);
+    wheelTimer = setTimeout(() => { if (commit) pushHistory(); notifyChange(); syncUI(); }, 350);
+  };
+  num.addEventListener('wheel', onWheel, { passive: false });
+  el.addEventListener('wheel', onWheel, { passive: false });
+  num.title = '마우스 휠로도 바꿀 수 있어요 (Shift: 10씩)';
   const reset = document.createElement('button');
   reset.type = 'button'; reset.className = 'reset'; reset.textContent = '↻';
   reset.dataset.tip = '초기화'; reset.setAttribute('aria-label', label + ' 초기화');
@@ -2349,6 +2369,7 @@ const syncers = [
   bindRange('rotY', () => slots[sel].rot, v => { slots[sel].rot = v; applyPlacement(slots[sel]); }),
   bindRange('presence', () => slots[sel].presence, v => { slots[sel].presence = v; applyPresence(slots[sel]); }),
   bindRange('fov', () => camera.fov, v => setFov(v), false),
+  bindRange('camRoll', () => camRoll, v => { camRoll = v; controls.update(); }, false),
   bindRange('sens', () => sens, v => { sens = v; applySens(); }, false),
   bindRange('filterAmt', () => filter.amt, v => { filter.amt = v; }, false),
   ...[['fxBright', 'bright'], ['fxContrast', 'contrast'], ['fxSat', 'sat'], ['fxTemp', 'temp'], ['fxFade', 'fade'], ['fxVig', 'vig'], ['fxGrain', 'grain'], ['fxTint', 'tintAmt']].map(([id, k]) =>
@@ -2383,6 +2404,11 @@ $('comicOn').addEventListener('change', e => { look.comic.on = e.target.checked;
 $('lineOnly').addEventListener('change', e => { look.line.only = e.target.checked; });
 $('bloomColor').addEventListener('input', e => { look.bloom.color = e.target.value; if (!look.bloom.on) { look.bloom.on = true; $('bloomOn').checked = true; } });
 syncLookUI();
+RESET_TO.camRoll = 0;
+chipRow($('rollChips'), [['-45', '↺45°'], ['-15', '↺15°'], ['0', '0°'], ['15', '↻15°'], ['45', '↻45°']], (k) => {
+  camRoll = Number(k); controls.update(); syncUI(); notifyChange();
+  say(camRoll ? `화면을 ${Math.abs(camRoll)}° ${camRoll > 0 ? '시계' : '반시계'} 방향으로 기울였어요.` : '화면 기울기를 없앴어요.');
+});
 function presetValue(k) { const p = FILTER_PRESETS.find(x => x[0] === filter.preset); return (p && p[2][k] !== undefined ? p[2][k] : NO_FILTER[k]); }
 function matchFilterPreset() {
   const p = FILTER_PRESETS.find(([, , v]) => Object.keys(NO_FILTER).every(k => String((v[k] ?? NO_FILTER[k])).toLowerCase() === String(filter[k]).toLowerCase()));
@@ -2499,7 +2525,7 @@ function sceneData() {
     look: JSON.parse(JSON.stringify(look)),
     // 배경(만화 효과 / 찾은 사진·만든 그림)도 장면과 함께
     bg: bgSpec ? (bgSpec.kind === 'fx' ? { kind: 'fx', type: bgSpec.type, color: bgSpec.color } : { kind: 'image', src: bgSpec.img.src }) : null,
-    camera: { pos: camera.position.toArray(), target: controls.target.toArray(), fov: camera.fov },
+    camera: { pos: camera.position.toArray(), target: controls.target.toArray(), fov: camera.fov, roll: camRoll },
     shot: shotSel,
     aa: aaLevel,
     filter: { ...filter },
@@ -2509,6 +2535,7 @@ function applySceneData(data) {
   if (!data || data.v !== 1 || !Array.isArray(data.slots)) throw new Error('러프 도구 장면 파일이 아니에요.');
   restoreSnap(JSON.stringify(data.slots.slice(0, slots.length)));
   camera.fov = data.camera.fov;
+  camRoll = Number(data.camera.roll) || 0;
   camera.position.fromArray(data.camera.pos);
   controls.target.fromArray(data.camera.target);
   updateClip();
@@ -2666,6 +2693,7 @@ function syncUI() {
   const hasFingers = !s.vrm || !!s.vrm.humanoid.getNormalizedBoneNode(handSel + 'IndexProximal');
   $('fingerNote').dataset.tip = hasFingers ? '0은 쭉 편 상태, 100은 끝까지 굽힌 상태예요. 손 점을 누르면 그쪽 손이 선택돼요.' : '이 모델에는 손가락 관절이 없어서 손가락을 움직일 수 없어요.';
   pressRow($('shots'), shotSel);
+  pressRow($('rollChips'), String(camRoll));
   syncFilterUI();
   syncUndoButtons();
 }
