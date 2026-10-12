@@ -1,6 +1,6 @@
 // 원고 화면: 페이지 목록, 페이지와 컷, 선택한 컷 패널, 원고 설정
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { TopBar } from '../components/TopBar';
 import { PageView } from '../components/PageView';
 import { WorkDialog } from '../components/WorkDialog';
@@ -13,6 +13,8 @@ import type { FrameStyle, Page, PageTitle, TemplateId, TitlePos } from '../scene
 import { applyTitle, DEFAULT_TITLE, pageStyle, TITLE_FONTS, TITLE_POS, TITLE_SIZES } from '../scene/title';
 import { Info } from '../components/Info';
 import { ImportPoseDialog } from '../components/ImportPoseDialog';
+import { ThumbBaker } from '../components/ThumbBaker';
+import { updateCut } from '../scene/manuscript';
 import { templateLabel, templateOf } from '../scene/layout';
 import { applySplit } from '../scene/split';
 import { CutDrawDialog } from '../components/CutDrawDialog';
@@ -24,6 +26,11 @@ import { ExportDialog, type ExportKind } from '../components/ExportDialog';
 
 export function ManuscriptPage() {
   const { msId } = useParams();
+  /** 컷 편집에서 돌아올 때 ?cut=… : 그 컷이 있는 페이지를 보여주고 그 컷을 고른다 */
+  const [search] = useSearchParams();
+  const backCut = search.get('cut');
+  const shownBack = useRef<string | null>(null);
+  const pendingSel = useRef<string | null>(null);
   const navigate = useNavigate();
   const { loading, manuscript: m, work, update, updateWork } = useManuscript(msId);
   const [pageIndex, setPageIndex] = useState(0);
@@ -39,6 +46,9 @@ export function ManuscriptPage() {
   /** 페이지 끌어 옮기기: 끄는 페이지 번호와 놓을 자리 */
   const [dragPage, setDragPage] = useState<number | null>(null);
   const [dropAt, setDropAt] = useState<number | null>(null);
+  /** 장면은 있는데 작은 그림이 없는 컷(가져오기 직후 등)을 보이지 않는 엔진으로 차례로 그린다 */
+  const [bakeQueue, setBakeQueue] = useState<string[]>([]);
+  const tried = useRef(new Set<string>());
   /** 페이지를 추가한 뒤 저장이 반영되면 그 페이지로 이동 */
   const [jumpTo, setJumpTo] = useState<number | null>(null);
   const [note, setNote] = useState('');
@@ -46,6 +56,12 @@ export function ManuscriptPage() {
   const [drawFor, setDrawFor] = useState<number | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (!m || !backCut || shownBack.current === backCut) return;
+    shownBack.current = backCut;
+    const f = findCut(m, backCut);
+    if (f) { pendingSel.current = backCut; setPageIndex(f.pageIndex); setSelected(backCut); }
+  }, [m, backCut]);
   useEffect(() => {
     if (!m) return;
     if (jumpTo !== null) {
@@ -57,9 +73,16 @@ export function ManuscriptPage() {
   // 기본으로 지금 페이지의 첫 컷을 고른 상태 (고른 컷이 이 페이지에 없으면 첫 컷으로)
   useEffect(() => {
     const pg = m?.pages[Math.min(pageIndex, m.pages.length - 1)];
+    // 컷 편집에서 돌아와 그 컷의 페이지로 넘어가는 중이면 기다린다
+    if (pendingSel.current) { if (pg?.cuts.some(c => c.id === pendingSel.current)) pendingSel.current = null; else return; }
     if (pg && !pg.cuts.some(c => c.id === selected)) setSelected(pg.cuts[0]?.id ?? null);
   }, [m, pageIndex, selected]);
 
+  useEffect(() => {
+    if (!m || bakeQueue.length) return;
+    const need = m.pages.flatMap(p => p.cuts).filter(c => c.scene && !c.thumb && !tried.current.has(c.id)).map(c => c.id);
+    if (need.length) { need.forEach(id => tried.current.add(id)); setBakeQueue(need); }
+  }, [m, bakeQueue.length]);
   // 지금 페이지가 왼쪽 목록에서 보이도록 (목록이 길어 스크롤될 때)
   useEffect(() => {
     document.querySelector('.pagethumb[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
@@ -161,6 +184,7 @@ export function ManuscriptPage() {
           {swapFrom
             ? <p className="swapbar" role="status"><span><b>{cutName(swapFrom)}</b>와(과) 바꿀 컷을 눌러 주세요. 다른 페이지의 컷도 돼요.</span><button type="button" className="btn small" onClick={() => setSwapFrom(null)}>취소 (Esc)</button></p>
             : <p className="sub" style={{ marginTop: 8 }}>컷을 누르면 선택, 두 번 누르면 장면 편집으로 들어가요.</p>}
+          {bakeQueue.length > 0 && <p className="sub" role="status">가져온 장면의 그림을 그리는 중… ({bakeQueue.length}컷)</p>}
         </section>
 
         <aside className="msside">
@@ -308,8 +332,17 @@ export function ManuscriptPage() {
           onApply={async (fn, sum) => {
             setImportOpen(false);
             await update(fn);
-            say(`포즈를 컷 ${sum.applied}개에 가져왔어요${sum.replaced ? ` (${sum.replaced}개 덮어씀)` : ''}. 그림은 컷을 열면 새로 그려져요.`);
+            say(`포즈를 컷 ${sum.applied}개에 가져왔어요${sum.replaced ? ` (${sum.replaced}개 덮어씀)` : ''}. 그림은 곧 새로 그려져요.`);
           }}
+        />
+      )}
+      {work && bakeQueue.length > 0 && (
+        <ThumbBaker
+          manuscript={m}
+          characters={work.characters}
+          queue={bakeQueue}
+          onThumb={async (id, thumb) => { if (thumb) await update(x => updateCut(x, id, { thumb })); }}
+          onFinish={() => setBakeQueue([])}
         />
       )}
       {work && <WorkDialog work={work} open={workOpen} onClose={() => setWorkOpen(false)} onSave={w => { updateWork(w); setWorkOpen(false); }} />}

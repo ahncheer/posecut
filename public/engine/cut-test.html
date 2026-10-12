@@ -1349,6 +1349,19 @@ let handSel = 'right';
 let talking = false;
 let talkT = 0;
 let frameRect = { x: 0, y: 0, w: 1, h: 1 };
+// 화각은 '컷 틀' 기준으로 기억한다. 창 크기·브라우저 확대가 바뀌어 틀이 화면에서 차지하는 비율이 달라져도
+// 틀 안에 보이는 모습(인물 위치·크기)은 그대로가 되도록, 실제 카메라 화각은 그때그때 계산한다.
+let frameFov = 24;
+function applyViewFov() {
+  const vh = Math.max(1, viewport.clientHeight), fh = Math.max(1, frameRect.h);
+  camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(D(frameFov) / 2) * vh / fh));
+  camera.updateProjectionMatrix();
+}
+/** 예전 장면(화면 전체 기준 화각) → 틀 기준 화각 */
+function frameFovFromView(viewFov) {
+  const vh = Math.max(1, viewport.clientHeight), fh = Math.max(1, frameRect.h);
+  return THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(D(viewFov) / 2) * fh / vh));
+}
 let cutRatio = [9, 4.2];
 const history = [];
 
@@ -2210,6 +2223,7 @@ function layout() {
   let fw = w * 0.86, fh = fw / r;
   if (fh > h * 0.84) { fh = h * 0.84; fw = fh * r; }
   frameRect = { x: (w - fw) / 2, y: (h - fh) / 2, w: fw, h: fh };
+  applyViewFov();
   Object.assign($('frame').style, { left: frameRect.x + 'px', top: frameRect.y + 'px', width: fw + 'px', height: fh + 'px' });
   if (bgSpec) rebuildBackground(); // 화면 비율이 바뀌면 배경도 다시 그림
   placeBubCanvas();
@@ -2259,13 +2273,13 @@ function updateClip() {
 }
 // 화각을 바꿔도 인물 크기는 그대로: 카메라를 그만큼 앞뒤로 움직인다 (원근감만 바뀜)
 function setFov(v) {
-  const old = camera.fov;
+  const old = frameFov;
   if (old === v) return;
   const d = camera.position.distanceTo(controls.target);
   const nd = d * Math.tan(D(old) / 2) / Math.tan(D(v) / 2);
   const dir = camera.position.clone().sub(controls.target).normalize();
   camera.position.copy(controls.target).addScaledVector(dir, nd);
-  camera.fov = v;
+  frameFov = v; applyViewFov();
   updateClip();
   controls.update();
 }
@@ -2563,7 +2577,7 @@ const syncers = [
   bindRange('posY', () => slots[sel].y || 0, v => { slots[sel].y = v; applyPlacement(slots[sel]); }),
   bindRange('rotY', () => slots[sel].rot, v => { slots[sel].rot = v; applyPlacement(slots[sel]); }),
   bindRange('presence', () => slots[sel].presence, v => { slots[sel].presence = v; applyPresence(slots[sel]); }),
-  bindRange('fov', () => camera.fov, v => setFov(v), false),
+  bindRange('fov', () => Math.round(frameFov), v => setFov(v), false),
   bindRange('camRoll', () => camRoll, v => { camRoll = v; controls.update(); }, false),
   bindRange('sens', () => sens, v => { sens = v; applySens(); }, false),
   bindRange('filterAmt', () => filter.amt, v => { filter.amt = v; }, false),
@@ -2795,7 +2809,7 @@ function sceneData() {
     look: JSON.parse(JSON.stringify(look)),
     // 배경(만화 효과 / 찾은 사진·만든 그림)도 장면과 함께
     bg: bgSpec ? (bgSpec.kind === 'fx' ? { kind: 'fx', type: bgSpec.type, color: bgSpec.color } : { kind: 'image', src: bgSpec.img.src }) : null,
-    camera: { pos: camera.position.toArray(), target: controls.target.toArray(), fov: camera.fov, roll: camRoll },
+    camera: { pos: camera.position.toArray(), target: controls.target.toArray(), fov: camera.fov, ff: frameFov, roll: camRoll },
     shot: shotSel,
     aa: aaLevel,
     filter: { ...filter },
@@ -2804,7 +2818,8 @@ function sceneData() {
 function applySceneData(data) {
   if (!data || data.v !== 1 || !Array.isArray(data.slots)) throw new Error('러프 도구 장면 파일이 아니에요.');
   restoreSnap(JSON.stringify(data.slots.slice(0, slots.length)));
-  camera.fov = data.camera.fov;
+  frameFov = Number.isFinite(data.camera.ff) ? data.camera.ff : frameFovFromView(Number(data.camera.fov) || 28);
+  frameFov = Math.min(90, Math.max(1, frameFov)); applyViewFov();
   camRoll = Number(data.camera.roll) || 0;
   camera.position.fromArray(data.camera.pos);
   controls.target.fromArray(data.camera.target);
@@ -3733,7 +3748,7 @@ function suggestCamera(text) {
   return { matched: hits.length > 0, list: list.slice(0, 3) };
 }
 function applyCameraSuggestion(m) {
-  camera.fov = m.fov; updateClip();
+  frameFov = m.fov; applyViewFov(); updateClip();
   shot(m.shot);
   syncers.forEach(f => f());
   say(`${SHOT_NAME[m.shot]} · 화각 ${m.fov}°로 바꿨어요. ${m.why}`);
@@ -4652,7 +4667,7 @@ if (new URLSearchParams(location.search).has('debug')) {
     openEditor(w, h, lm2d, world) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#ddd'; g.fillRect(0, 0, w, h); const img = new Image(); img.src = c.toDataURL(); return new Promise(r => { img.onload = () => { openPoseEditor(img, lm2d, world); r(true); }; }); },
     bgKind() { return bgSpec ? (bgSpec.kind === 'fx' ? bgSpec.type : 'image') : 'paper'; },
     slotState(letter) { const s = slots.find(x => x.letter === letter); return { x: s.x, z: s.z, rot: s.rot, look: s.look, emotion: s.expr.emotion, blink: s.expr.blink, hands: s.hands }; },
-    fov() { return camera.fov; },
+    fov() { return frameFov; },
     shotSel() { return shotSel; },
     look(letter, b, off) {
       const s = slots.find(x => x.letter === letter); const p = s.vrm.humanoid.getRawBoneNode(b).getWorldPosition(new THREE.Vector3());

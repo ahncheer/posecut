@@ -4,9 +4,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { TopBar } from '../components/TopBar';
 import { useManuscript } from '../storage/useManuscript';
 import { castForCut, findCut, neighbourCutId, remapSceneSlots, updateCut } from '../scene/manuscript';
-import { cutRatio } from '../scene/layout';
-import { ENGINE_URL, type EngineCast, type RoughEngine, waitForEngine } from '../engine/bridge';
-import { loadModelFile } from '../storage/db';
+import { ENGINE_URL, type RoughEngine, waitForEngine } from '../engine/bridge';
+import { loadCutIntoEngine } from '../engine/loadCut';
 import { CastDialog } from '../components/CastDialog';
 import { PreviewDialog } from '../components/PreviewDialog';
 import { ImportPoseDialog } from '../components/ImportPoseDialog';
@@ -81,17 +80,7 @@ export function CutEditorPage() {
     (async () => {
       try {
         const eng = await waitForEngine(frame);
-        // 이 컷에 고른 인물(안 골랐으면 모델이 있는 앞의 2명)을 A, B, C … 자리에
-        const chosen = castForCut(w.characters, found.cut.cast);
-        const files = await Promise.all(chosen.map(c => loadModelFile(c.model)));
-        if (cancelled) return;
-        const cast: EngineCast[] = chosen.map((c, i) => ({ letter: CUT_LETTERS[i], name: c.name || c.slot, gender: c.gender, age: c.age }));
-        const models = Object.fromEntries(chosen.map((_, i) => [CUT_LETTERS[i], files[i] ?? undefined]));
-        await eng.load({
-          ratio: cutRatio(found.cut.rect), models, scene: found.cut.scene, cast,
-          shape: found.cut.poly ? found.cut.poly.map(([x, y]) => [(x - found.cut.rect.x) / found.cut.rect.w, (y - found.cut.rect.y) / found.cut.rect.h] as [number, number]) : null,
-          name: `${ms.title}_${found.pageIndex + 1}페이지_컷${found.cutIndex + 1}`,
-        });
+        if (!(await loadCutIntoEngine(eng, ms, w.characters, cutId, found.cut, () => cancelled))) return;
         if (cancelled) return;
         engineRef.current = eng;
         eng.onAction?.(a => {
@@ -105,6 +94,8 @@ export function CutEditorPage() {
           saveTimer.current = window.setTimeout(save, 600);
         });
         setStatus(found.cut.scene ? '자동 저장됨' : '새 장면 · 바꾸면 자동 저장돼요');
+        // 장면은 있는데 작은 그림이 없으면 (가져오기 직후 등) 바로 그려서 저장
+        if (found.cut.scene && !found.cut.thumb) void save();
       } catch (e) {
         if (!cancelled) setStatus(e instanceof Error ? e.message : '불러오지 못했어요.');
       }
@@ -187,7 +178,7 @@ export function CutEditorPage() {
     <div className="editor">
       <div>
         <TopBar>
-          <a href={`#/m/${m.id}`} className="btn small ghost" onClick={e => { e.preventDefault(); void leave(`/m/${m.id}`); }}>← 원고로</a>
+          <a href={`#/m/${m.id}?cut=${found.cut.id}`} className="btn small ghost" onClick={e => { e.preventDefault(); void leave(`/m/${m.id}?cut=${found.cut.id}`); }}>← 원고로</a>
           <b>{found.pageIndex + 1}페이지 · 컷 {found.cutIndex + 1}</b>
           <button type="button" className="btn small" disabled={!prev} onClick={() => go(prev)}>‹ 이전 컷</button>
           <button type="button" className="btn small" disabled={!next} onClick={() => go(next)}>다음 컷 ›</button>
