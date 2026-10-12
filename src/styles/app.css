@@ -442,3 +442,23 @@ dialog.previewdlg { width: min(1040px, calc(100% - 24px)); }
 
 /* 작은 그림을 그리는 보이지 않는 엔진 (화면 밖에 두되 크기는 있어야 그림이 그려짐) */
 .thumbbaker { position: fixed; left: -12000px; top: 0; width: 1100px; height: 760px; border: 0; pointer-events: none; }
+
+/* 그림으로 콘티 만들기 */
+dialog.sbdlg { width: min(1080px, calc(100% - 24px)); }
+.sbgrid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.sbleft { display: grid; gap: 8px; position: sticky; top: 0; }
+.sbimg { position: relative; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--bg); min-height: 220px; display: grid; place-items: center; }
+.sbimg img { display: block; width: 100%; height: auto; }
+.sbimg[data-empty="true"] span { color: var(--muted); font-size: 13px; padding: 20px; text-align: center; }
+.sbbox { position: absolute; border: 2px solid var(--accent); border-radius: 2px; background: rgba(47, 95, 191, .08); pointer-events: none; }
+.sbbox b { position: absolute; left: 0; top: 0; background: var(--accent); color: #fff; font-size: 11px; padding: 0 5px; border-radius: 0 0 4px 0; }
+.sbright { display: grid; gap: 12px; min-width: 0; }
+.sbways { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sbway { display: grid; gap: 6px; align-content: start; padding: 10px; border: 1px solid var(--line); border-radius: 8px; }
+.sbway .sub { font-size: 12px; }
+.sbkey { display: flex; gap: 6px; }
+.sbkey input { flex: 1; min-width: 0; }
+.sbprompt summary { font-size: 13px; color: var(--muted); cursor: pointer; }
+.sbprompt pre { max-height: 220px; overflow: auto; white-space: pre-wrap; font-size: 11.5px; background: var(--bg); padding: 8px; border-radius: 6px; }
+.sbtext { width: 100%; font-family: ui-monospace, monospace; font-size: 12px; }
+@media (max-width: 760px) { .sbgrid, .sbways { grid-template-columns: minmax(0, 1fr); } .sbleft { position: static; } }

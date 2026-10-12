@@ -1,5 +1,8 @@
-// 화면에 그린 페이지(SVG)를 PNG로 저장. 컷 그림은 원고 화면용 작은 그림이라 "미리보기 화질"이다.
-export async function exportSvgAsPng(svg: SVGSVGElement, fileName: string, scale = 3): Promise<void> {
+// 화면에 그린 페이지(SVG)를 PNG로 저장. 고화질로 다시 그린 컷 그림(images)을 주면 작은 그림 대신 넣는다.
+/**
+ * images: 컷 id → 고화질 그림(data URL). 주면 작은 그림 대신 그 그림을 넣는다 (작은 그림이 없던 컷도).
+ */
+export async function exportSvgAsPng(svg: SVGSVGElement, fileName: string, scale = 3, images: Record<string, string> = {}): Promise<void> {
   const vb = svg.viewBox.baseVal;
   // 제목 글자는 웹 글꼴이라 SVG 그림 안에서는 안 보일 수 있어서, 빼고 그린 뒤 캔버스에 같은 글꼴로 다시 쓴다
   const clone = svg.cloneNode(true) as SVGSVGElement;
@@ -11,6 +14,21 @@ export async function exportSvgAsPng(svg: SVGSVGElement, fileName: string, scale
   clone.querySelectorAll('text.pgtitle-t').forEach(t => t.remove());
   // 화면용 표시(고른 컷 테두리, '장면 만들기' 안내)는 저장 그림에서 뺀다
   clone.querySelectorAll('.selmark, text.hint').forEach(t => t.remove());
+  for (const [id, url] of Object.entries(images)) {
+    const g = clone.querySelector<SVGGElement>(`g[data-cut="${CSS.escape(id)}"]`);
+    if (!g) continue;
+    let im = g.querySelector<SVGImageElement>('image[data-cutimg]');
+    if (!im) {
+      const [x, y, w, h] = (g.dataset.rect ?? '0,0,0,0').split(',').map(Number);
+      im = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+      im.setAttribute('x', String(x)); im.setAttribute('y', String(y)); im.setAttribute('width', String(w)); im.setAttribute('height', String(h));
+      im.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+      if (g.dataset.clip) im.setAttribute('clip-path', `url(#${g.dataset.clip})`);
+      const fillShape = g.querySelector('path[fill="#F8F7F2"], rect[fill="#F8F7F2"]');
+      if (fillShape) fillShape.after(im); else g.prepend(im);
+    }
+    im.setAttribute('href', url);
+  }
   const xml = new XMLSerializer().serializeToString(clone);
   const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml' }));
   try {

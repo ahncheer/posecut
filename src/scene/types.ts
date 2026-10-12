@@ -79,6 +79,18 @@ export interface Cut {
   poly?: [number, number][];
   /** 이 컷에 나오는 등장인물(slot). 없으면 모델이 있는 앞의 인물들 */
   cast?: SlotId[];
+  /** 그림에서 뽑은 콘티 (아직 장면이 없을 때 엔진이 이대로 장면을 처음 만든다). docs/storyboard-format.md */
+  plan?: CutPlan;
+}
+
+/** 콘티 한 컷 (엔진용): chars 순서 = cast 순서. 위치·크기는 컷 틀 기준 0~1 */
+export interface CutPlan {
+  shot?: 'full' | 'bust' | 'close' | 'low' | 'high';
+  chars?: { x?: number; depth?: 'near' | 'mid' | 'far'; facing?: string; pose?: string; emotion?: string; eyes?: 'open' | 'half' | 'closed'; look?: 'camera' | 'other' | 'none' }[];
+  bubbles?: { kind?: string; text?: string; x?: number; y?: number; w?: number; h?: number; to?: number; tail?: { x: number; y: number }; rot?: number }[];
+  marks?: { kind: string; x?: number; y?: number; size?: number; rot?: number }[];
+  background?: string;
+  note?: string;
 }
 
 /** 페이지 제목 자리: 위 왼쪽·가운데·오른쪽, 위 색 띠, 오른쪽 세로(4컷 만화식), 첫 컷 안 */

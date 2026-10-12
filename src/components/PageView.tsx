@@ -36,6 +36,9 @@ export function PageView({ page, style, width, selectedCutId, onSelect, onOpen, 
         return (
           <g
             key={c.id}
+            data-cut={c.id}
+            data-rect={`${x},${y},${w},${h}`}
+            data-clip={d ? clipId : undefined}
             className={interactive ? 'cutbox' : undefined}
             tabIndex={interactive ? 0 : undefined}
             role={interactive ? 'button' : undefined}
@@ -48,7 +51,7 @@ export function PageView({ page, style, width, selectedCutId, onSelect, onOpen, 
             {d && <clipPath id={clipId}><path d={d} /></clipPath>}
             {sel && d && <path className="selmark" d={d} fill="none" stroke="#2F5FBF" strokeWidth={style.border.width + 7} strokeLinejoin="round" />}
             {d ? <path d={d} fill="#F8F7F2" /> : <rect x={x} y={y} width={w} height={h} fill="#F8F7F2" />}
-            {c.thumb && <image href={c.thumb} x={x} y={y} width={w} height={h} preserveAspectRatio="xMidYMid slice" clipPath={d ? `url(#${clipId})` : undefined} />}
+            {c.thumb && <image data-cutimg={c.id} href={c.thumb} x={x} y={y} width={w} height={h} preserveAspectRatio="xMidYMid slice" clipPath={d ? `url(#${clipId})` : undefined} />}
             {!c.thumb && interactive && <text className="hint" x={cx} y={cy + 4} textAnchor="middle">장면 만들기</text>}
             {d
               ? <path d={d} fill="none" stroke={style.border.color} strokeWidth={style.border.width} strokeLinejoin="miter" />

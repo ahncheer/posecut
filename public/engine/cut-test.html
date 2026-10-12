@@ -588,6 +588,7 @@ body.embed .top { flex-wrap: nowrap; }
             <summary><h2>말풍선 모양</h2><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="컷에서 말풍선을 끌면 옮겨지고, 오른쪽 아래 네모로 크기를, 주황 점으로 꼬리 끝을 바꿔요. 두 번 누르면 글을 고칠 수 있어요. Delete 키로 지워요."></span></summary>
             <div class="foldbody">
               <div class="btiles grouped-tiles" id="bubShapes"></div>
+              <div class="field"><label for="bubRot">돌리기</label><input id="bubRot" type="range" min="-180" max="180" step="1"><output for="bubRot" id="bubRoto"></output></div>
               <label class="check" id="bubTailRow"><input type="checkbox" id="bubTail" checked>꼬리 달기 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="꼬리를 빼면 컷 밖에서 들리는 말이나 내레이션처럼 보여요."></span></label>
             </div>
           </details>
@@ -892,6 +893,11 @@ function EXTRA_PRESETS() {
     ['쪼그려 앉기', both({ leftUpperArm: R(-48, 0, -70), leftLowerArm: R(0, -34, 0), leftUpperLeg: R(-122, 0, -6), leftLowerLeg: R(142, 0, 0), leftFoot: R(-18, 0, 0), spine: R(26, 0, 0), chest: R(8, 0, 0), head: R(-18, 0, 0) })],
     ['무릎 꿇기', both({ leftUpperArm: R(-6, 0, -74), leftLowerArm: R(0, -10, 0), leftUpperLeg: R(-4, 0, 0), leftLowerLeg: R(92, 0, 0), leftFoot: R(30, 0, 0) })],
     ['한쪽 무릎', { leftUpperArm: R(-20, 0, -74), leftLowerArm: R(0, -50, 0), rightUpperArm: R(0, 0, 74), rightLowerArm: R(0, 10, 0), leftUpperLeg: R(-88, 0, 0), leftLowerLeg: R(88, 0, 0), rightUpperLeg: R(4, 0, 0), rightLowerLeg: R(92, 0, 0), rightFoot: R(30, 0, 0) }],
+    // 아래 넷은 앉기·서기 자세에서 손·팔꿈치를 목표 위치로 IK로 옮겨 계산한 값 (?debug 의 ik)
+    ['턱 괴기', { leftUpperLeg: R(-88, 0, 0), leftLowerLeg: R(88, 0, 0), rightUpperLeg: R(-88, 0, 0), rightLowerLeg: R(88, 0, 0), spine: R(14, 0, 0), chest: R(8, 0, 0), neck: R(4, 0, 0), head: R(6, 0, -8), leftUpperArm: R(-59, -29, -98), leftLowerArm: R(0, -54, 0), rightUpperArm: R(-72, 34, 126), rightLowerArm: R(0, 132, 0) }, { hands: { right: grip } }],
+    ['책상에 엎드리기', { leftUpperLeg: R(-88, 0, 0), leftLowerLeg: R(88, 0, 0), rightUpperLeg: R(-88, 0, 0), rightLowerLeg: R(88, 0, 0), spine: R(32, 0, 0), chest: R(26, 0, 0), neck: R(16, 0, 0), head: R(18, 0, 10), leftUpperArm: R(-71, -15, -73), leftLowerArm: R(0, -106, 0), rightUpperArm: R(-72, 14, 72), rightLowerArm: R(0, 115, 0) }, { hands: { left: grip, right: grip } }],
+    ['물건 집기', { leftUpperArm: R(0, 0, -72), leftLowerArm: R(0, 0, -6), rightUpperArm: R(-61, 24, 86), rightLowerArm: R(0, 2, 0), spine: R(25, 1, 5), head: R(12, 0, 0), chest: R(-9, 4, -2) }, { hands: { right: grip } }],
+    ['가방 끈 잡기', { leftUpperArm: R(0, 0, -72), leftLowerArm: R(0, 0, -6), rightUpperArm: R(13, 24, 73), rightLowerArm: R(0, 110, 0) }, { hands: { right: fist } }],
   ];
 }
 const EMOTIONS = [['neutral', '기본'], ['happy', '기쁨'], ['angry', '화남'], ['sad', '슬픔'], ['relaxed', '편안'], ['surprised', '놀람']];
@@ -3039,7 +3045,12 @@ const BUB_SHAPE_GROUPS = [
   ['외침·감정', [['shout', '외침'], ['saw', '톱니'], ['blackBurst', '검은 폭발'], ['scary', '무서움'], ['electric', '전화·기계'], ['cutoff', '말 끊김']]],
   ['마음의 소리', [['thought', '생각'], ['dotBubble', '생각(매끈)'], ['flash', '플래시'], ['uniflash', '우니 플래시'], ['swirl', '소용돌이'], ['darkFlash', '검은 플래시'], ['softGlow', '몽글 빛'], ['whiteFlash', '흰 섬광']]],
   ['특수', [['hexTech', '육각(SF)'], ['hexFrame', '육각 틀']]],
+  ['만화 기호', [['markHeart', '하트'], ['markSparkle', '반짝'], ['markSweat', '땀방울'], ['markFluster', '당황'], ['markAnger', '빡침'], ['markScribble', '엉킨 낙서'],
+    ['markGloom', '우울 세로줄'], ['markBlush', '홍조 빗금'], ['markEmph', '강조선'], ['markMusic', '음표'], ['markSigh', '한숨'], ['markExclaim', '!'], ['markQuestion', '?']]],
 ];
+// 만화 기호: 말풍선과 같은 칸(옮기기·크기·돌리기·저장)을 쓰지만 몸·꼬리·글자 없이 기호만 그린다. 색 = 글자 색(color)
+const MARK_SHAPES = new Set(['markHeart', 'markSparkle', 'markSweat', 'markFluster', 'markAnger', 'markScribble', 'markGloom', 'markBlush', 'markEmph', 'markMusic', 'markSigh', 'markExclaim', 'markQuestion']);
+const isMark = (b) => MARK_SHAPES.has(b.shape);
 const BUB_SHAPES = BUB_SHAPE_GROUPS.flatMap(([, list]) => list);
 const BUB_SHAPE_TIP = {
   oval: '보통 대사', round: '차분한 대사, 문자·메신저 느낌', angled: '딱딱한 말투·안내 방송·기계적인 대사', box: '내레이션·장소·시간 설명 (꼬리 없음)',
@@ -3050,6 +3061,10 @@ const BUB_SHAPE_TIP = {
   uniflash: '날카로운 가시 집중선(성게) — 격한 속마음·갈등', swirl: '휘몰아치는 집중선 — 혼란·두근거림', darkFlash: '검고 촘촘한 가시 — 불안·공포·어두운 속마음',
   softGlow: '테두리 없이 은은한 빛 — 몽글몽글한 회상·설렘', whiteFlash: '하얀 가시 섬광 — 번뜩이는 깨달음·충격',
   hexTech: 'SF·홀로그램·AI 목소리 — 두 겹 육각형', hexFrame: '모서리가 교차하는 육각 틀 — 시스템 메시지·특수 효과',
+  markHeart: '하트 — 설렘·호감', markSparkle: '반짝임 — 기대·감탄', markSweat: '땀방울 — 곤란·민망', markFluster: '당황선(〃) — 놀람·당황, 머리 옆에',
+  markAnger: '빡침 마크 — 짜증·화남, 이마 옆에', markScribble: '엉킨 낙서 — 혼란·답답함, 머리 위에', markGloom: '우울 세로줄 — 실망·풀 죽음, 머리 위에',
+  markBlush: '홍조 빗금 — 부끄러움, 볼 위에', markEmph: '강조선 — 시선 집중·번뜩', markMusic: '음표 — 콧노래·기분 좋음', markSigh: '한숨 김 — 안도·피곤',
+  markExclaim: '느낌표 — 놀람', markQuestion: '물음표 — 의문',
 };
 const DARK_SHAPES = new Set(['blackBurst', 'darkFlash']);
 const BUB_THEMES = {
@@ -3287,7 +3302,99 @@ function drawDeco(ctx, kind, P, s, R) {
   ctx.restore();
 }
 /** 말풍선 하나를 그린다 (W×H는 컷 틀 픽셀) */
+/** 만화 기호 그리기: (cx, cy) 가운데, rx·ry 반지름 안에 */
+function drawMark(ctx, kind, cx, cy, rx, ry, color, seed) {
+  const R = bubRng(seed), m = Math.min(rx, ry), lw = Math.max(1, m * 0.09);
+  ctx.save();
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const P = new Path2D();
+  switch (kind) {
+    case 'markHeart': {
+      const top = cy - ry * 0.45;
+      P.moveTo(cx, cy + ry * 0.85);
+      P.bezierCurveTo(cx - rx * 1.1, cy + ry * 0.05, cx - rx * 0.75, top - ry * 0.75, cx, top);
+      P.bezierCurveTo(cx + rx * 0.75, top - ry * 0.75, cx + rx * 1.1, cy + ry * 0.05, cx, cy + ry * 0.85);
+      ctx.lineWidth = lw * 1.2; ctx.stroke(P); break;
+    }
+    case 'markSparkle': {
+      const star = (x, y, r) => { const q = new Path2D(); q.moveTo(x, y - r); q.quadraticCurveTo(x, y, x + r * 0.8, y); q.quadraticCurveTo(x, y, x, y + r); q.quadraticCurveTo(x, y, x - r * 0.8, y); q.quadraticCurveTo(x, y, x, y - r); ctx.fill(q); };
+      star(cx - rx * 0.15, cy, m * 0.95); star(cx + rx * 0.6, cy - ry * 0.55, m * 0.38); star(cx + rx * 0.55, cy + ry * 0.6, m * 0.25); break;
+    }
+    case 'markSweat': {
+      P.moveTo(cx, cy - ry * 0.95);
+      P.bezierCurveTo(cx + rx * 0.2, cy - ry * 0.4, cx + rx * 0.75, cy + ry * 0.05, cx + rx * 0.55, cy + ry * 0.55);
+      P.bezierCurveTo(cx + rx * 0.35, cy + ry * 1.0, cx - rx * 0.35, cy + ry * 1.0, cx - rx * 0.55, cy + ry * 0.55);
+      P.bezierCurveTo(cx - rx * 0.75, cy + ry * 0.05, cx - rx * 0.2, cy - ry * 0.4, cx, cy - ry * 0.95);
+      ctx.fillStyle = '#FFFFFF'; ctx.fill(P); ctx.stroke(P);
+      const hl = new Path2D(); hl.moveTo(cx - rx * 0.25, cy + ry * 0.15); hl.quadraticCurveTo(cx - rx * 0.3, cy + ry * 0.5, cx - rx * 0.05, cy + ry * 0.62); ctx.lineWidth = lw * 0.7; ctx.stroke(hl); break;
+    }
+    case 'markFluster': // 〃 짧은 굽은 선 세 개
+      for (let i = 0; i < 3; i++) {
+        const x = cx - rx * 0.6 + i * rx * 0.55, y0 = cy - ry * (0.7 - i * 0.12), y1 = cy + ry * (0.5 - i * 0.18);
+        P.moveTo(x, y0); P.quadraticCurveTo(x + rx * 0.22, (y0 + y1) / 2, x + rx * 0.05, y1);
+      }
+      ctx.lineWidth = lw * 1.3; ctx.stroke(P); break;
+    case 'markAnger': // 빡침: 네 귀퉁이에서 가운데로 휜 괄호
+      for (let i = 0; i < 4; i++) {
+        const sx = i % 2 ? 1 : -1, sy = i < 2 ? -1 : 1, g = m * 0.16;
+        P.moveTo(cx + sx * g, cy + sy * m * 0.9); P.quadraticCurveTo(cx + sx * g, cy + sy * g, cx + sx * m * 0.9, cy + sy * g);
+      }
+      ctx.lineWidth = lw * 1.6; ctx.stroke(P); break;
+    case 'markScribble': { // 엉킨 낙서: 흔들리는 고리를 여러 번
+      let a = R() * 6.28; P.moveTo(cx + Math.cos(a) * rx * 0.5, cy + Math.sin(a) * ry * 0.5);
+      for (let i = 0; i < 46; i++) { a += 0.55 + R() * 0.25; const k = 0.35 + R() * 0.6; P.lineTo(cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k * 0.8); }
+      ctx.lineWidth = lw * 0.8; ctx.stroke(P);
+      const tail = new Path2D(); tail.moveTo(cx + rx * 0.1, cy + ry * 0.7); tail.quadraticCurveTo(cx - rx * 0.2, cy + ry * 0.85, cx + rx * 0.05, cy + ry * 1.0); ctx.stroke(tail); break;
+    }
+    case 'markGloom': // 위에서 내려오는 세로줄
+      for (let i = 0; i < 9; i++) {
+        const x = cx - rx * 0.9 + (i / 8) * rx * 1.8, len = ry * (0.9 + R() * 1.0);
+        P.moveTo(x, cy - ry); P.lineTo(x, cy - ry + len);
+      }
+      ctx.lineWidth = lw * 0.7; ctx.stroke(P); break;
+    case 'markBlush': // 볼 홍조: 비스듬한 짧은 빗금
+      for (let i = 0; i < 6; i++) {
+        const x = cx - rx * 0.75 + (i / 5) * rx * 1.5, h = ry * (0.55 - Math.abs(i - 2.5) * 0.06);
+        P.moveTo(x + rx * 0.12, cy - h); P.lineTo(x - rx * 0.12, cy + h);
+      }
+      ctx.lineWidth = lw * 0.8; ctx.stroke(P); break;
+    case 'markEmph': // 한 점을 향하는 짧은 강조선
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI * 0.95 + (i / 4) * Math.PI * 0.9;
+        P.moveTo(cx + Math.cos(a) * rx * 0.45, cy + Math.sin(a) * ry * 0.45); P.lineTo(cx + Math.cos(a) * rx * 0.95, cy + Math.sin(a) * ry * 0.95);
+      }
+      ctx.lineWidth = lw * 1.3; ctx.stroke(P); break;
+    case 'markMusic': {
+      const hx = cx - rx * 0.25, hy = cy + ry * 0.55, hr = m * 0.26;
+      ctx.beginPath(); ctx.ellipse(hx, hy, hr * 1.25, hr, -0.4, 0, Math.PI * 2); ctx.fill();
+      P.moveTo(hx + hr * 1.1, hy - hr * 0.2); P.lineTo(hx + hr * 1.1, cy - ry * 0.85); P.quadraticCurveTo(cx + rx * 0.55, cy - ry * 0.6, cx + rx * 0.5, cy - ry * 0.1);
+      ctx.lineWidth = lw * 1.2; ctx.stroke(P); break;
+    }
+    case 'markSigh': { // 한숨 김: 동그란 구름 + 짧은 선
+      const c = new Path2D();
+      [[-0.35, 0.1, 0.38], [0.05, -0.15, 0.45], [0.42, 0.12, 0.36]].forEach(([dx, dy, r]) => { c.moveTo(cx + dx * rx + r * m, cy + dy * ry); c.arc(cx + dx * rx, cy + dy * ry, r * m, 0, Math.PI * 2); });
+      ctx.lineWidth = lw * 1.8; ctx.stroke(c); ctx.fillStyle = '#FFFFFF'; ctx.fill(c); break; // 굵게 그린 뒤 속을 칠해 겹친 안쪽 선을 지움
+    }
+    case 'markExclaim': case 'markQuestion':
+      ctx.font = `800 ${Math.round(ry * 1.9)}px "Black Han Sans", "Noto Sans KR", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(kind === 'markExclaim' ? '!' : '?', cx, cy + ry * 0.05); break;
+  }
+  ctx.restore();
+}
+const markColor = (b) => (b.match ? '#1D1F22' : b.color || '#1D1F22');
 function drawBubble(ctx, b, W, H) {
+  if (b.rot) {
+    // 돌린 말풍선·기호: 가운데를 축으로 돌려서 그린다
+    const cx = b.x * W, cy = b.y * H;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(THREE.MathUtils.degToRad(b.rot)); ctx.translate(-cx, -cy);
+    drawBubbleBody(ctx, b, W, H);
+    ctx.restore();
+    return;
+  }
+  drawBubbleBody(ctx, b, W, H);
+}
+function drawBubbleBody(ctx, b, W, H) {
+  if (isMark(b)) { drawMark(ctx, b.shape, b.x * W, b.y * H, (b.w * W) / 2, (b.h * H) / 2, markColor(b), bubHash(b.id)); return; }
   const th = BUB_THEMES[b.theme] || BUB_THEMES.basic;
   const P = bubblePaths(b, W, H);
   const s = H / 420; // 굵기·장식 크기 기준
@@ -3429,27 +3536,42 @@ function drawBubbleLayer() {
   const b = bubbles.find(x => x.id === selBub);
   if (b) {
     const x0 = (b.x - b.w / 2) * W, y0 = (b.y - b.h / 2) * H;
-    g.save(); g.setLineDash([5, 4]); g.strokeStyle = '#2F5FBF'; g.lineWidth = 1.2; g.strokeRect(x0 - 4, y0 - 4, b.w * W + 8, b.h * H + 8); g.setLineDash([]);
+    g.save();
+    if (b.rot) { g.translate(b.x * W, b.y * H); g.rotate(THREE.MathUtils.degToRad(b.rot)); g.translate(-b.x * W, -b.y * H); }
+    g.setLineDash([5, 4]); g.strokeStyle = '#2F5FBF'; g.lineWidth = 1.2; g.strokeRect(x0 - 4, y0 - 4, b.w * W + 8, b.h * H + 8); g.setLineDash([]);
     g.fillStyle = '#FFFFFF'; g.strokeStyle = '#2F5FBF'; g.lineWidth = 2;
     g.fillRect(x0 + b.w * W - 3, y0 + b.h * H - 3, 10, 10); g.strokeRect(x0 + b.w * W - 3, y0 + b.h * H - 3, 10, 10);
-    if (b.tailOn && b.shape !== 'box') { g.beginPath(); g.arc(b.tail.x * W, b.tail.y * H, 6, 0, Math.PI * 2); g.fillStyle = '#D2541F'; g.fill(); g.strokeStyle = '#FFFFFF'; g.stroke(); }
+    if (b.tailOn && b.shape !== 'box' && !isMark(b)) {
+      if (b.rot) g.setTransform(dpr, 0, 0, dpr, 0, 0); // 꼬리 점은 돌리지 않은 화면 좌표 (꼬리 끝은 돌린 뒤 위치를 따라감)
+      const tp = rotPt(b, b.tail.x * W, b.tail.y * H, W, H, 1);
+      g.beginPath(); g.arc(tp[0], tp[1], 6, 0, Math.PI * 2); g.fillStyle = '#D2541F'; g.fill(); g.strokeStyle = '#FFFFFF'; g.stroke();
+    }
     g.restore();
   }
 }
 try { document.fonts.addEventListener('loadingdone', drawBubbleLayer); } catch (e) { /* 오래된 브라우저 */ }
 
 function framePt(e) { const r = bubCanvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
-function hitBubble([px, py]) {
+/** 말풍선 가운데를 축으로 (x, y)를 돌린다. dir = 1: 말풍선 좌표 → 화면, -1: 화면 → 말풍선 좌표 */
+function rotPt(b, x, y, W, H, dir) {
+  if (!b.rot) return [x, y];
+  const a = THREE.MathUtils.degToRad(b.rot) * dir, cx = b.x * W, cy = b.y * H, c = Math.cos(a), s = Math.sin(a);
+  return [cx + (x - cx) * c - (y - cy) * s, cy + (x - cx) * s + (y - cy) * c];
+}
+function hitBubble([px0, py0]) {
   const W = frameRect.w, H = frameRect.h;
   const sb = bubbles.find(x => x.id === selBub);
   if (sb) {
+    const [px, py] = rotPt(sb, px0, py0, W, H, -1);
     const hx = (sb.x + sb.w / 2) * W, hy = (sb.y + sb.h / 2) * H;
     if (Math.hypot(px - hx - 2, py - hy - 2) < 12) return { b: sb, part: 'size' };
-    if (sb.tailOn && sb.shape !== 'box' && Math.hypot(px - sb.tail.x * W, py - sb.tail.y * H) < 11) return { b: sb, part: 'tail' };
+    const tp = rotPt(sb, sb.tail.x * W, sb.tail.y * H, W, H, 1);
+    if (sb.tailOn && sb.shape !== 'box' && !isMark(sb) && Math.hypot(px0 - tp[0], py0 - tp[1]) < 11) return { b: sb, part: 'tail' };
   }
   for (let i = bubbles.length - 1; i >= 0; i--) {
-    const b = bubbles[i], dx = (px / W - b.x) / (b.w / 2), dy = (py / H - b.y) / (b.h / 2);
-    if (dx * dx + dy * dy <= 1.08 || (Math.abs(dx) <= 1 && Math.abs(dy) <= 1 && (b.shape === 'box' || b.shape === 'round'))) return { b, part: 'move' };
+    const b = bubbles[i], [px, py] = rotPt(b, px0, py0, W, H, -1);
+    const dx = (px / W - b.x) / (b.w / 2), dy = (py / H - b.y) / (b.h / 2);
+    if (dx * dx + dy * dy <= 1.08 || (Math.abs(dx) <= 1 && Math.abs(dy) <= 1 && (b.shape === 'box' || b.shape === 'round' || isMark(b)))) return { b, part: 'move' };
   }
   return null;
 }
@@ -3474,7 +3596,7 @@ window.addEventListener('pointermove', e => {
   const cl = (v) => Math.max(-0.2, Math.min(1.2, v));
   if (bubDrag.part === 'move') { b.x = cl(o.x + dx); b.y = cl(o.y + dy); b.tail = { x: cl(o.tail.x + dx), y: cl(o.tail.y + dy) }; }
   else if (bubDrag.part === 'size') { b.w = Math.max(0.08, Math.min(1.4, o.w + dx * 2)); b.h = Math.max(0.06, Math.min(1.4, o.h + dy * 2)); }
-  else { b.tail = { x: cl(px / W), y: cl(py / H) }; }
+  else { const [lx, ly] = rotPt(b, px, py, W, H, -1); b.tail = { x: cl(lx / W), y: cl(ly / H) }; }
   drawBubbleLayer();
   e.stopPropagation();
 }, true);
@@ -3528,7 +3650,11 @@ function makeTile(k, label, kind) {
     const sp = document.createElement('span'); sp.textContent = label;
     btn.append(cv, sp);
     btn.addEventListener('click', () => changeBub(b => {
-      if (kind === 'shape') { b.shape = k; if (['flash', 'uniflash', 'swirl', 'darkFlash', 'softGlow', 'whiteFlash', 'none'].includes(k)) b.tailOn = false; }
+      if (kind === 'shape') {
+        const wasMark = isMark(b);
+        b.shape = k; if (['flash', 'uniflash', 'swirl', 'darkFlash', 'softGlow', 'whiteFlash', 'none'].includes(k) || MARK_SHAPES.has(k)) b.tailOn = false;
+        if (MARK_SHAPES.has(k) && !wasMark) { b.match = false; b.color = '#1D1F22'; const sz = Math.min(b.w, b.h * frameRect.h / Math.max(1, frameRect.w)); b.w = Math.max(0.06, sz * 0.5); b.h = b.w * frameRect.w / Math.max(1, frameRect.h); }
+      }
       else b.theme = k;
     }));
     return btn;
@@ -3575,6 +3701,8 @@ const tfxSyncers = [['tfxAmt', 'amt'], ['tfxDist', 'dist'], ['tfxAngle', 'angle'
 $('bubFront').addEventListener('click', () => changeBub(b => { bubbles = bubbles.filter(x => x !== b).concat([b]); }));
 $('bubDup').addEventListener('click', () => { const b = curBub(); if (!b) return; const c = { ...JSON.parse(JSON.stringify(b)), id: Math.random().toString(36).slice(2, 10), x: b.x + 0.05, y: b.y + 0.05, tail: { x: b.tail.x + 0.05, y: b.tail.y + 0.05 } }; bubbles.push(c); selBub = c.id; drawBubbleLayer(); renderBubUI(); pushHistory(); notifyChange(); });
 $('bubDel').addEventListener('click', () => { if (selBub) removeBubble(selBub); });
+const bubRotSync = bindRange('bubRot', () => (curBub() ? curBub().rot || 0 : 0), v => { const b = curBub(); if (b) { b.rot = v; drawBubbleLayer(); } });
+RESET_TO.bubRot = 0;
 const bubSizeSync = bindRange('bubSize', () => (curBub() ? curBub().size : 52), v => { const b = curBub(); if (b) { b.size = v; drawBubbleLayer(); } });
 RESET_TO.bubSize = 52;
 function renderBubUI() {
@@ -3596,7 +3724,10 @@ function renderBubUI() {
   if (!b) return;
   $('bubShapes').querySelectorAll('.btile').forEach(t => t.setAttribute('aria-pressed', String(t.dataset.key === b.shape)));
   $('bubThemes').querySelectorAll('.btile').forEach(t => t.setAttribute('aria-pressed', String(t.dataset.key === b.theme)));
-  $('bubTail').checked = b.tailOn; $('bubTailRow').hidden = b.shape === 'box';
+  $('bubTail').checked = b.tailOn; $('bubTailRow').hidden = b.shape === 'box' || isMark(b);
+  bubRotSync();
+  // 만화 기호는 글자·말풍선 색·글씨 효과가 없음 (색은 '글꼴' 칸의 글자 색)
+  ['foldBubTheme', 'foldBubText', 'foldBubTfx'].forEach(id => { $(id).hidden = isMark(b); });
   $('bubBgRow').hidden = b.theme !== 'color'; if ($('bubBg').value.toLowerCase() !== b.bg.toLowerCase()) $('bubBg').value = b.bg;
   if (document.activeElement !== $('bubText')) $('bubText').value = b.text;
   const st = bubTextStyle(b);
@@ -4730,7 +4861,105 @@ if (new URLSearchParams(location.search).has('debug')) {
       return out;
     },
     applyNow(letter) { const s = slots.find(x => x.letter === letter); applyPose(s); groundSlot(s); syncUI(); },
+    /** 손·발 등을 월드 목표로 IK로 옮긴 뒤 자세를 돌려준다 (포즈 프리셋 만들기용) */
+    ik(letter, eff, target) {
+      const s = slots.find(x => x.letter === letter);
+      for (let i = 0; i < 3; i++) { solveIK(s, eff, new THREE.Vector3(...target)); s.vrm.humanoid.update(); s.vrm.scene.updateMatrixWorld(true); }
+      syncUI(); return JSON.parse(JSON.stringify(s.pose));
+    },
+    setPose(letter, pose, hands) { const s = slots.find(x => x.letter === letter); s.pose = pose; if (hands) s.hands = hands; applyPose(s); groundSlot(s); s.vrm.humanoid.update(); s.vrm.scene.updateMatrixWorld(true); syncUI(); },
   };
+}
+
+// ---------- 콘티(plan) 적용: 그림에서 뽑은 JSON(docs/storyboard-format.md)의 컷 하나를 장면으로 ----------
+// plan = { shot, chars: [{ x 0~1, depth near·mid·far, facing, pose(프리셋 이름), emotion, eyes, look }], bubbles: [{ kind, text, x, y, w?, h?, to?, tail? }], marks: [{ kind, x, y, size, rot }] }
+// chars 순서 = 이 컷 인물 자리(A, B …) 순서. 위치·크기는 컷 틀 기준 0~1.
+const PLAN_FACING = { camera: 0, front: 0, left: -60, right: 60, back: 180, 'three-quarter-left': -30, 'three-quarter-right': 30, 'back-left': -150, 'back-right': 150 };
+const PLAN_SPAN = { full: 260, bust: 150, close: 90, low: 220, high: 220 };
+const PLAN_DEPTH = { near: 70, mid: 0, far: -240 };
+const PLAN_BUBBLE = { speech: 'oval', thought: 'thought', narration: 'box', caption: 'box', shout: 'shout', whisper: 'whisper', sfx: 'none', monologue: 'double', phone: 'electric', flash: 'flash', small: 'oval' };
+const PLAN_MARK = { heart: 'markHeart', sparkle: 'markSparkle', sweat: 'markSweat', fluster: 'markFluster', anger: 'markAnger', scribble: 'markScribble', gloom: 'markGloom',
+  blush: 'markBlush', emphasis: 'markEmph', music: 'markMusic', sigh: 'markSigh', exclaim: 'markExclaim', question: 'markQuestion' };
+const clamp01 = (v, d) => (Number.isFinite(Number(v)) ? Math.min(1, Math.max(0, Number(v))) : d);
+function findPreset(name) {
+  if (typeof name !== 'string' || !name.trim()) return null;
+  const n = name.replace(/\s+/g, '');
+  return PRESETS.find(p => p[0].replace(/\s+/g, '') === n) || PRESETS.find(p => n.includes(p[0].replace(/\s+/g, '')) || p[0].replace(/\s+/g, '').includes(n)) || null;
+}
+function applyPlan(plan) {
+  if (!plan || typeof plan !== 'object') return;
+  const kind = SHOT_NAME[plan.shot] ? plan.shot : 'bust';
+  const span = PLAN_SPAN[kind];
+  const chars = Array.isArray(plan.chars) ? plan.chars : [];
+  const live = slots.filter(s => s.vrm);
+  live.forEach((s, i) => {
+    const c = chars[i] || {};
+    const pre = findPreset(c.pose);
+    if (pre) {
+      s.pose = JSON.parse(JSON.stringify(pre[1]));
+      const opt = pre[2] || {};
+      s.hands = { left: { ...((opt.hands && opt.hands.left) || relaxedHand()) }, right: { ...((opt.hands && opt.hands.right) || relaxedHand()) } };
+    }
+    s.x = clampPos(Math.round((clamp01(c.x, (i + 0.5) / live.length) - 0.5) * span));
+    s.z = PLAN_DEPTH[c.depth] ?? 0;
+    s.rot = PLAN_FACING[c.facing] ?? (live.length > 1 ? (s.x < 0 ? 20 : -20) : 0);
+    if (EMOTIONS.some(([k]) => k === c.emotion)) { s.expr.emotion = c.emotion; s.expr.weight = 100; }
+    s.expr.blink = c.eyes === 'closed' ? 100 : c.eyes === 'half' ? 50 : 0;
+    s.look = c.look === 'camera' ? 'camera' : c.look === 'other' && live.length > 1 ? 'other' : 'manual';
+    applyPlacement(s); applyPose(s); groundSlot(s); applyLook(s); settleSprings(s);
+  });
+  shot(kind);
+  controls.update(); camera.updateMatrixWorld(true);
+  const W = Math.max(1, frameRect.w), H = Math.max(1, frameRect.h);
+  // 실제로 놓인 인물 머리가 컷 틀 안 어디에 보이는지 (말풍선 꼬리를 그쪽으로)
+  const headAt = (s) => {
+    if (!s || !s.vrm) return null;
+    s.vrm.scene.updateMatrixWorld(true);
+    const n = s.vrm.humanoid.getRawBoneNode('head'); if (!n) return null;
+    const v = n.getWorldPosition(new THREE.Vector3()).project(camera);
+    const vw = viewport.clientWidth, vh = viewport.clientHeight;
+    return { x: ((v.x + 1) / 2 * vw - frameRect.x) / W, y: ((1 - v.y) / 2 * vh - frameRect.y) / H };
+  };
+  bubbles = [];
+  (Array.isArray(plan.bubbles) ? plan.bubbles : []).slice(0, 30).forEach(pb => {
+    const b = newBubble();
+    const k = PLAN_BUBBLE[pb.kind] ? pb.kind : 'speech';
+    const text = String(pb.text ?? '').slice(0, 400);
+    const lines = text.split('\n'), longest = Math.max(1, ...lines.map(l => [...l].length));
+    b.shape = PLAN_BUBBLE[k]; b.theme = 'basic'; b.text = text;
+    b.size = k === 'sfx' ? 80 : k === 'narration' || k === 'caption' ? 46 : k === 'small' ? 44 : 52;
+    const em = (b.size * H / 1000) / W; // 글자 하나 너비(컷 가로 비율)
+    b.w = Number.isFinite(pb.w) ? clamp01(pb.w, 0.3) : Math.min(0.6, Math.max(0.1, longest * em * 1.05 + (k === 'narration' || k === 'caption' ? 0.04 : 0.09)));
+    b.h = Number.isFinite(pb.h) ? clamp01(pb.h, 0.2) : Math.min(0.8, Math.max(0.12, (lines.length * em * 1.35 * W) / H + (k === 'narration' || k === 'caption' ? 0.06 : 0.14)));
+    // 말풍선이 컷 밖으로 나가지 않게
+    b.x = Math.min(1 - b.w / 2 - 0.01, Math.max(b.w / 2 + 0.01, clamp01(pb.x, 0.5)));
+    b.y = Math.min(1 - b.h / 2 - 0.01, Math.max(b.h / 2 + 0.01, clamp01(pb.y, 0.25)));
+    const who = Number.isInteger(pb.to) ? chars[pb.to] : null;
+    const head = Number.isInteger(pb.to) ? headAt(live[pb.to]) : null;
+    if (pb.tail && Number.isFinite(pb.tail.x) && Number.isFinite(pb.tail.y)) b.tail = { x: clamp01(pb.tail.x, 0.5), y: clamp01(pb.tail.y, 0.6) };
+    else if (head) {
+      // 머리 쪽으로 (머리에 닿기 전까지). 머리가 말풍선 바로 옆이면 말풍선 테두리 밖으로 조금만
+      const hx = Math.min(0.98, Math.max(0.02, head.x)), hy = Math.min(0.98, Math.max(0.02, head.y));
+      const ex = (hx - b.x) / (b.w / 2), ey = (hy - b.y) / (b.h / 2), e = Math.hypot(ex, ey);
+      if (e < 1.5) { const k = 1.35 / Math.max(0.01, e); b.tail = { x: b.x + (hx - b.x) * k, y: b.y + (hy - b.y) * k }; }
+      else b.tail = { x: b.x + (hx - b.x) * 0.75, y: b.y + (hy - b.y) * 0.75 };
+    }
+    else if (who) b.tail = { x: clamp01(who.x, 0.5), y: Math.min(0.9, b.y + b.h / 2 + 0.12) };
+    else b.tail = { x: b.x + 0.06, y: Math.min(0.95, b.y + b.h / 2 + 0.1) };
+    b.tailOn = ['speech', 'thought', 'shout', 'whisper', 'phone', 'small', 'monologue'].includes(k) && (!!who || !!pb.tail);
+    if (k === 'sfx') { b.match = false; b.font = 'Nanum Pen Script'; b.color = '#1D1F22'; b.bold = true; b.rot = Number.isFinite(pb.rot) ? pb.rot : -8; }
+    bubbles.push(b);
+  });
+  (Array.isArray(plan.marks) ? plan.marks : []).slice(0, 30).forEach(pm => {
+    if (!PLAN_MARK[pm.kind]) return;
+    const b = newBubble();
+    b.shape = PLAN_MARK[pm.kind]; b.text = ''; b.tailOn = false; b.match = false; b.color = '#1D1F22';
+    b.w = Math.min(0.5, Math.max(0.03, Number(pm.size) || 0.08)); b.h = (b.w * W) / H;
+    b.x = clamp01(pm.x, 0.5); b.y = clamp01(pm.y, 0.3); b.rot = Number.isFinite(pm.rot) ? pm.rot : 0;
+    bubbles.push(b);
+  });
+  bubShow = true; selBub = null;
+  drawBubbleLayer(); renderBubUI(); syncUI();
 }
 
 // ---------- 앱 연결 (주소에 ?embed 가 있을 때: 러프 도구 앱의 컷 편집 화면 안에서 실행) ----------
@@ -4772,7 +5001,7 @@ if (EMBED) {
   }
   window.roughEngine = {
     /** ratio: [가로, 세로], models: { A?: File, B?: File }, scene: 저장된 장면 또는 null */
-    async load({ ratio, models, scene, cast, name, shape }) {
+    async load({ ratio, models, scene, cast, name, shape, plan }) {
       if (name) cutName = name;
       // 사선 등 네모가 아닌 컷: 컷 틀 안에 실제 컷 모양을 표시 (0~1 좌표)
       if (Array.isArray(shape) && shape.length >= 3 && shape.every(p => Array.isArray(p) && p.every(Number.isFinite))) {
@@ -4812,12 +5041,21 @@ if (EMBED) {
       }
       slots.forEach(settleSprings);
       if (!scene || saved < slots.filter(x => x.vrm).length) shot(shotSel);
+      // 그림에서 뽑은 콘티(plan)가 있고 아직 장면이 없으면: 포즈·방향·샷·말풍선·기호를 콘티대로 놓는다
+      if (!scene && plan) { applyPlan(plan); history.length = 0; future.length = 0; pushHistory(); }
       $('emptyEmbed').hidden = !!models.A;
       if (!models.A) say('이 컷에 나오는 인물이 없어요. "+ 인물 추가"를 눌러 넣어 주세요.');
       sel = 0; buildCastRows(); syncUI();
       return { loaded: slots.filter(s => s.vrm).map(s => s.letter) };
     },
     exportScene,
+    /** 고화질 그림 (원고 페이지를 크게 내보낼 때): 컷 틀 가로 widthPx 픽셀, PNG */
+    async render(widthPx = 1200) {
+      if (!slots.some(s => s.vrm) || !frameRect.w || !viewport.clientWidth) return null;
+      await bubbleFontsReady();
+      const scale = Math.min(6, Math.max(0.25, widthPx / frameRect.w));
+      return renderCut({ scale, transparent: false, withFilter: true, hideBackground: false, withBubbles: true }).toDataURL('image/png');
+    },
     /** 원고 화면용 작은 그림 */
     thumbnail(maxWidth = 360) {
       if (!slots.some(s => s.vrm) || !frameRect.w || !viewport.clientWidth) return null;

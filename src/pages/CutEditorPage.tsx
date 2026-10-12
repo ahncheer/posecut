@@ -95,7 +95,7 @@ export function CutEditorPage() {
         });
         setStatus(found.cut.scene ? '자동 저장됨' : '새 장면 · 바꾸면 자동 저장돼요');
         // 장면은 있는데 작은 그림이 없으면 (가져오기 직후 등) 바로 그려서 저장
-        if (found.cut.scene && !found.cut.thumb) void save();
+        if ((found.cut.scene && !found.cut.thumb) || (!found.cut.scene && found.cut.plan)) void save();
       } catch (e) {
         if (!cancelled) setStatus(e instanceof Error ? e.message : '불러오지 못했어요.');
       }

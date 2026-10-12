@@ -82,15 +82,21 @@ export function findCut(m: Manuscript, cutId: string): (CutRef & { cut: Cut }) |
   return null;
 }
 
-export function updateCut(m: Manuscript, cutId: string, patch: Partial<Pick<Cut, 'scene' | 'thumb' | 'cast'>>): Manuscript {
+export function updateCut(m: Manuscript, cutId: string, patch: Partial<Pick<Cut, 'scene' | 'thumb' | 'cast' | 'plan'>>): Manuscript {
   return {
     ...m,
-    pages: m.pages.map(p => ({ ...p, cuts: p.cuts.map(c => (c.id === cutId ? { ...c, ...patch } : c)) })),
+    pages: m.pages.map(p => ({ ...p, cuts: p.cuts.map(c => {
+      if (c.id !== cutId) return c;
+      const next: Cut = { ...c, ...patch };
+      // 장면이 생기면 콘티(plan)는 다 쓴 것이라 지운다
+      if (next.scene || ('plan' in patch && !patch.plan)) delete next.plan;
+      return next;
+    }) })),
   };
 }
 
 export function clearCut(m: Manuscript, cutId: string): Manuscript {
-  return updateCut(m, cutId, { scene: null, thumb: null });
+  return updateCut(m, cutId, { scene: null, thumb: null, plan: undefined });
 }
 
 /** 읽는 순서로 바로 앞 컷 (없으면 null) */
@@ -126,10 +132,11 @@ export function movePage(m: Manuscript, from: number, to: number): Manuscript {
 export function swapCuts(m: Manuscript, idA: string, idB: string): Manuscript {
   const a = findCut(m, idA)?.cut, b = findCut(m, idB)?.cut;
   if (!a || !b || idA === idB) return m;
-  const body = (c: Cut) => ({ scene: c.scene, thumb: c.thumb, cast: c.cast });
+  const body = (c: Cut) => ({ scene: c.scene, thumb: c.thumb, cast: c.cast, plan: c.plan });
   const put = (c: Cut, from: Cut): Cut => {
     const next: Cut = { ...c, ...body(from) };
     if (!from.cast) delete next.cast;
+    if (!from.plan) delete next.plan;
     return next;
   };
   return { ...m, pages: m.pages.map(p => ({ ...p, cuts: p.cuts.map(c => (c.id === idA ? put(c, b) : c.id === idB ? put(c, a) : c)) })) };

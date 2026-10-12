@@ -69,7 +69,7 @@
 
 ### bubbles[] — 말풍선
 
-`{ id, shape, theme, text, x, y, w, h, tailOn, tail: {x, y}, match, font, size, bold, italic, color, outline, outlineColor, bg, fx }` — 위치·크기·꼬리는 컷 틀 기준 0~1 (왼쪽 위가 0). `shape` 말풍선 모양(oval, round, shout, thought, flash …), `theme` 말풍선 색, `match` = 말풍선 색에 맞춘 글자 스타일 쓰기(true면 font·color 등은 무시), `fx` 글씨 효과 `{ type: none·shadow·glow·echo·outline·hollow·background·splice·glitch·neon·extrude·gradient·sticker, color, color2, amt, dist, angle, blur, alpha }`.
+`{ id, shape, theme, text, x, y, w, h, rot, tailOn, tail: {x, y}, match, font, size, bold, italic, color, outline, outlineColor, bg, fx }` — 위치·크기·꼬리는 컷 틀 기준 0~1 (왼쪽 위가 0, x·y는 가운데), `rot` = 기울기(도, 가운데 기준). `shape`가 `mark…`(markHeart · markSparkle · markSweat · markFluster · markAnger · markScribble · markGloom · markBlush · markEmph · markMusic · markSigh · markExclaim · markQuestion)이면 글자 없이 **만화 기호**만 그리고, 색은 `color`입니다. `shape` 말풍선 모양(oval, round, shout, thought, flash …), `theme` 말풍선 색, `match` = 말풍선 색에 맞춘 글자 스타일 쓰기(true면 font·color 등은 무시), `fx` 글씨 효과 `{ type: none·shadow·glow·echo·outline·hollow·background·splice·glitch·neon·extrude·gradient·sticker, color, color2, amt, dist, angle, blur, alpha }`.
 
 ### look — 그림 효과
 
@@ -112,7 +112,8 @@
         "cuts": [
           { "id": "…", "rect": { "x": 12, "y": 12, "w": 336, "h": 178 },
             "cast": ["A", "B"],       // 이 컷에 나오는 인물(slot), 순서 = 장면 slots 순서
-            "scene": { /* 장면 파일과 같은 모양 (kind·$설명 없이) */ } }
+            "scene": { /* 장면 파일과 같은 모양 (kind·$설명 없이) */ },
+            "plan": { /* (장면이 아직 없을 때만) 그림 콘티에서 온 엔진용 콘티 — docs/storyboard-format.md */ } }
         ]
       }
     ]

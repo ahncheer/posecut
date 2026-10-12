@@ -1,16 +1,18 @@
 // 컷 편집 엔진과의 연결부.
 // 지금 엔진은 프로토타입(public/engine/cut-test.html)이고 같은 출처의 iframe 안에서 window.roughEngine 을 연다.
 // 엔진을 TypeScript 모듈로 옮기면 이 파일의 인터페이스만 유지하고 안쪽을 바꾼다.
-import type { EngineScene } from '../scene/types';
+import type { CutPlan, EngineScene } from '../scene/types';
 
 /** 엔진 화면에 보여줄 인물 정보 (A·B 자리 순서) */
 export interface EngineCast { letter: string; name: string; gender: string; age: string }
 
 export interface RoughEngine {
   /** models: 자리 글자(A, B, C …)마다 VRM 파일 */
-  load(args: { ratio: [number, number]; models: Record<string, File | undefined>; scene: EngineScene | null; cast?: EngineCast[]; name?: string; shape?: [number, number][] | null }): Promise<{ loaded: string[] }>;
+  load(args: { ratio: [number, number]; models: Record<string, File | undefined>; scene: EngineScene | null; cast?: EngineCast[]; name?: string; shape?: [number, number][] | null; plan?: CutPlan }): Promise<{ loaded: string[] }>;
   exportScene(): EngineScene;
   thumbnail(maxWidth?: number): string | null;
+  /** 고화질 그림 (컷 가로 widthPx 픽셀, PNG data URL) */
+  render?(widthPx: number): Promise<string | null>;
   onChange(cb: () => void): void;
   /** 엔진 안 버튼이 앱에 부탁하는 일. 'cast' = 등장인물 창 열기, 'remove' = 그 자리 인물을 이 컷에서 빼기 */
   onAction?(cb: (a: { type: 'cast' | 'save' | 'preview' | 'import' } | { type: 'remove'; letter: string }) => void): void;
