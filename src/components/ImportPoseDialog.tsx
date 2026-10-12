@@ -53,8 +53,8 @@ export function ImportPoseDialog({ open, manuscript: m, characters, scopes, cutI
       setMapping(defaultMapping(s, characters));
       // 가져올 컷·페이지 기본값: 같은 자리 → 없으면 장면이 있는 첫 컷
       const here = cutId ? m.pages.flatMap((p, pi) => p.cuts.map((c, ci) => (c.id === cutId ? [pi, ci] as [number, number] : null))).find(Boolean) : null;
-      const firstFilled = s.pages.flatMap((p, pi) => p.map((c, ci) => (c.scene ? [pi, ci] as [number, number] : null))).find(Boolean) ?? [0, 0];
-      setSrcCut(here && s.pages[here[0]]?.[here[1]]?.scene ? here : firstFilled);
+      const firstFilled = s.pages.flatMap((p, pi) => p.map((c, ci) => (c.scene || c.panel ? [pi, ci] as [number, number] : null))).find(Boolean) ?? [0, 0];
+      setSrcCut(here && (s.pages[here[0]]?.[here[1]]?.scene || s.pages[here[0]]?.[here[1]]?.panel) ? here : firstFilled);
       setSrcPage(s.pages[pageIndex] ? pageIndex : 0);
       if (s.kind === 'scene') setScope(scopes.includes('cut') ? 'cut' : scopes[0]);
     } catch (e) {
@@ -68,17 +68,17 @@ export function ImportPoseDialog({ open, manuscript: m, characters, scopes, cutI
   const pairs = useMemo(() => (src ? planPairs(m, src, { scope, targetCutId: cutId ?? undefined, targetPage: pageIndex, srcCut, srcPage, skipFilled }) : []),
     [m, src, scope, cutId, pageIndex, srcCut, srcPage, skipFilled]);
   const dupes = duplicateTargets(mapping);
-  const preview = useMemo(() => (src ? applyImport(m, pairs, mapping, skipFilled).summary : null), [m, src, pairs, mapping, skipFilled]);
+  const preview = useMemo(() => (src ? applyImport(m, pairs, mapping, skipFilled, characters).summary : null), [m, src, pairs, mapping, skipFilled, characters]);
   const mappedCount = Object.values(mapping).filter(Boolean).length;
   const canApply = !!src && !dupes.length && mappedCount > 0 && !!preview?.applied && (scope !== 'cut' || !!cutId);
   const withModel = characters.filter(c => c.model);
 
   return (
     <dialog ref={ref} onClose={onClose} aria-labelledby="impTitle">
-      <form className="dlg importdlg" method="dialog" onSubmit={e => { if (!canApply || !src) { e.preventDefault(); return; } const r = applyImport(m, pairs, mapping, skipFilled); const pp = pairs, mp = mapping, sk = skipFilled; onApply(x => applyImport(x, pp, mp, sk).manuscript, r.summary); }}>
+      <form className="dlg importdlg" method="dialog" onSubmit={e => { if (!canApply || !src) { e.preventDefault(); return; } const r = applyImport(m, pairs, mapping, skipFilled, characters); const pp = pairs, mp = mapping, sk = skipFilled; onApply(x => applyImport(x, pp, mp, sk, characters).manuscript, r.summary); }}>
         <div className="dlg-head">
           <h2 id="impTitle">JSON에서 포즈 가져오기</h2>
-          <Info text="러프 도구에서 저장한 장면 파일(.json, 컷 편집 → 내보내기)이나 원고 파일(.rough.json, 원고 → 내보내기)에서 자세·표정·카메라를 가져와요. 파일 속 인물을 지금 작품의 인물(모델)에 짝지어 넣어요." />
+          <Info text="러프 도구에서 저장한 장면 파일(.json, 컷 편집 → 내보내기)·원고 파일(.rough.json, 원고 → 내보내기)·그림 콘티(.json)에서 자세·표정·카메라를 가져와요. 파일 속 인물을 지금 작품의 인물(모델)에 짝지어 넣어요." />
           <span className="spacer" />
           <button type="button" className="btn small ghost" onClick={onClose} aria-label="닫기">✕</button>
         </div>
@@ -93,7 +93,7 @@ export function ImportPoseDialog({ open, manuscript: m, characters, scopes, cutI
           {err && <p className="sect-note" role="alert" style={{ color: 'var(--danger)' }}>{err}</p>}
           {src && (
             <p className="impcount" role="status">
-              <b>인물 {src.people.length}명</b> · 자세가 있는 컷 {sceneCount(src)}개{src.kind === 'manuscript' ? ` · ${src.pages.length}페이지` : ''}
+              <b>인물 {src.people.length}명</b> · 자세가 있는 컷 {sceneCount(src)}개{src.kind !== 'scene' ? ` · ${src.pages.length}페이지` : ''}{src.kind === 'storyboard' ? ' · 그림 콘티' : ''}
               {src.people.length > MAX_IN_CUT && <span className="warn"> · 한 컷에는 {MAX_IN_CUT}명까지만 들어가요</span>}
             </p>
           )}
@@ -131,10 +131,11 @@ export function ImportPoseDialog({ open, manuscript: m, characters, scopes, cutI
               ))}
             </div>
             {src.kind === 'scene' && scopes.length > 1 && <p className="sect-note">장면 파일은 컷 하나 분량이라 "이 컷"에만 넣을 수 있어요. 페이지·원고 전체는 원고 파일(.rough.json)로 가져와 주세요.</p>}
-            {scope === 'cut' && src.kind === 'manuscript' && (
+            {src.kind === 'storyboard' && <p className="sect-note">그림 콘티예요. 컷마다 포즈·방향·샷·말풍선·기호를 콘티대로 새로 놓아요 (지금 장면은 바뀌어요). 컷 칸 모양까지 그림처럼 만들려면 원고 화면의 "그림으로 콘티"를 쓰세요.</p>}
+            {scope === 'cut' && src.kind !== 'scene' && (
               <label className="impsel">가져올 컷
                 <select value={srcCut.join(',')} onChange={e => setSrcCut(e.target.value.split(',').map(Number) as [number, number])}>
-                  {src.pages.flatMap((p, pi) => p.map((c, ci) => c.scene && (
+                  {src.pages.flatMap((p, pi) => p.map((c, ci) => (c.scene || c.panel) && (
                     <option key={`${pi},${ci}`} value={`${pi},${ci}`}>{pi + 1}페이지 컷 {ci + 1} · {c.people.length}명</option>
                   )))}
                 </select>
@@ -143,7 +144,7 @@ export function ImportPoseDialog({ open, manuscript: m, characters, scopes, cutI
             {scope === 'page' && (
               <label className="impsel">가져올 페이지
                 <select value={srcPage} onChange={e => setSrcPage(Number(e.target.value))}>
-                  {src.pages.map((p, pi) => <option key={pi} value={pi}>{pi + 1}페이지 · 자세 {p.filter(c => c.scene).length}컷</option>)}
+                  {src.pages.map((p, pi) => <option key={pi} value={pi}>{pi + 1}페이지 · 자세 {p.filter(c => c.scene || c.panel).length}컷</option>)}
                 </select>
               </label>
             )}

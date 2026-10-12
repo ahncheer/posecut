@@ -58,3 +58,23 @@ describe('JSON 포즈 가져오기', () => {
     expect(() => parsePoseSource('not json')).toThrow();
   });
 });
+
+import sbSample from '../../docs/examples/1화_취향_콘티.json?raw';
+describe('그림 콘티도 포즈 가져오기로', () => {
+  it('콘티 파일을 읽고 컷에 콘티(plan)를 넣는다', () => {
+    const s = parsePoseSource(sbSample, '콘티.json');
+    expect(s.kind).toBe('storyboard');
+    expect(s.people.map(p => p.key)).toEqual(['A', 'B']);
+    const w = work();
+    const target = ms(w);
+    target.pages[0].cuts[0] = { ...target.pages[0].cuts[0], scene: scene(1, 'old'), thumb: 'T' };
+    const pairs = planPairs(target, s, { scope: 'all', skipFilled: false });
+    expect(pairs.length).toBe(4);
+    const r = applyImport(target, pairs, { A: 'A', B: 'B' }, false, w.characters);
+    const c0 = r.manuscript.pages[0].cuts[0];
+    expect(c0.scene).toBeNull(); expect(c0.thumb).toBeNull();
+    expect(c0.cast).toEqual(['A', 'B']);
+    expect(c0.plan?.chars?.length).toBe(2);
+    expect(r.summary.replaced).toBe(1);
+  });
+});

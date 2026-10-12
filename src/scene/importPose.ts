@@ -1,16 +1,19 @@
 // JSON에서 포즈 가져오기: 장면 파일(컷 하나) 또는 원고 파일(.rough.json)을 읽어
 // 등장인물을 지금 작품의 인물에 짝지은 뒤, 컷·페이지·원고 전체에 자세를 옮긴다.
+// 그림 콘티(rough-storyboard)도 받는다: 컷마다 콘티(plan)를 넣고, 장면은 엔진이 콘티대로 만든다.
 import type { Character, EngineScene, Manuscript, SlotId } from './types';
 import { MAX_IN_CUT } from './types';
 import { castForCut, updateCut } from './manuscript';
 import { stripNotes } from '../storage/readableJson';
+import { looseJSON, panelToCut, parseStoryboard, type SbPanel } from './storyboard';
 
 /** 가져온 파일 속 인물 한 명 */
 export interface SrcPerson { key: string; label: string; model: string | null }
 /** 가져온 파일 속 컷 하나: scene.slots[i] = people[i]의 자세 */
-export interface SrcCut { scene: EngineScene | null; people: string[] }
+export interface SrcCut { scene: EngineScene | null; people: string[]; /** 그림 콘티의 컷 (scene 대신) */ panel?: SbPanel }
+const hasPose = (c: SrcCut) => !!(c.scene || c.panel);
 export interface PoseSource {
-  kind: 'scene' | 'manuscript';
+  kind: 'scene' | 'manuscript' | 'storyboard';
   title: string;
   people: SrcPerson[];
   /** 페이지 → 컷 (장면 파일이면 [[컷 하나]]) */
@@ -23,7 +26,15 @@ const isScene = (v: unknown): v is EngineScene => isObj(v) && v.v === 1 && Array
 /** 파일 내용 → 가져올 거리. 러프 도구 파일이 아니면 오류 */
 export function parsePoseSource(text: string, fileName = ''): PoseSource {
   let data: unknown;
-  try { data = stripNotes(JSON.parse(text)); } catch { throw new Error('JSON 파일을 읽지 못했어요.'); }
+  try { data = stripNotes(JSON.parse(looseJSON(text))); } catch { throw new Error('JSON 파일을 읽지 못했어요.'); }
+  if (isObj(data) && (data.kind === 'rough-storyboard' || (Array.isArray(data.pages) && data.pages.some(p => isObj(p) && Array.isArray(p.panels))) || Array.isArray(data.panels))) {
+    const sb = parseStoryboard(text);
+    return {
+      kind: 'storyboard', title: fileName || '그림 콘티',
+      people: sb.characters.map(c => ({ key: c.id, label: c.name, model: c.desc ?? null })),
+      pages: sb.pages.map(p => p.panels.map(panel => ({ scene: null, people: (panel.chars ?? []).map(c => c.id), panel }))),
+    };
+  }
   if (isScene(data)) {
     const who = Array.isArray((data as { who?: unknown }).who) ? (data as unknown as { who: { name?: unknown; letter?: unknown }[] }).who : [];
     const people = data.slots.map((_, i) => {
@@ -52,10 +63,10 @@ export function parsePoseSource(text: string, fileName = ''): PoseSource {
     const title = [isObj(data.work) && typeof data.work.title === 'string' ? data.work.title : '', typeof ms.title === 'string' ? ms.title : ''].filter(Boolean).join(' · ');
     return { kind: 'manuscript', title: title || fileName || '원고 파일', people, pages };
   }
-  throw new Error('러프 도구에서 저장한 장면(.json)이나 원고(.rough.json) 파일이 아니에요.');
+  throw new Error('러프 도구에서 저장한 장면(.json)·원고(.rough.json)·그림 콘티(.json) 파일이 아니에요.');
 }
 
-export const sceneCount = (src: PoseSource) => src.pages.reduce((n, p) => n + p.filter(c => c.scene).length, 0);
+export const sceneCount = (src: PoseSource) => src.pages.reduce((n, p) => n + p.filter(hasPose).length, 0);
 
 /** 처음 짝: 이름이 같은 인물 → 남은 인물은 순서대로 (모델이 있는 인물만) */
 export function defaultMapping(src: PoseSource, characters: Character[]): Record<string, SlotId | ''> {
@@ -129,21 +140,28 @@ export function planPairs(m: Manuscript, src: PoseSource, plan: ImportPlan): Imp
   } else {
     m.pages.forEach((p, pi) => p.cuts.forEach((c, ci) => { const s = src.pages[pi]?.[ci]; if (s) pairs.push({ cutId: c.id, label: label(pi, ci), src: s }); }));
   }
-  return pairs.filter(p => p.src.scene);
+  return pairs.filter(p => hasPose(p.src));
 }
 
 export interface ImportSummary { applied: number; replaced: number; skipped: number; empty: number }
 
 /** 실제로 넣기. 장면 그림(thumb)은 컷을 열면 새로 그려지도록 비운다 */
-export function applyImport(m: Manuscript, pairs: ImportPair[], mapping: Record<string, SlotId | ''>, skipFilled: boolean): { manuscript: Manuscript; summary: ImportSummary } {
+export function applyImport(m: Manuscript, pairs: ImportPair[], mapping: Record<string, SlotId | ''>, skipFilled: boolean, characters: Character[] = []): { manuscript: Manuscript; summary: ImportSummary } {
   const summary: ImportSummary = { applied: 0, replaced: 0, skipped: 0, empty: 0 };
   let out = m;
   for (const p of pairs) {
     const had = m.pages.some(pg => pg.cuts.some(c => c.id === p.cutId && c.scene));
     if (had && skipFilled) { summary.skipped++; continue; }
-    const r = remapCut(p.src, mapping);
-    if (!r) { summary.empty++; continue; }
-    out = updateCut(out, p.cutId, { scene: r.scene, cast: r.cast, thumb: null });
+    if (p.src.panel) {
+      // 그림 콘티: 출연 인물과 콘티만 넣고 장면은 비운다 (엔진이 콘티대로 새로 만듦)
+      const { cast, plan } = panelToCut(p.src.panel, mapping, characters);
+      if (!cast.length) { summary.empty++; continue; }
+      out = updateCut(out, p.cutId, { scene: null, thumb: null, cast, plan });
+    } else {
+      const r = remapCut(p.src, mapping);
+      if (!r) { summary.empty++; continue; }
+      out = updateCut(out, p.cutId, { scene: r.scene, cast: r.cast, thumb: null });
+    }
     summary.applied++;
     if (had) summary.replaced++;
   }
