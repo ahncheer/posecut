@@ -112,6 +112,19 @@ export function pasteScene(m: Manuscript, cutId: string, scene: EngineScene | nu
   return updateCut(m, cutId, { scene: scene ? structuredClone(scene) : null, thumb });
 }
 
+/** 두 컷의 내용(장면·작은 그림·나오는 인물)을 맞바꾼다. 컷 자리·모양은 그대로 */
+export function swapCuts(m: Manuscript, idA: string, idB: string): Manuscript {
+  const a = findCut(m, idA)?.cut, b = findCut(m, idB)?.cut;
+  if (!a || !b || idA === idB) return m;
+  const body = (c: Cut) => ({ scene: c.scene, thumb: c.thumb, cast: c.cast });
+  const put = (c: Cut, from: Cut): Cut => {
+    const next: Cut = { ...c, ...body(from) };
+    if (!from.cast) delete next.cast;
+    return next;
+  };
+  return { ...m, pages: m.pages.map(p => ({ ...p, cuts: p.cuts.map(c => (c.id === idA ? put(c, b) : c.id === idB ? put(c, a) : c)) })) };
+}
+
 /** 페이지 추가 (페이지 만화). 틀을 안 주면 마지막 페이지와 같은 틀. 웹툰은 맨 아래에 컷 하나 추가 */
 export function addPage(m: Manuscript, template?: TemplateId): Manuscript {
   if (m.format === 'webtoon') return { ...m, pages: m.pages.map((p, i) => (i === m.pages.length - 1 ? appendWebtoonCut(p, m.style) : p)) };

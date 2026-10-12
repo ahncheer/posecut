@@ -126,3 +126,20 @@ describe('등장인물 추가·삭제', () => {
     expect(nextEpisodeTitle(['1화', '외전'])).toBe('3화');
   });
 });
+
+describe('컷 맞바꾸기', () => {
+  it('두 컷의 장면·그림·인물만 바꾸고 자리는 그대로', async () => {
+    const { swapCuts, newManuscript, newWork } = await import('./manuscript');
+    const { DEFAULT_STYLE, DEFAULT_PAGE_RATIO } = await import('./layout');
+    const m0 = newManuscript({ title: 't', work: newWork(), format: 'page', template: 'four', style: DEFAULT_STYLE, pageRatio: DEFAULT_PAGE_RATIO });
+    const [c1, , c3] = m0.pages[0].cuts;
+    const sc = { v: 1 as const, slots: [{ a: 1 }], camera: { pos: [0, 0, 0], target: [0, 0, 0], fov: 30 }, shot: 'full', aa: 1 };
+    const m = { ...m0, pages: [{ ...m0.pages[0], cuts: m0.pages[0].cuts.map(c => (c.id === c1.id ? { ...c, scene: sc, thumb: 'T', cast: ['B'] } : c)) }] };
+    const s = swapCuts(m, c1.id, c3.id);
+    const [n1, , n3] = s.pages[0].cuts;
+    expect(n1.scene).toBeNull(); expect(n1.thumb).toBeNull(); expect('cast' in n1).toBe(false);
+    expect(n3.scene).toEqual(sc); expect(n3.thumb).toBe('T'); expect(n3.cast).toEqual(['B']);
+    expect(n1.rect).toEqual(c1.rect); expect(n3.rect).toEqual(c3.rect); expect(n1.id).toBe(c1.id);
+    expect(swapCuts(swapCuts(m, c1.id, c3.id), c1.id, c3.id)).toEqual(m);
+  });
+});

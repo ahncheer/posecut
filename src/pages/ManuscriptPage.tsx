@@ -6,7 +6,7 @@ import { PageView } from '../components/PageView';
 import { WorkDialog } from '../components/WorkDialog';
 import { exportSvgAsPng } from '../components/exportPage';
 import { useManuscript } from '../storage/useManuscript';
-import { addPage, changePageTemplate, clearCut, findCut, pasteScene, previousCut, removePage, scenesLostByTemplate } from '../scene/manuscript';
+import { addPage, changePageTemplate, clearCut, findCut, pasteScene, previousCut, removePage, scenesLostByTemplate, swapCuts } from '../scene/manuscript';
 import { PageTemplateDialog } from '../components/PageTemplateDialog';
 import { TemplatePicker } from '../components/TemplatePicker';
 import type { FrameStyle, Page, PageTitle, TemplateId, TitlePos } from '../scene/types';
@@ -32,6 +32,10 @@ export function ManuscriptPage() {
   const [tplDialog, setTplDialog] = useState<'add' | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  /** 컷 바꾸기: 먼저 고른 컷 id (다른 컷을 누르면 맞바꿈) */
+  const [swapFrom, setSwapFrom] = useState<string | null>(null);
+  /** 방금 맞바꾼 두 컷 (되돌리기용) */
+  const [lastSwap, setLastSwap] = useState<[string, string] | null>(null);
   /** 페이지를 추가한 뒤 저장이 반영되면 그 페이지로 이동 */
   const [jumpTo, setJumpTo] = useState<number | null>(null);
   const [note, setNote] = useState('');
@@ -53,6 +57,13 @@ export function ManuscriptPage() {
     if (pg && !pg.cuts.some(c => c.id === selected)) setSelected(pg.cuts[0]?.id ?? null);
   }, [m, pageIndex, selected]);
 
+  useEffect(() => {
+    if (!swapFrom) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSwapFrom(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [swapFrom]);
+
   if (loading) return <><TopBar /><p className="sub" style={{ padding: 16 }}>불러오는 중…</p></>;
   if (!m) return <><TopBar /><div style={{ padding: 16 }} className="panel"><p>원고를 찾을 수 없어요.</p><Link to="/" className="btn">내 원고로</Link></div></>;
 
@@ -61,7 +72,17 @@ export function ManuscriptPage() {
   const sel = found?.cut ?? null;
   const ratio = sel ? cutRatio(sel.rect) : null;
   const openCut = (id: string) => navigate(`/m/${m.id}/cut/${id}`);
-  const say = (t: string) => setNote(t);
+  const say = (t: string) => { setNote(t); setLastSwap(null); };
+  const cutName = (id: string) => { const f = findCut(m, id); return f ? `${f.pageIndex + 1}페이지 컷 ${f.cutIndex + 1}` : ''; };
+  const doSwap = async (a: string, b: string) => {
+    setSwapFrom(null);
+    if (a === b) { say('같은 컷이라 바꾸지 않았어요.'); return; }
+    await update(x => swapCuts(x, a, b));
+    setSelected(b);
+    say(`${cutName(a)}와(과) ${cutName(b)}의 장면을 맞바꿨어요.`);
+    setLastSwap([a, b]);
+  };
+  const pickCut = (id: string) => { if (swapFrom) void doSwap(swapFrom, id); else setSelected(id); };
 
   return (
     <>
@@ -75,7 +96,7 @@ export function ManuscriptPage() {
         <aside className="pagelist" aria-label="페이지">
           <h2>{m.format === 'page' ? '페이지' : '웹툰'}</h2>
           {m.pages.map((p, i) => (
-            <button key={p.id} type="button" className="pagethumb" aria-current={i === pageIndex} onClick={() => { setPageIndex(i); setSelected(null); }}>
+            <button key={p.id} type="button" className="pagethumb" aria-current={i === pageIndex} onClick={() => { setPageIndex(i); if (!swapFrom) setSelected(null); }}>
               <PageView page={p} style={m.style} width={90} showNumbers={false} label={`${i + 1}페이지 미리보기`} />
               <span>{i + 1}</span>
             </button>
@@ -99,12 +120,14 @@ export function ManuscriptPage() {
             page={page}
             style={m.style}
             width={m.format === 'page' ? 360 : 420}
-            selectedCutId={selected}
-            onSelect={setSelected}
+            selectedCutId={swapFrom ?? selected}
+            onSelect={pickCut}
             onOpen={openCut}
             label={`${pageIndex + 1}페이지, 컷 ${page.cuts.length}개`}
           />
-          <p className="sub" style={{ marginTop: 8 }}>컷을 누르면 선택, 두 번 누르면 장면 편집으로 들어가요.</p>
+          {swapFrom
+            ? <p className="swapbar" role="status"><span><b>{cutName(swapFrom)}</b>와(과) 바꿀 컷을 눌러 주세요. 다른 페이지의 컷도 돼요.</span><button type="button" className="btn small" onClick={() => setSwapFrom(null)}>취소 (Esc)</button></p>
+            : <p className="sub" style={{ marginTop: 8 }}>컷을 누르면 선택, 두 번 누르면 장면 편집으로 들어가요.</p>}
         </section>
 
         <aside style={{ display: 'grid', gap: 12 }}>
@@ -118,6 +141,7 @@ export function ManuscriptPage() {
                   <button type="button" className="btn small" disabled={!sel.scene} onClick={() => { if (sel.scene && copyScene({ scene: sel.scene, thumb: sel.thumb, from: `${found.pageIndex + 1}페이지 컷 ${found.cutIndex + 1}`, at: Date.now() })) say('장면을 복사했어요.'); }}>복사</button>
                   <button type="button" className="btn small" onClick={() => { const c = readClip(); if (!c) { say('복사한 장면이 없어요.'); return; } update(x => pasteScene(x, sel.id, c.scene, c.thumb)); say(`${c.from}의 장면을 붙여넣었어요.`); }}>붙여넣기</button>
                   <button type="button" className="btn small" onClick={() => { const prev = previousCut(m, sel.id); if (!prev?.scene) { say('앞 컷에 장면이 없어요.'); return; } update(x => pasteScene(x, sel.id, prev.scene, prev.thumb)); say('앞 컷에서 장면을 가져왔어요.'); }}>이전 컷에서 가져오기</button>
+                  <button type="button" className="btn small" aria-pressed={swapFrom === sel.id} onClick={() => { setSwapFrom(swapFrom === sel.id ? null : sel.id); say(''); }}>{swapFrom === sel.id ? '바꾸기 취소' : '다른 컷과 바꾸기'}</button>
                   <button type="button" className="btn small ghost danger" disabled={!sel.scene} onClick={() => { if (confirm('이 컷의 장면을 비울까요?')) update(x => clearCut(x, sel.id)); }}>비우기</button>
                 </div>
               </>
@@ -128,7 +152,7 @@ export function ManuscriptPage() {
               </>
             )}
             <button type="button" className="btn small" style={{ marginTop: 10 }} onClick={() => setImportOpen(true)} disabled={!work}>JSON에서 포즈 가져오기</button>
-            {note && <p className="sub" role="status">{note}</p>}
+            {note && <p className="sub" role="status">{note}{lastSwap && <> <button type="button" className="linkbtn" onClick={() => { const [a, b] = lastSwap; void update(x => swapCuts(x, a, b)); setSelected(a); setLastSwap(null); say('맞바꾼 것을 되돌렸어요.'); }}>되돌리기</button></>}</p>}
           </section>
 
           <details className="panel fold" aria-label="작품 설정">

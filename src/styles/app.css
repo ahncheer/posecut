@@ -421,3 +421,7 @@ dialog.previewdlg { width: min(1040px, calc(100% - 24px)); }
 .chip[aria-pressed="true"], .chip[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .chip:disabled { opacity: .45; cursor: default; }
 .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* 컷 맞바꾸기 안내 */
+.swapbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 8px 0 0; padding: 8px 12px; border-radius: 8px; background: var(--accent-soft); color: var(--ink); font-size: 13px; }
+.canvaswrap:has(.swapbar) .cutbox { cursor: copy; }
