@@ -3,6 +3,7 @@
 import type { Character, EngineScene, Manuscript, SlotId } from './types';
 import { MAX_IN_CUT } from './types';
 import { castForCut, updateCut } from './manuscript';
+import { stripNotes } from '../storage/readableJson';
 
 /** 가져온 파일 속 인물 한 명 */
 export interface SrcPerson { key: string; label: string; model: string | null }
@@ -22,7 +23,7 @@ const isScene = (v: unknown): v is EngineScene => isObj(v) && v.v === 1 && Array
 /** 파일 내용 → 가져올 거리. 러프 도구 파일이 아니면 오류 */
 export function parsePoseSource(text: string, fileName = ''): PoseSource {
   let data: unknown;
-  try { data = JSON.parse(text); } catch { throw new Error('JSON 파일을 읽지 못했어요.'); }
+  try { data = stripNotes(JSON.parse(text)); } catch { throw new Error('JSON 파일을 읽지 못했어요.'); }
   if (isScene(data)) {
     const who = Array.isArray((data as { who?: unknown }).who) ? (data as unknown as { who: { name?: unknown; letter?: unknown }[] }).who : [];
     const people = data.slots.map((_, i) => {

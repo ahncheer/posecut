@@ -20,7 +20,7 @@ import { applySplit } from '../scene/split';
 import { CutDrawDialog } from '../components/CutDrawDialog';
 import { cutRatio } from '../scene/layout';
 import { copyScene, readClip } from '../storage/clipboard';
-import { downloadJSON, toFile } from '../storage/file-io';
+import { downloadJSON, toReadableFile } from '../storage/file-io';
 import { deleteManuscript } from '../storage/db';
 import { ExportDialog, type ExportKind } from '../components/ExportDialog';
 
@@ -312,7 +312,7 @@ export function ManuscriptPage() {
         pageNumber={pageIndex + 1}
         onClose={() => setExportOpen(false)}
         onExport={async (kind: ExportKind) => {
-          if (kind === 'file') { if (work) downloadJSON(`${work.title || '작품'}_${m.title || '원고'}.rough.json`, toFile(work, m)); }
+          if (kind === 'file') { if (work) downloadJSON(`${work.title || '작품'}_${m.title || '원고'}.rough.json`, toReadableFile(work, m)); }
           else {
             const svg = canvasRef.current?.querySelector('svg');
             if (svg) await exportSvgAsPng(svg, `${work?.title || '작품'}_${m.title || '원고'}_${pageIndex + 1}페이지.png`);
