@@ -143,3 +143,15 @@ describe('컷 맞바꾸기', () => {
     expect(swapCuts(swapCuts(m, c1.id, c3.id), c1.id, c3.id)).toEqual(m);
   });
 });
+
+describe('페이지 순서 바꾸기', () => {
+  it('앞뒤로 옮기고, 범위 밖이면 그대로', async () => {
+    const { movePage, newManuscript, newWork, addPage } = await import('./manuscript');
+    const { DEFAULT_STYLE, DEFAULT_PAGE_RATIO } = await import('./layout');
+    const m = addPage(addPage(newManuscript({ title: 't', work: newWork(), format: 'page', template: 'four', style: DEFAULT_STYLE, pageRatio: DEFAULT_PAGE_RATIO })));
+    const ids = m.pages.map(p => p.id);
+    expect(movePage(m, 0, 2).pages.map(p => p.id)).toEqual([ids[1], ids[2], ids[0]]);
+    expect(movePage(m, 2, 0).pages.map(p => p.id)).toEqual([ids[2], ids[0], ids[1]]);
+    expect(movePage(m, 0, 3)).toBe(m);
+  });
+});

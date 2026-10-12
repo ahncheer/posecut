@@ -6,7 +6,7 @@ import { PageView } from '../components/PageView';
 import { WorkDialog } from '../components/WorkDialog';
 import { exportSvgAsPng } from '../components/exportPage';
 import { useManuscript } from '../storage/useManuscript';
-import { addPage, changePageTemplate, clearCut, findCut, pasteScene, previousCut, removePage, scenesLostByTemplate, swapCuts } from '../scene/manuscript';
+import { addPage, changePageTemplate, clearCut, findCut, pasteScene, previousCut, removePage, scenesLostByTemplate, swapCuts, movePage } from '../scene/manuscript';
 import { PageTemplateDialog } from '../components/PageTemplateDialog';
 import { TemplatePicker } from '../components/TemplatePicker';
 import type { FrameStyle, Page, PageTitle, TemplateId, TitlePos } from '../scene/types';
@@ -36,6 +36,9 @@ export function ManuscriptPage() {
   const [swapFrom, setSwapFrom] = useState<string | null>(null);
   /** 방금 맞바꾼 두 컷 (되돌리기용) */
   const [lastSwap, setLastSwap] = useState<[string, string] | null>(null);
+  /** 페이지 끌어 옮기기: 끄는 페이지 번호와 놓을 자리 */
+  const [dragPage, setDragPage] = useState<number | null>(null);
+  const [dropAt, setDropAt] = useState<number | null>(null);
   /** 페이지를 추가한 뒤 저장이 반영되면 그 페이지로 이동 */
   const [jumpTo, setJumpTo] = useState<number | null>(null);
   const [note, setNote] = useState('');
@@ -57,6 +60,10 @@ export function ManuscriptPage() {
     if (pg && !pg.cuts.some(c => c.id === selected)) setSelected(pg.cuts[0]?.id ?? null);
   }, [m, pageIndex, selected]);
 
+  // 지금 페이지가 왼쪽 목록에서 보이도록 (목록이 길어 스크롤될 때)
+  useEffect(() => {
+    document.querySelector('.pagethumb[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
+  }, [pageIndex, m?.pages.length]);
   useEffect(() => {
     if (!swapFrom) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSwapFrom(null); };
@@ -82,6 +89,12 @@ export function ManuscriptPage() {
     say(`${cutName(a)}와(과) ${cutName(b)}의 장면을 맞바꿨어요.`);
     setLastSwap([a, b]);
   };
+  const reorder = async (from: number, to: number) => {
+    if (from === to) return;
+    await update(x => movePage(x, from, to));
+    setJumpTo(to);
+    say(`${from + 1}페이지를 ${to + 1}번째로 옮겼어요.`);
+  };
   const pickCut = (id: string) => { if (swapFrom) void doSwap(swapFrom, id); else setSelected(id); };
 
   return (
@@ -96,7 +109,21 @@ export function ManuscriptPage() {
         <aside className="pagelist" aria-label="페이지">
           <h2>{m.format === 'page' ? '페이지' : '웹툰'}</h2>
           {m.pages.map((p, i) => (
-            <button key={p.id} type="button" className="pagethumb" aria-current={i === pageIndex} onClick={() => { setPageIndex(i); if (!swapFrom) setSelected(null); }}>
+            <button
+              key={p.id}
+              type="button"
+              className="pagethumb"
+              aria-current={i === pageIndex}
+              draggable={m.format === 'page' && m.pages.length > 1}
+              data-drop={dropAt === i && dragPage !== null && dragPage !== i ? (dragPage < i ? 'after' : 'before') : undefined}
+              title={m.format === 'page' && m.pages.length > 1 ? '끌어서 순서를 바꿀 수 있어요' : undefined}
+              onClick={() => { setPageIndex(i); if (!swapFrom) setSelected(null); }}
+              onDragStart={e => { setDragPage(i); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); }}
+              onDragOver={e => { if (dragPage === null) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dropAt !== i) setDropAt(i); }}
+              onDragLeave={() => { if (dropAt === i) setDropAt(null); }}
+              onDrop={e => { e.preventDefault(); if (dragPage !== null) void reorder(dragPage, i); setDragPage(null); setDropAt(null); }}
+              onDragEnd={() => { setDragPage(null); setDropAt(null); }}
+            >
               <PageView page={p} style={m.style} width={90} showNumbers={false} label={`${i + 1}페이지 미리보기`} />
               <span>{i + 1}</span>
             </button>
@@ -104,6 +131,12 @@ export function ManuscriptPage() {
           {m.format === 'page'
             ? <button type="button" className="btn small" onClick={() => setTplDialog('add')}>+ 페이지 추가</button>
             : <button type="button" className="btn small" onClick={() => update(x => addPage(x))}>+ 컷 추가</button>}
+          {m.format === 'page' && m.pages.length > 1 && (
+            <div className="pagemove" role="group" aria-label="페이지 순서">
+              <button type="button" className="btn small" disabled={pageIndex === 0} onClick={() => void reorder(pageIndex, pageIndex - 1)} aria-label={`${pageIndex + 1}페이지를 앞으로`}>↑ 앞으로</button>
+              <button type="button" className="btn small" disabled={pageIndex >= m.pages.length - 1} onClick={() => void reorder(pageIndex, pageIndex + 1)} aria-label={`${pageIndex + 1}페이지를 뒤로`}>↓ 뒤로</button>
+            </div>
+          )}
           {m.format === 'page' && m.pages.length > 1 && (
             <button
               type="button"
@@ -130,7 +163,7 @@ export function ManuscriptPage() {
             : <p className="sub" style={{ marginTop: 8 }}>컷을 누르면 선택, 두 번 누르면 장면 편집으로 들어가요.</p>}
         </section>
 
-        <aside style={{ display: 'grid', gap: 12 }}>
+        <aside className="msside">
           <section className="panel" aria-label="선택한 컷">
             {sel && found ? (
               <>

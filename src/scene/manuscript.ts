@@ -112,6 +112,16 @@ export function pasteScene(m: Manuscript, cutId: string, scene: EngineScene | nu
   return updateCut(m, cutId, { scene: scene ? structuredClone(scene) : null, thumb });
 }
 
+/** 페이지 순서 바꾸기: from 번째 페이지를 to 번째 자리로 (0부터) */
+export function movePage(m: Manuscript, from: number, to: number): Manuscript {
+  const n = m.pages.length;
+  if (from === to || from < 0 || to < 0 || from >= n || to >= n) return m;
+  const pages = [...m.pages];
+  const [p] = pages.splice(from, 1);
+  pages.splice(to, 0, p);
+  return { ...m, pages };
+}
+
 /** 두 컷의 내용(장면·작은 그림·나오는 인물)을 맞바꾼다. 컷 자리·모양은 그대로 */
 export function swapCuts(m: Manuscript, idA: string, idB: string): Manuscript {
   const a = findCut(m, idA)?.cut, b = findCut(m, idB)?.cut;
