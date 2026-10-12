@@ -324,6 +324,11 @@ body.embed .top { flex-wrap: nowrap; }
           <button class="btn small" type="button" data-prop="sphere" data-tip="공 (구)">＋ 공</button>
           <button class="btn small" type="button" data-prop="cylinder" data-tip="원기둥">＋ 원기둥</button>
         </div>
+        <div class="propadd" role="group" aria-label="고른 인물에 맞춰 가구 넣기">
+          <button class="btn small" type="button" data-furnish="chair" data-tip="고른 인물이 앉은 자리에 맞춰 의자(좌석 + 등받이)를 놓아요">＋ 의자</button>
+          <button class="btn small" type="button" data-furnish="counter" data-tip="고른 인물 앞에 카운터를 놓아요. 앉아 있으면 팔꿈치 높이에 맞춰요">＋ 카운터</button>
+          <button class="btn small" type="button" data-furnish="desk" data-tip="고른 인물 앞에 책상을 놓아요. 앉아 있으면 팔꿈치 높이에 맞춰요">＋ 책상</button>
+        </div>
         <div id="propList" class="proplist"></div>
         <div id="propEdit" class="propedit" hidden>
           <div class="field"><label for="propX">좌우</label><input id="propX" type="range" min="-1000" max="1000" step="1"><output for="propX" id="propXo"></output></div>
@@ -1305,6 +1310,7 @@ function cleanProp(p) {
     w: clampN(p.w, 5, 500, d0.w), h: clampN(p.h, 5, 500, d0.h), d: clampN(p.d, 5, 500, d0.d),
     rot: clampN(p.rot, -180, 180, 0), tilt: clampN(p.tilt, -90, 90, 0),
     color: /^#[0-9a-f]{6}$/i.test(p.color) ? p.color : '#d9d4c7',
+    ...(typeof p.name === 'string' && p.name.trim() ? { name: p.name.trim().slice(0, 20) } : {}),
   };
 }
 function applyProp(p) {
@@ -1342,6 +1348,38 @@ function pickProp(e) {
   return hit ? { id: hit.object.userData.propId, dist: hit.distance, point: hit.point.clone() } : null;
 }
 const propRay = new THREE.Raycaster(), _ndcP = new THREE.Vector2();
+/**
+ * 인물에 맞춰 가구 놓기 (상자 도형으로): chair 의자(좌석 + 등받이) · counter 카운터 · desk 책상.
+ * 인물의 엉덩이·팔꿈치 실제 위치와 몸 방향(rot)을 읽어 높이·자리를 정한다. 만든 도형 목록을 돌려준다.
+ */
+function furnish(s, type) {
+  if (!s || !s.vrm) return [];
+  s.vrm.humanoid.update(); s.vrm.scene.updateMatrixWorld(true);
+  const W = (b) => { const n = s.vrm.humanoid.getRawBoneNode(b); return n ? n.getWorldPosition(new THREE.Vector3()) : null; };
+  const hips = W('hips'); if (!hips) return [];
+  const chest = W('chest') || hips, knee = W('leftLowerLeg'), elbows = [W('leftLowerArm'), W('rightLowerArm')].filter(Boolean);
+  const a = THREE.MathUtils.degToRad(s.rot || 0), fx = Math.sin(a), fz = Math.cos(a); // 몸 앞쪽 방향
+  const sitting = !!knee && Math.abs(knee.y - hips.y) < 0.2;
+  const made = [];
+  const put = (p) => { const q = cleanProp(p); props.push(q); applyProp(q); made.push(q); };
+  const rot = Math.round(s.rot || 0);
+  if (type === 'chair') {
+    const seat = Math.max(0.2, hips.y - 0.1);
+    put({ kind: 'box', name: '의자', x: (hips.x - fx * 0.04) * 100, z: (hips.z - fz * 0.04) * 100, y: 0, w: 44, d: 44, h: seat * 100, rot, color: '#b9b2a5' });
+    put({ kind: 'box', name: '의자 등받이', x: (hips.x - fx * 0.25) * 100, z: (hips.z - fz * 0.25) * 100, y: seat * 100, w: 44, d: 5, h: 45, rot, color: '#b9b2a5' });
+  } else if (type === 'counter' || type === 'desk') {
+    let top = type === 'counter' ? 0.95 : 0.74;
+    if (sitting) {
+      const ey = elbows.length ? Math.min(...elbows.map(v => v.y)) : hips.y + 0.25;
+      top = Math.min(hips.y + 0.34, Math.max(hips.y + 0.15, ey - 0.04)); // 팔꿈치를 올려놓는 높이 (가슴보다 낮게)
+    }
+    const depth = type === 'counter' ? 0.6 : 0.65, near = sitting ? 0.14 : 0.2;
+    put({ kind: 'box', name: type === 'counter' ? '카운터' : '책상', x: (chest.x + fx * (near + depth / 2)) * 100, z: (chest.z + fz * (near + depth / 2)) * 100, y: 0,
+      w: type === 'counter' ? 160 : 120, d: depth * 100, h: top * 100, rot, color: '#d9d4c7' });
+  }
+  renderPropUI();
+  return made;
+}
 
 const loader = new GLTFLoader();
 loader.register((parser) => new VRMLoaderPlugin(parser));
@@ -2624,7 +2662,7 @@ function renderPropUI() {
     const b = document.createElement('button');
     b.type = 'button'; b.setAttribute('aria-pressed', String(p.id === propSel));
     const sw = document.createElement('span'); sw.className = 'sw'; sw.dataset.k = p.kind; sw.style.background = p.color;
-    b.append(sw, document.createTextNode(`${PROP_KINDS[p.kind]} ${count[p.kind]}`));
+    b.append(sw, document.createTextNode(p.name || `${PROP_KINDS[p.kind]} ${count[p.kind]}`));
     b.addEventListener('click', () => selectProp(p.id === propSel ? null : p.id));
     list.append(b);
   });
@@ -2643,6 +2681,14 @@ function addProp(kind, from) {
   say(`${PROP_KINDS[p.kind]}을(를) 넣었어요. 화면에서 끌어 옮기고, 아래 칸에서 크기·높이·색을 바꿔요.`);
 }
 document.querySelectorAll('[data-prop]').forEach(b => b.addEventListener('click', () => addProp(b.dataset.prop)));
+document.querySelectorAll('[data-furnish]').forEach(b => b.addEventListener('click', () => {
+  const s = slots[sel];
+  if (!s || !s.vrm) { say('먼저 인물을 골라 주세요.'); return; }
+  const made = furnish(s, b.dataset.furnish);
+  if (!made.length) return;
+  selectProp(made[0].id); pushHistory(); notifyChange();
+  say(`${s.label}에 맞춰 ${made[0].name}을(를) 놓았어요. 끌어 옮기거나 아래 칸에서 크기를 바꿀 수 있어요.`);
+}));
 $('propDup').addEventListener('click', () => { const p = curProp(); if (p) addProp(p.kind, p); });
 $('propDel').addEventListener('click', () => {
   const p = curProp(); if (!p) return;
@@ -4907,6 +4953,12 @@ function applyPlan(plan) {
     s.expr.blink = c.eyes === 'closed' ? 100 : c.eyes === 'half' ? 50 : 0;
     s.look = c.look === 'camera' ? 'camera' : c.look === 'other' && live.length > 1 ? 'other' : 'manual';
     applyPlacement(s); applyPose(s); groundSlot(s); applyLook(s); settleSprings(s);
+  });
+  // 콘티의 가구: { type: chair·counter·desk, char: 인물 번호 }
+  setProps([]);
+  (Array.isArray(plan.props) ? plan.props : []).slice(0, 12).forEach(pp => {
+    const who = live[Number.isInteger(pp.char) ? pp.char : 0];
+    if (who && ['chair', 'counter', 'desk'].includes(pp.type)) furnish(who, pp.type);
   });
   shot(kind);
   controls.update(); camera.updateMatrixWorld(true);

@@ -15,12 +15,14 @@ export const FACINGS = ['camera', 'left', 'right', 'three-quarter-left', 'three-
 export const BUBBLE_KINDS = ['speech', 'thought', 'narration', 'shout', 'whisper', 'sfx', 'monologue', 'phone', 'small'];
 export const MARK_KINDS = ['heart', 'sparkle', 'sweat', 'fluster', 'anger', 'scribble', 'gloom', 'blush', 'emphasis', 'music', 'sigh', 'exclaim', 'question'];
 export const EMOTIONS = ['neutral', 'happy', 'angry', 'sad', 'relaxed', 'surprised'];
+export const FURNITURE = ['chair', 'counter', 'desk'] as const;
 
 export interface SbChar { id: string; name: string; desc?: string }
 export interface SbPanelChar { id: string; x?: number; depth?: 'near' | 'mid' | 'far'; facing?: string; pose?: string; emotion?: string; eyes?: 'open' | 'half' | 'closed'; look?: 'camera' | 'other' | 'none' }
 export interface SbBubble { kind?: string; text?: string; x?: number; y?: number; w?: number; h?: number; to?: string; rot?: number }
 export interface SbMark { kind: string; x?: number; y?: number; size?: number; rot?: number }
-export interface SbPanel { box: [number, number, number, number]; shot?: string; chars?: SbPanelChar[]; bubbles?: SbBubble[]; marks?: SbMark[]; background?: string; note?: string }
+export interface SbProp { type: typeof FURNITURE[number]; for?: string }
+export interface SbPanel { box: [number, number, number, number]; shot?: string; chars?: SbPanelChar[]; bubbles?: SbBubble[]; marks?: SbMark[]; props?: SbProp[]; background?: string; note?: string }
 export interface SbPage { title?: string; panels: SbPanel[] }
 export interface Storyboard { kind: 'rough-storyboard'; version: 1; characters: SbChar[]; pages: SbPage[] }
 
@@ -87,7 +89,12 @@ export function parseStoryboard(text: string): Storyboard {
         const kind = oneOf(r.kind, MARK_KINDS);
         return kind ? [{ kind, x: num(r.x, 0.5), y: num(r.y, 0.3), size: num(r.size, 0.08, 0.02, 0.5), rot: num(r.rot, 0, -180, 180) }] : [];
       });
-      return [{ box, shot: oneOf(q.shot, SHOT_KINDS), chars: pchars, bubbles, marks, background: str(q.background, 200), note: str(q.note, 300) }];
+      const props = (Array.isArray(q.props) ? q.props : []).slice(0, 12).flatMap(x => {
+        const r = x as Record<string, unknown>;
+        const type = oneOf(r.type, FURNITURE);
+        return type ? [{ type, for: str(r.for, 20) }] : [];
+      });
+      return [{ box, shot: oneOf(q.shot, SHOT_KINDS), chars: pchars, bubbles, marks, props, background: str(q.background, 200), note: str(q.note, 300) }];
     });
     return { title: str(p.title, 40), panels };
   }).filter(p => p.panels.length);
@@ -148,6 +155,7 @@ export function panelToCut(panel: SbPanel, mapping: Record<string, SlotId | ''>,
       chars: kept.map(({ c }) => ({ x: c.x, depth: c.depth, facing: c.facing, pose: c.pose, emotion: c.emotion, eyes: c.eyes, look: c.look })),
       bubbles: (panel.bubbles ?? []).map(b => ({ kind: b.kind, text: b.text, x: b.x, y: b.y, w: b.w, h: b.h, to: index(b.to), rot: b.rot })),
       marks: panel.marks ?? [],
+      props: (panel.props ?? []).flatMap(p => { const i = index(p.for) ?? (kept.length ? 0 : undefined); return i === undefined ? [] : [{ type: p.type, char: i }]; }),
       background: panel.background,
       note: panel.note,
     },
@@ -230,6 +238,7 @@ export const STORYBOARD_PROMPT = `첨부한 만화 페이지 그림을 3D 콘티
         "kind": "${MARK_KINDS.join(' | ')}",  // 하트·반짝·땀·당황선·빡침·엉킨 낙서·우울 세로줄·홍조 빗금·강조선·음표·한숨·!·?
         "x": 0.2, "y": 0.2, "size": 0.06, "rot": 0   // 컷 기준 위치, size = 컷 가로 대비 크기, rot = 기울기(도)
       } ],
+      "props": [ { "type": "chair | counter | desk", "for": "A" } ],   // 그 인물에 맞춰 놓을 가구: 앉아 있으면 chair, 앞에 계산대면 counter, 책상이면 desk
       "background": "배경 한 줄 (예: 편의점 카운터, 밤)"
     } ]
   } ]

@@ -43,6 +43,7 @@
         "rot": -10                               // (선택) 기울기, 도
       } ],
       "marks": [ { "kind": "fluster", "x": 0.12, "y": 0.45, "size": 0.05, "rot": -10 } ],
+      "props": [ { "type": "chair", "for": "A" }, { "type": "counter", "for": "A" } ],  // 그 인물에 맞춰 놓는 가구
       "background": "편의점 카운터, 밤"            // 메모 (지금은 장면에 쓰지 않음)
     } ]
   } ]
@@ -56,6 +57,7 @@
 | `bubbles[].kind` | `speech` 대사 · `thought` 생각(구름) · `narration` 네모 설명 · `shout` 외침 · `whisper` 속삭임 · `sfx` 효과음 글자 · `monologue` 독백 · `phone` 전화·기계 · `small` 작은 말풍선(…) |
 | `marks[].kind` | `heart` 하트 · `sparkle` 반짝 · `sweat` 땀방울 · `fluster` 당황선 · `anger` 빡침 · `scribble` 엉킨 낙서 · `gloom` 우울 세로줄 · `blush` 홍조 빗금 · `emphasis` 강조선 · `music` 음표 · `sigh` 한숨 · `exclaim` ! · `question` ? |
 | `marks[].size` | 컷 가로 대비 크기 (0.02~0.5) |
+| `props[].type` | `chair` 의자(앉은 자리에 좌석+등받이) · `counter` 카운터(앞에, 앉아 있으면 팔꿈치 높이) · `desk` 책상 — 상자 도형으로 놓이고 컷 편집에서 고칠 수 있어요 |
 
 ## 바꿀 때의 규칙 (코드)
 

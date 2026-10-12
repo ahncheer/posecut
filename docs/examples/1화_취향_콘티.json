@@ -2,76 +2,301 @@
   "kind": "rough-storyboard",
   "version": 1,
   "characters": [
-    { "id": "A", "name": "알바생", "desc": "부스스한 검은 머리, 안경, 검은 후드티" },
-    { "id": "B", "name": "손님", "desc": "긴 흰 머리 포니테일, 안경, 흰 셔츠, 가방" }
+    {
+      "id": "A",
+      "name": "알바생",
+      "desc": "부스스한 검은 머리, 안경, 검은 후드티"
+    },
+    {
+      "id": "B",
+      "name": "손님",
+      "desc": "긴 흰 머리 포니테일, 안경, 흰 셔츠, 가방"
+    }
   ],
   "pages": [
     {
       "title": "1화. 취향",
       "panels": [
         {
-          "box": [0.035, 0.031, 0.93, 0.226],
+          "box": [
+            0.035,
+            0.031,
+            0.93,
+            0.226
+          ],
           "shot": "bust",
           "chars": [
-            { "id": "A", "x": 0.28, "depth": "near", "facing": "back-right", "pose": "의자에 앉기", "emotion": "surprised", "look": "other" },
-            { "id": "B", "x": 0.74, "depth": "far", "facing": "three-quarter-left", "pose": "가방 끈 잡기", "emotion": "neutral", "eyes": "half" }
+            {
+              "id": "A",
+              "x": 0.28,
+              "depth": "near",
+              "facing": "back-right",
+              "pose": "의자에 앉기",
+              "emotion": "surprised",
+              "look": "other"
+            },
+            {
+              "id": "B",
+              "x": 0.74,
+              "depth": "far",
+              "facing": "three-quarter-left",
+              "pose": "가방 끈 잡기",
+              "emotion": "neutral",
+              "eyes": "half"
+            }
           ],
           "bubbles": [
-            { "kind": "thought", "text": "…와.\n취향이다.", "x": 0.5, "y": 0.32, "to": "A" },
-            { "kind": "sfx", "text": "딸랑~", "x": 0.72, "y": 0.12, "rot": -10 },
-            { "kind": "small", "text": "…", "x": 0.85, "y": 0.5, "to": "B" }
-          ],
-          "marks": [{ "kind": "fluster", "x": 0.12, "y": 0.45, "size": 0.05, "rot": -10 }],
-          "background": "편의점 카운터, 밤, 유리문"
-        },
-        {
-          "box": [0.035, 0.266, 0.93, 0.271],
-          "shot": "bust",
-          "chars": [
-            { "id": "A", "x": 0.3, "depth": "mid", "facing": "three-quarter-right", "pose": "의자에 앉기", "emotion": "happy", "look": "other" },
-            { "id": "B", "x": 0.8, "depth": "mid", "facing": "left", "pose": "물건 집기", "emotion": "neutral", "eyes": "half" }
-          ],
-          "bubbles": [
-            { "kind": "thought", "text": "진짜 취향이다.", "x": 0.2, "y": 0.18, "to": "A" },
-            { "kind": "thought", "text": "와… 키도 크고\n진짜 말랐다\n분위기 미쳤네…", "x": 0.13, "y": 0.5, "to": "A" },
-            { "kind": "small", "text": "…", "x": 0.72, "y": 0.45, "to": "B" }
+            {
+              "kind": "thought",
+              "text": "…와.\n취향이다.",
+              "x": 0.5,
+              "y": 0.32,
+              "to": "A"
+            },
+            {
+              "kind": "sfx",
+              "text": "딸랑~",
+              "x": 0.72,
+              "y": 0.12,
+              "rot": -10
+            },
+            {
+              "kind": "small",
+              "text": "…",
+              "x": 0.85,
+              "y": 0.5,
+              "to": "B"
+            }
           ],
           "marks": [
-            { "kind": "heart", "x": 0.4, "y": 0.52, "size": 0.025, "rot": -15 },
-            { "kind": "heart", "x": 0.43, "y": 0.62, "size": 0.02, "rot": 10 },
-            { "kind": "fluster", "x": 0.4, "y": 0.22, "size": 0.035, "rot": 0 }
+            {
+              "kind": "fluster",
+              "x": 0.12,
+              "y": 0.45,
+              "size": 0.05,
+              "rot": -10
+            }
           ],
-          "background": "편의점 계산대"
+          "background": "편의점 카운터, 밤, 유리문",
+          "props": [
+            {
+              "type": "chair",
+              "for": "A"
+            },
+            {
+              "type": "counter",
+              "for": "A"
+            }
+          ]
         },
         {
-          "box": [0.035, 0.546, 0.93, 0.2],
+          "box": [
+            0.035,
+            0.266,
+            0.93,
+            0.271
+          ],
           "shot": "bust",
           "chars": [
-            { "id": "A", "x": 0.45, "depth": "mid", "facing": "three-quarter-right", "pose": "턱 괴기", "emotion": "relaxed", "eyes": "half" }
+            {
+              "id": "A",
+              "x": 0.3,
+              "depth": "mid",
+              "facing": "three-quarter-right",
+              "pose": "의자에 앉기",
+              "emotion": "happy",
+              "look": "other"
+            },
+            {
+              "id": "B",
+              "x": 0.8,
+              "depth": "mid",
+              "facing": "left",
+              "pose": "물건 집기",
+              "emotion": "neutral",
+              "eyes": "half"
+            }
           ],
           "bubbles": [
-            { "kind": "narration", "text": "다음 날, 야간 근무.", "x": 0.2, "y": 0.15 },
-            { "kind": "thought", "text": "오늘도 오려나?\n…오겠지?", "x": 0.68, "y": 0.38, "to": "A" }
-          ],
-          "marks": [{ "kind": "fluster", "x": 0.52, "y": 0.18, "size": 0.035, "rot": 20 }],
-          "background": "편의점 계산대, 밤"
-        },
-        {
-          "box": [0.035, 0.755, 0.93, 0.219],
-          "shot": "bust",
-          "chars": [
-            { "id": "A", "x": 0.5, "depth": "mid", "facing": "camera", "pose": "책상에 엎드리기", "emotion": "sad", "eyes": "closed" }
-          ],
-          "bubbles": [
-            { "kind": "narration", "text": "근무 종료.", "x": 0.15, "y": 0.15 },
-            { "kind": "thought", "text": "안 오네………\n진짜 안 오네.", "x": 0.72, "y": 0.35, "to": "A" },
-            { "kind": "narration", "text": "…그리고 그는 오지 않았다.", "x": 0.8, "y": 0.85 }
+            {
+              "kind": "thought",
+              "text": "진짜 취향이다.",
+              "x": 0.2,
+              "y": 0.18,
+              "to": "A"
+            },
+            {
+              "kind": "thought",
+              "text": "와… 키도 크고\n진짜 말랐다\n분위기 미쳤네…",
+              "x": 0.13,
+              "y": 0.5,
+              "to": "A"
+            },
+            {
+              "kind": "small",
+              "text": "…",
+              "x": 0.72,
+              "y": 0.45,
+              "to": "B"
+            }
           ],
           "marks": [
-            { "kind": "scribble", "x": 0.48, "y": 0.15, "size": 0.06, "rot": 0 },
-            { "kind": "gloom", "x": 0.4, "y": 0.32, "size": 0.05, "rot": 0 }
+            {
+              "kind": "heart",
+              "x": 0.4,
+              "y": 0.52,
+              "size": 0.025,
+              "rot": -15
+            },
+            {
+              "kind": "heart",
+              "x": 0.43,
+              "y": 0.62,
+              "size": 0.02,
+              "rot": 10
+            },
+            {
+              "kind": "fluster",
+              "x": 0.4,
+              "y": 0.22,
+              "size": 0.035,
+              "rot": 0
+            }
           ],
-          "background": "편의점 계산대, 근무 끝"
+          "background": "편의점 계산대",
+          "props": [
+            {
+              "type": "chair",
+              "for": "A"
+            },
+            {
+              "type": "counter",
+              "for": "A"
+            }
+          ]
+        },
+        {
+          "box": [
+            0.035,
+            0.546,
+            0.93,
+            0.2
+          ],
+          "shot": "bust",
+          "chars": [
+            {
+              "id": "A",
+              "x": 0.45,
+              "depth": "mid",
+              "facing": "three-quarter-right",
+              "pose": "턱 괴기",
+              "emotion": "relaxed",
+              "eyes": "half"
+            }
+          ],
+          "bubbles": [
+            {
+              "kind": "narration",
+              "text": "다음 날, 야간 근무.",
+              "x": 0.2,
+              "y": 0.15
+            },
+            {
+              "kind": "thought",
+              "text": "오늘도 오려나?\n…오겠지?",
+              "x": 0.68,
+              "y": 0.38,
+              "to": "A"
+            }
+          ],
+          "marks": [
+            {
+              "kind": "fluster",
+              "x": 0.52,
+              "y": 0.18,
+              "size": 0.035,
+              "rot": 20
+            }
+          ],
+          "background": "편의점 계산대, 밤",
+          "props": [
+            {
+              "type": "chair",
+              "for": "A"
+            },
+            {
+              "type": "counter",
+              "for": "A"
+            }
+          ]
+        },
+        {
+          "box": [
+            0.035,
+            0.755,
+            0.93,
+            0.219
+          ],
+          "shot": "bust",
+          "chars": [
+            {
+              "id": "A",
+              "x": 0.5,
+              "depth": "mid",
+              "facing": "camera",
+              "pose": "책상에 엎드리기",
+              "emotion": "sad",
+              "eyes": "closed"
+            }
+          ],
+          "bubbles": [
+            {
+              "kind": "narration",
+              "text": "근무 종료.",
+              "x": 0.15,
+              "y": 0.15
+            },
+            {
+              "kind": "thought",
+              "text": "안 오네………\n진짜 안 오네.",
+              "x": 0.72,
+              "y": 0.35,
+              "to": "A"
+            },
+            {
+              "kind": "narration",
+              "text": "…그리고 그는 오지 않았다.",
+              "x": 0.8,
+              "y": 0.85
+            }
+          ],
+          "marks": [
+            {
+              "kind": "scribble",
+              "x": 0.48,
+              "y": 0.15,
+              "size": 0.06,
+              "rot": 0
+            },
+            {
+              "kind": "gloom",
+              "x": 0.4,
+              "y": 0.32,
+              "size": 0.05,
+              "rot": 0
+            }
+          ],
+          "background": "편의점 계산대, 근무 끝",
+          "props": [
+            {
+              "type": "chair",
+              "for": "A"
+            },
+            {
+              "type": "counter",
+              "for": "A"
+            }
+          ]
         }
       ]
     }
