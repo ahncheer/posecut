@@ -180,6 +180,18 @@ body:not(.embed) .embed-only { display: none !important; }
 .hint { position: fixed; z-index: 50; max-width: 260px; padding: 7px 10px; border-radius: 8px; background: rgba(29, 31, 34, .94); color: #FFFFFF; font-size: 12px; line-height: 1.55; pointer-events: none; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
 .hint.short { white-space: nowrap; }
 .headrow { display: flex; align-items: center; gap: 8px; }
+.propbox { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.propadd { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.propadd .btn { padding-inline: 4px; }
+.proplist { display: flex; flex-wrap: wrap; gap: 4px; }
+.proplist button { min-height: 28px; padding: 0 8px 0 6px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); font: inherit; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.proplist button[aria-pressed="true"] { border: 2px solid var(--accent); padding: 0 7px 0 5px; color: var(--accent); font-weight: 600; }
+.proplist .sw { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0,0,0,.25); }
+.proplist .sw[data-k="sphere"] { border-radius: 50%; }
+.propedit { display: grid; gap: 6px; padding: 8px; border-radius: 8px; background: var(--bg, #f3f2ee); }
+.propfoot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.propcolor { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; margin-right: auto; }
+.propcolor input { width: 36px; height: 28px; padding: 1px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
 .headrow h2 { flex: 1; }
 .panel h2 { display: flex; align-items: center; gap: 6px; }
 /* 접고 펴는 구역 */
@@ -304,6 +316,31 @@ body.embed .top { flex-wrap: nowrap; }
         <div class="field"><label for="rotY">몸 방향</label><input id="rotY" type="range" min="-180" max="180" step="1"><output for="rotY" id="rotYo"></output></div>
         <div class="field"><label for="presence">존재감 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="낮출수록 인물이 회색으로 바래고 외곽선이 가늘고 옅어져요. 투명해지는 게 아니라, 뒤에 있는 인물이나 배경 인물처럼 덜 눈에 띄게 만드는 거예요. 100이 원래 모습이에요."></span></label><input id="presence" type="range" min="10" max="100" step="1"><output for="presence" id="presenceo"></output></div>
         <button class="btn small ghost" id="removeB" type="button" hidden>B 빼기</button>
+      </div>
+      <div id="propBox" class="propbox">
+        <div class="headrow"><h2>도형 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="인물 말고 간단한 상자·공·원기둥을 놓아요. 책상·의자·벽·소품 자리를 잡는 데 써요. 화면에서 끌면 바닥 위에서 옮겨지고, 아래 칸으로 크기·높이·회전·색을 바꿔요. 장면과 함께 저장돼요."></span></h2></div>
+        <div class="propadd" role="group" aria-label="도형 넣기">
+          <button class="btn small" type="button" data-prop="box" data-tip="네모 상자 (정육면체)">＋ 네모</button>
+          <button class="btn small" type="button" data-prop="sphere" data-tip="공 (구)">＋ 공</button>
+          <button class="btn small" type="button" data-prop="cylinder" data-tip="원기둥">＋ 원기둥</button>
+        </div>
+        <div id="propList" class="proplist"></div>
+        <div id="propEdit" class="propedit" hidden>
+          <div class="field"><label for="propX">좌우</label><input id="propX" type="range" min="-1000" max="1000" step="1"><output for="propX" id="propXo"></output></div>
+          <div class="field"><label for="propZ">앞뒤</label><input id="propZ" type="range" min="-1000" max="1000" step="1"><output for="propZ" id="propZo"></output></div>
+          <div class="field"><label for="propY">높이 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="바닥에서 도형 아랫면까지 높이(cm). 0이면 바닥에 놓여요."></span></label><input id="propY" type="range" min="0" max="400" step="1"><output for="propY" id="propYo"></output></div>
+          <div class="field"><label for="propW">가로</label><input id="propW" type="range" min="5" max="500" step="1"><output for="propW" id="propWo"></output></div>
+          <div class="field"><label for="propH">세로</label><input id="propH" type="range" min="5" max="500" step="1"><output for="propH" id="propHo"></output></div>
+          <div class="field"><label for="propD">깊이</label><input id="propD" type="range" min="5" max="500" step="1"><output for="propD" id="propDo"></output></div>
+          <div class="field"><label for="propRot">돌리기</label><input id="propRot" type="range" min="-180" max="180" step="1"><output for="propRot" id="propRoto"></output></div>
+          <div class="field"><label for="propTilt">기울기</label><input id="propTilt" type="range" min="-90" max="90" step="1"><output for="propTilt" id="propTilto"></output></div>
+          <div class="propfoot">
+            <label class="propcolor">색 <input id="propColor" type="color" value="#d9d4c7"></label>
+            <button class="btn small" id="propCube" type="button" data-tip="가로·세로·깊이를 모두 가로 길이로 맞춰요">같은 길이로</button>
+            <button class="btn small" id="propDup" type="button">복제</button>
+            <button class="btn small ghost danger" id="propDel" type="button">지우기</button>
+          </div>
+        </div>
       </div>
       <p class="sub" id="moveHint">몸통을 끌면 바닥 위에서 옮겨지고, 팔·다리를 끌면 자세가 바뀌어요.</p>
       <p class="sub not-embed">VRM 파일을 화면 가운데로 끌어다 놓아도 선택한 인물의 모델이 바뀌어요.</p>
@@ -1238,6 +1275,68 @@ scene.add(sun, new THREE.HemisphereLight(0xffffff, 0xd8d6cf, 0.6));
 const grid = new THREE.GridHelper(40, 80, 0xb9b7ae, 0xd9d7cf); // 40m, 50cm 칸
 scene.add(grid);
 
+// ---------- 도형 (상자·공·원기둥): 책상·벽·소품 자리 잡기용 ----------
+// 데이터는 cm·도 단위: { id, kind, x, y(바닥에서 아랫면까지), z, w, h, d, rot(좌우 돌리기), tilt(앞뒤 기울기), color }
+const PROP_KINDS = { box: '네모', sphere: '공', cylinder: '원기둥' };
+const PROP_GEO = {
+  box: new THREE.BoxGeometry(1, 1, 1),
+  sphere: new THREE.SphereGeometry(0.5, 40, 24),
+  cylinder: new THREE.CylinderGeometry(0.5, 0.5, 1, 40),
+};
+const PROP_DEFAULT = { box: { w: 50, h: 50, d: 50 }, sphere: { w: 40, h: 40, d: 40 }, cylinder: { w: 40, h: 80, d: 40 } };
+let props = [];
+let propSel = null;
+const propMeshes = new Map();
+const propGroup = new THREE.Group(); scene.add(propGroup);
+// 고른 도형 테두리: 효과(만화 등)가 덮이지 않게 맨 위 덧그림(overlay)에 그린다
+const propHelper = new THREE.BoxHelper(new THREE.Object3D(), 0x2f5fbf); propHelper.visible = false;
+const clampN = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.min(hi, Math.max(lo, Number(v))) : d);
+function cleanProp(p) {
+  const kind = PROP_KINDS[p && p.kind] ? p.kind : 'box', d0 = PROP_DEFAULT[kind];
+  return {
+    id: typeof p.id === 'string' ? p.id.slice(0, 20) : Math.random().toString(36).slice(2, 10), kind,
+    x: clampN(p.x, -POS_LIMIT, POS_LIMIT, 0), y: clampN(p.y, 0, 400, 0), z: clampN(p.z, -POS_LIMIT, POS_LIMIT, 0),
+    w: clampN(p.w, 5, 500, d0.w), h: clampN(p.h, 5, 500, d0.h), d: clampN(p.d, 5, 500, d0.d),
+    rot: clampN(p.rot, -180, 180, 0), tilt: clampN(p.tilt, -90, 90, 0),
+    color: /^#[0-9a-f]{6}$/i.test(p.color) ? p.color : '#d9d4c7',
+  };
+}
+function applyProp(p) {
+  let m = propMeshes.get(p.id);
+  if (!m) { m = new THREE.Mesh(PROP_GEO[p.kind], new THREE.MeshToonMaterial({ color: p.color })); m.userData.propId = p.id; propGroup.add(m); propMeshes.set(p.id, m); }
+  if (m.geometry !== PROP_GEO[p.kind]) m.geometry = PROP_GEO[p.kind];
+  m.material.color.set(p.color);
+  m.scale.set(p.w / 100, p.h / 100, p.d / 100);
+  m.rotation.set(THREE.MathUtils.degToRad(p.tilt), THREE.MathUtils.degToRad(p.rot), 0, 'YXZ');
+  m.position.set(p.x / 100, p.y / 100 + p.h / 200, p.z / 100);
+  if (p.id === propSel) { m.updateMatrixWorld(true); propHelper.setFromObject(m); }
+}
+function setProps(list) {
+  props = (Array.isArray(list) ? list : []).slice(0, 60).map(cleanProp);
+  for (const [id, m] of propMeshes) if (!props.some(p => p.id === id)) { propGroup.remove(m); m.material.dispose(); propMeshes.delete(id); }
+  props.forEach(applyProp);
+  if (!props.some(p => p.id === propSel)) propSel = null;
+  renderPropUI();
+}
+const curProp = () => props.find(p => p.id === propSel) || null;
+function selectProp(id) {
+  propSel = id;
+  const p = curProp();
+  if (!propHelper.parent && typeof overlay !== 'undefined') overlay.add(propHelper);
+  propHelper.visible = !!p;
+  if (p) { const m = propMeshes.get(p.id); m.updateMatrixWorld(true); propHelper.setFromObject(m); }
+  renderPropUI();
+}
+function pickProp(e) {
+  if (!props.length) return null;
+  const rect = renderer.domElement.getBoundingClientRect();
+  _ndcP.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+  propRay.setFromCamera(_ndcP, camera);
+  const hit = propRay.intersectObjects(propGroup.children, false)[0];
+  return hit ? { id: hit.object.userData.propId, dist: hit.distance, point: hit.point.clone() } : null;
+}
+const propRay = new THREE.Raycaster(), _ndcP = new THREE.Vector2();
+
 const loader = new GLTFLoader();
 loader.register((parser) => new VRMLoaderPlugin(parser));
 
@@ -1303,7 +1402,7 @@ function makeSlot(letter, x) {
   return { letter, label: letter, x, y: 0, z: 0, rot: 0, presence: 100, vrm: null, file: '', pose: JSON.parse(JSON.stringify(ARMS_DOWN)), hands: { left: relaxedHand(), right: relaxedHand() }, expr: blankExpr(), look: 'manual',
     eyes: { r: { x: 0, y: 0 }, l: { x: 0, y: 0 }, link: true }, autoBlink: false, blinkNext: 2 + Math.random() * 3, blinkT: -1, markers: [] };
 }
-const snapshot = () => JSON.stringify({ b: typeof bubbles === 'undefined' ? [] : bubbles, v: typeof bubShow === 'undefined' ? true : bubShow, s: slots.map(s => ({ x: s.x, y: s.y || 0, z: s.z, rot: s.rot, presence: s.presence, pose: s.pose, hands: s.hands, expr: s.expr, look: s.look, eyes: s.eyes })) });
+const snapshot = () => JSON.stringify({ b: typeof bubbles === 'undefined' ? [] : bubbles, v: typeof bubShow === 'undefined' ? true : bubShow, p: typeof props === 'undefined' ? [] : props, s: slots.map(s => ({ x: s.x, y: s.y || 0, z: s.z, rot: s.rot, presence: s.presence, pose: s.pose, hands: s.hands, expr: s.expr, look: s.look, eyes: s.eyes })) });
 // 되돌리기 / 다시 하기: history 맨 위가 지금 상태, future는 되돌린 상태들
 const future = [];
 function pushHistory() {
@@ -1316,6 +1415,7 @@ function pushHistory() {
 function restoreSnap(json) {
   const d = JSON.parse(json);
   if (!Array.isArray(d)) { bubbles = JSON.parse(JSON.stringify(d.b || [])); bubShow = d.v !== false; if (!bubbles.some(x => x.id === selBub)) selBub = null; drawBubbleLayer(); renderBubUI(); }
+  if (!Array.isArray(d) && typeof setProps === 'function') setProps(d.p || []);
   (Array.isArray(d) ? d : d.s).forEach((p, i) => { if (slots[i]) Object.assign(slots[i], JSON.parse(JSON.stringify(p)), { autoBlink: false }); });
   slots.forEach(applyAll);
   syncUI();
@@ -1976,6 +2076,18 @@ viewport.addEventListener('pointerdown', e => {
   const m = $('showJoints').checked ? pickMarker(e.clientX - rect.left, e.clientY - rect.top) : null;
   if (!m) {
     const body = pickBody(e);
+    const pr = pickProp(e);
+    if (pr && (!body || pr.dist < body.dist)) {
+      // 도형을 누름 → 바닥과 평행하게 끌어서 옮김
+      e.stopPropagation(); e.preventDefault();
+      const p = props.find(x => x.id === pr.id);
+      dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), pr.point);
+      drag = { prop: p, bone: 'hips', x0: e.clientX, y0: e.clientY, moved: false, startX: p.x, startZ: p.z, start: pr.point };
+      selectProp(p.id);
+      document.body.classList.add('dragging');
+      renderer.domElement.setPointerCapture && renderer.domElement.setPointerCapture(e.pointerId);
+      return;
+    }
     if (!body) { emptyDown = [e.clientX, e.clientY]; return; } // 빈 곳 → 카메라 조작(화면 이동)
     e.stopPropagation(); e.preventDefault();
     // 팔·다리를 누름 → 그 손·발(팔꿈치·무릎)을 끌어 자세 바꾸기 (Alt를 누르고 있으면 인물 통째로 옮기기)
@@ -2010,6 +2122,15 @@ window.addEventListener('pointermove', e => {
   if (!drag) return;
   if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < DRAG_START_PX) return;
   if (!canMove(drag.bone)) return;
+  if (drag.prop) {
+    if (!drag.moved) { drag.moved = true; viewport.style.cursor = 'grabbing'; }
+    if (!rayAt(e)) return;
+    const p = drag.prop;
+    p.x = clampPos(Math.round(drag.startX + (_hit.x - drag.start.x) * 100));
+    p.z = clampPos(Math.round(drag.startZ + (_hit.z - drag.start.z) * 100));
+    applyProp(p); propSyncers.forEach(f => f());
+    return;
+  }
   if (!drag.moved) { drag.moved = true; stopTalk(true); sel = slots.indexOf(drag.slot); viewport.style.cursor = 'grabbing'; $('tip').hidden = true; }
   if (!rayAt(e)) return;
   const s = drag.slot;
@@ -2033,12 +2154,17 @@ window.addEventListener('pointerup', e => {
   const d = drag; drag = null;
   viewport.style.cursor = '';
   document.body.classList.remove('dragging');
+  if (d.prop) {
+    if (d.moved) { pushHistory(); notifyChange(); say(`${PROP_KINDS[d.prop.kind]}을(를) 옮겼어요. 되돌리기로 취소할 수 있어요.`); }
+    else say(`${PROP_KINDS[d.prop.kind]}을(를) 골랐어요. 끌면 바닥 위에서 옮겨지고, 왼쪽 "도형" 칸에서 크기·높이·색을 바꿔요.`);
+    return;
+  }
   if (d.moved) {
     pushHistory(); syncUI(); refreshGizmo();
     const what = d.bone === 'hips' ? '위치를 옮겼어요' : `${BONE_NAME[d.bone]}을(를) 끌어서 자세를 바꿨어요`;
     say(`${d.slot.label}의 ${what}. 되돌리기로 취소할 수 있어요.`);
   } else if (d.body) {
-    stopTalk(true); sel = slots.indexOf(d.slot); syncUI();
+    stopTalk(true); sel = slots.indexOf(d.slot); if (propSel) selectProp(null); syncUI();
     say(`${d.slot.label}을(를) 선택했어요. 몸통을 끌면 바닥 위에서 옮겨지고, 팔·다리를 끌면 자세가 바뀌어요. (Alt+끌기: 어디를 잡든 통째로 옮기기)`);
   } else {
     selectMarker(d.marker);
@@ -2061,7 +2187,7 @@ renderer.domElement.addEventListener('pointermove', e => {
   hoverMarker = m;
   if (!m) {
     const now = performance.now();
-    if (now - (bodyHoverAt || 0) > 70) { bodyHoverAt = now; bodyHover = !!pickBody(e); }
+    if (now - (bodyHoverAt || 0) > 70) { bodyHoverAt = now; bodyHover = !!pickBody(e) || !!pickProp(e); }
   }
   viewport.style.cursor = m ? (canMove(m.userData.bone) ? 'grab' : 'pointer') : bubHover || bodyHover ? 'move' : '';
   const tip = $('tip');
@@ -2164,6 +2290,7 @@ function renderCut({ scale, transparent, withFilter, hideBackground, withBubbles
   renderer.setSize(w, h, false);
   scene.background = transparent ? null : hideBackground ? PAPER : currentBackground();
   grid.visible = !!hideBackground;
+  propHelper.visible = false;
   renderer.autoClear = true;
   renderer.setClearColor(0x000000, transparent ? 0 : 1);
   renderer.render(scene, camera);
@@ -2177,6 +2304,7 @@ function renderCut({ scale, transparent, withFilter, hideBackground, withBubbles
   renderer.setSize(w, h, false);
   scene.background = currentBackground();
   grid.visible = $('showGrid').checked;
+  propHelper.visible = !!propSel;
   return out;
 }
 async function capture() {
@@ -2462,6 +2590,49 @@ const lookSyncers = [
     if (id === 'lineOutline' || id === 'celHard') applyLookToSlots();
   }, false);
 });
+// 도형 칸
+const propSyncers = [['propX', 'x'], ['propZ', 'z'], ['propY', 'y'], ['propW', 'w'], ['propH', 'h'], ['propD', 'd'], ['propRot', 'rot'], ['propTilt', 'tilt']].map(([id, k]) => {
+  RESET_TO[id] = () => { const p = curProp(); return p ? ({ x: 0, z: 0, y: 0, rot: 0, tilt: 0 })[k] ?? PROP_DEFAULT[p.kind][k] : 0; };
+  return bindRange(id, () => (curProp() ? curProp()[k] : 0), v => { const p = curProp(); if (!p) return; p[k] = v; applyProp(p); });
+});
+function renderPropUI() {
+  const list = $('propList');
+  list.innerHTML = '';
+  const count = {};
+  props.forEach(p => {
+    count[p.kind] = (count[p.kind] || 0) + 1;
+    const b = document.createElement('button');
+    b.type = 'button'; b.setAttribute('aria-pressed', String(p.id === propSel));
+    const sw = document.createElement('span'); sw.className = 'sw'; sw.dataset.k = p.kind; sw.style.background = p.color;
+    b.append(sw, document.createTextNode(`${PROP_KINDS[p.kind]} ${count[p.kind]}`));
+    b.addEventListener('click', () => selectProp(p.id === propSel ? null : p.id));
+    list.append(b);
+  });
+  const p = curProp();
+  $('propEdit').hidden = !p;
+  if (p) { propSyncers.forEach(f => f()); if ($('propColor').value.toLowerCase() !== p.color.toLowerCase()) $('propColor').value = p.color; }
+}
+function addProp(kind, from) {
+  const s = slots[sel];
+  const base = from ? { ...from, id: undefined, x: from.x + 30 } : { kind, ...PROP_DEFAULT[kind], x: (s ? s.x : 0) + 70, z: s ? s.z : 0, y: 0 };
+  // 이미 있는 도형과 겹치면 옆으로 비켜 놓기
+  for (let i = 0; i < 20 && props.some(q => Math.abs(q.x - base.x) < 30 && Math.abs(q.z - base.z) < 30); i++) base.x += 60;
+  const p = cleanProp({ ...base, id: undefined, color: from ? from.color : '#d9d4c7' });
+  props.push(p); applyProp(p); selectProp(p.id);
+  pushHistory(); notifyChange();
+  say(`${PROP_KINDS[p.kind]}을(를) 넣었어요. 화면에서 끌어 옮기고, 아래 칸에서 크기·높이·색을 바꿔요.`);
+}
+document.querySelectorAll('[data-prop]').forEach(b => b.addEventListener('click', () => addProp(b.dataset.prop)));
+$('propDup').addEventListener('click', () => { const p = curProp(); if (p) addProp(p.kind, p); });
+$('propDel').addEventListener('click', () => {
+  const p = curProp(); if (!p) return;
+  setProps(props.filter(x => x.id !== p.id)); selectProp(null);
+  pushHistory(); notifyChange(); say(`${PROP_KINDS[p.kind]}을(를) 지웠어요. 되돌리기로 살릴 수 있어요.`);
+});
+$('propCube').addEventListener('click', () => { const p = curProp(); if (!p) return; p.h = p.d = p.w; applyProp(p); renderPropUI(); pushHistory(); notifyChange(); });
+$('propColor').addEventListener('input', e => { const p = curProp(); if (!p) return; p.color = e.target.value; applyProp(p); renderPropUI(); });
+$('propColor').addEventListener('change', () => { pushHistory(); notifyChange(); });
+renderPropUI();
 function syncLookUI() {
   lookSyncers.forEach(f => f());
   $('bloomOn').checked = look.bloom.on; $('comicOn').checked = look.comic.on; $('lineOnly').checked = look.line.only;
@@ -2620,6 +2791,7 @@ function sceneData() {
     who: slots.map(s => ({ letter: s.letter, name: s.label || s.letter })),
     bubbles: JSON.parse(JSON.stringify(bubbles)),
     bubbleShow: bubShow,
+    props: JSON.parse(JSON.stringify(props)),
     look: JSON.parse(JSON.stringify(look)),
     // 배경(만화 효과 / 찾은 사진·만든 그림)도 장면과 함께
     bg: bgSpec ? (bgSpec.kind === 'fx' ? { kind: 'fx', type: bgSpec.type, color: bgSpec.color } : { kind: 'image', src: bgSpec.img.src }) : null,
@@ -2643,6 +2815,7 @@ function applySceneData(data) {
   Object.assign(filter, NO_FILTER, { preset: 'none', amt: 100 }, data.filter || {});
   bubbles = Array.isArray(data.bubbles) ? JSON.parse(JSON.stringify(data.bubbles)) : [];
   bubShow = data.bubbleShow !== false; selBub = null;
+  setProps(Array.isArray(data.props) ? data.props : []);
   if ('bg' in data) restoreBackground(data.bg);
   { const L = data.look || {}; for (const k of Object.keys(LOOK_DEFAULT)) Object.assign(look[k], LOOK_DEFAULT[k], L[k] || {}); applyLookToSlots(); syncLookUI(); }
   drawBubbleLayer(); renderBubUI();
