@@ -305,7 +305,7 @@ body.embed .top { flex-wrap: nowrap; }
         <div class="field"><label for="presence">존재감 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="낮출수록 인물이 회색으로 바래고 외곽선이 가늘고 옅어져요. 투명해지는 게 아니라, 뒤에 있는 인물이나 배경 인물처럼 덜 눈에 띄게 만드는 거예요. 100이 원래 모습이에요."></span></label><input id="presence" type="range" min="10" max="100" step="1"><output for="presence" id="presenceo"></output></div>
         <button class="btn small ghost" id="removeB" type="button" hidden>B 빼기</button>
       </div>
-      <p class="sub" id="moveHint">인물 몸을 끌면 바닥 위에서 옮겨져요.</p>
+      <p class="sub" id="moveHint">몸통을 끌면 바닥 위에서 옮겨지고, 팔·다리를 끌면 자세가 바뀌어요.</p>
       <p class="sub not-embed">VRM 파일을 화면 가운데로 끌어다 놓아도 선택한 인물의 모델이 바뀌어요.</p>
     </aside>
 
@@ -367,7 +367,7 @@ body.embed .top { flex-wrap: nowrap; }
           <div class="foldbody"><div class="chips" id="presets"></div></div>
         </details>
         <details class="fold" id="foldJoint">
-          <summary><h2>관절 돌리기</h2><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="왼쪽·오른쪽은 캐릭터 기준이에요. 화면에서 손·발·팔꿈치·무릎·머리 점을 끌면 자세가 바뀌고, 엉덩이 점이나 몸을 끌면 바닥 위에서 위치가 옮겨져요. 팔꿈치·무릎은 사람처럼 한쪽으로만 굽고, 손발이 닿지 않으면 상체가 기울다가 몸 전체가 끌려와요. 목록에서 관절에 마우스를 올리면 화면의 그 점이 노란색으로 커져요. 지금 고른 관절은 주황색이에요."></span></summary>
+          <summary><h2>관절 돌리기</h2><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="왼쪽·오른쪽은 캐릭터 기준이에요. 화면에서 손·발·팔꿈치·무릎·머리 점을 끌면 자세가 바뀌고, 엉덩이 점이나 몸을 끌면 바닥 위에서 위치가 옮겨져요. 팔꿈치·무릎은 사람처럼 한쪽으로만 굽고, 손발이 닿지 않으면 상체까지만 기울어요 (Shift를 누른 채 끌면 몸 전체가 따라와요). 팔·다리 자체를 잡고 끌어도 자세가 바뀌고, 몸통을 끌면 위치가 옮겨져요 (Alt+끌기: 어디를 잡든 통째로). 목록에서 관절에 마우스를 올리면 화면의 그 점이 노란색으로 커져요. 지금 고른 관절은 주황색이에요."></span></summary>
           <div class="foldbody">
             <div class="bonepick" id="bonePick">
               <button type="button" class="bonebtn" id="boneBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="관절 선택"><span id="boneLabel">오른팔 위</span><span aria-hidden="true">▾</span></button>
@@ -1788,8 +1788,8 @@ function ccdSolve(slot, effName, boneNames, target, maxStepDeg, iterations) {
 }
 // 상체(가슴·허리)를 범위 안에서 기울여 손을 목표에 더 가깝게
 const leanToward = (slot, effName, target, names) => ccdSolve(slot, effName, names, target, 6, 6);
-// 손발: 팔다리 → (안 닿으면) 상체 기울이기 → (그래도 안 닿으면) 몸 전체가 끌려옴
-function dragLimb(slot, effName, target) {
+// 손발: 팔다리 → (안 닿으면) 상체 기울이기 → (pull일 때만, 그래도 안 닿으면) 몸 전체가 끌려옴
+function dragLimb(slot, effName, target, pull = false) {
   const eff = slot.vrm.humanoid.getNormalizedBoneNode(effName);
   const L = LIMB[effName];
   solveLimb(slot, effName, target);
@@ -1800,7 +1800,7 @@ function dragLimb(slot, effName, target) {
     miss = target.clone().sub(eff.getWorldPosition(new THREE.Vector3()));
   }
   miss.y = 0; // 바닥 위에서만 끌려옴
-  if (miss.length() > REACH_TOL) {
+  if (pull && miss.length() > REACH_TOL) {
     slot.x = clampPos((slot.x + miss.x * 100));
     slot.z = clampPos((slot.z + miss.z * 100));
     applyPlacement(slot);
@@ -1810,8 +1810,8 @@ function dragLimb(slot, effName, target) {
   return false;
 }
 // 점 끌기의 입구: 손발은 팔다리 계산(dragLimb), 그 외(팔꿈치·무릎·머리)는 CCD
-function solveIK(slot, effName, target) {
-  if (LIMB[effName]) return dragLimb(slot, effName, target);
+function solveIK(slot, effName, target, pull = false) {
+  if (LIMB[effName]) return dragLimb(slot, effName, target, pull);
   ccdSolve(slot, effName, IK_CHAINS[effName], target, effName === 'head' ? 6 : 20, 14);
   return false;
 }
@@ -1825,6 +1825,33 @@ function rayAt(e) {
   _ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
   raycaster.setFromCamera(_ndc, camera);
   return raycaster.ray.intersectPlane(dragPlane, _hit);
+}
+// 누른 곳이 팔·다리면 그 팔다리 끝(손·발, 위팔·허벅지면 팔꿈치·무릎)을 끌게 한다. 몸통·머리면 null (인물 옮기기)
+const LIMB_SEGS = [];
+['left', 'right'].forEach(sd => {
+  LIMB_SEGS.push(
+    [sd + 'UpperArm', sd + 'LowerArm', sd + 'LowerArm'], [sd + 'LowerArm', sd + 'Hand', sd + 'Hand'], [sd + 'Hand', sd + 'MiddleProximal', sd + 'Hand', 1.8],
+    [sd + 'UpperLeg', sd + 'LowerLeg', sd + 'LowerLeg'], [sd + 'LowerLeg', sd + 'Foot', sd + 'Foot'], [sd + 'Foot', sd + 'Toes', sd + 'Foot', 1.6],
+    ['chest', sd + 'UpperArm', null], ['hips', sd + 'UpperLeg', null]);
+});
+LIMB_SEGS.push(['hips', 'spine', null], ['spine', 'chest', null], ['chest', 'neck', null], ['neck', 'head', null], ['head', 'head', null]);
+const _sa = new THREE.Vector3(), _sb = new THREE.Vector3(), _sl = new THREE.Line3(), _sc = new THREE.Vector3();
+function limbAt(slot, point) {
+  const h = slot.vrm.humanoid;
+  let best = null, bestD = Infinity;
+  for (const [a, b, eff, ext] of LIMB_SEGS) {
+    const na = h.getRawBoneNode(a), nb = h.getRawBoneNode(b);
+    if (!na) continue;
+    na.getWorldPosition(_sa);
+    if (a === b) _sb.copy(_sa).y += 0.18;               // 머리: 위로 짧은 막대
+    else if (!nb) continue;
+    else nb.getWorldPosition(_sb);
+    if (ext) _sb.sub(_sa).multiplyScalar(ext).add(_sa);  // 손가락·발가락 끝까지 늘림
+    _sl.set(_sa, _sb).closestPointToPoint(point, true, _sc);
+    const d = _sc.distanceTo(point);
+    if (d < bestD) { bestD = d; best = eff; }
+  }
+  return best && IK_CHAINS[best] ? best : null;
 }
 // 화면의 그 자리에 보이는 인물 (몸 메시에 광선을 쏴서 찾음)
 function pickBody(e) {
@@ -1950,8 +1977,19 @@ viewport.addEventListener('pointerdown', e => {
   if (!m) {
     const body = pickBody(e);
     if (!body) { emptyDown = [e.clientX, e.clientY]; return; } // 빈 곳 → 카메라 조작(화면 이동)
-    // 몸을 누름 → 그 인물을 바닥과 평행하게 끌어서 옮김
     e.stopPropagation(); e.preventDefault();
+    // 팔·다리를 누름 → 그 손·발(팔꿈치·무릎)을 끌어 자세 바꾸기 (Alt를 누르고 있으면 인물 통째로 옮기기)
+    const limb = e.altKey ? null : limbAt(body.slot, body.point);
+    if (limb) {
+      const node = body.slot.vrm.humanoid.getRawBoneNode(limb);
+      const eff = node.getWorldPosition(new THREE.Vector3());
+      camera.getWorldDirection(_camDir); dragPlane.setFromNormalAndCoplanarPoint(_camDir, body.point);
+      drag = { body: true, limb: true, slot: body.slot, bone: limb, x0: e.clientX, y0: e.clientY, moved: false, startX: body.slot.x, startZ: body.slot.z, start: body.point, off: eff.sub(body.point) };
+      document.body.classList.add('dragging');
+      renderer.domElement.setPointerCapture && renderer.domElement.setPointerCapture(e.pointerId);
+      return;
+    }
+    // 몸통을 누름 → 그 인물을 바닥과 평행하게 끌어서 옮김
     dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), body.point);
     drag = { body: true, slot: body.slot, bone: 'hips', x0: e.clientX, y0: e.clientY, moved: false, startX: body.slot.x, startZ: body.slot.z, start: body.point };
     document.body.classList.add('dragging');
@@ -1980,7 +2018,7 @@ window.addEventListener('pointermove', e => {
     s.z = clampPos((Math.round(drag.startZ + (_hit.z - drag.start.z) * 100)));
     applyPlacement(s);
   } else {
-    solveIK(s, drag.bone, _hit);
+    solveIK(s, drag.bone, drag.off ? _hit.add(drag.off) : _hit, e.shiftKey);
     bone = IK_CHAINS[drag.bone][0];
   }
   syncers.forEach(f => f());
@@ -2001,7 +2039,7 @@ window.addEventListener('pointerup', e => {
     say(`${d.slot.label}의 ${what}. 되돌리기로 취소할 수 있어요.`);
   } else if (d.body) {
     stopTalk(true); sel = slots.indexOf(d.slot); syncUI();
-    say(`${d.slot.label}을(를) 선택했어요. 몸을 끌면 바닥 위에서 옮겨져요.`);
+    say(`${d.slot.label}을(를) 선택했어요. 몸통을 끌면 바닥 위에서 옮겨지고, 팔·다리를 끌면 자세가 바뀌어요. (Alt+끌기: 어디를 잡든 통째로 옮기기)`);
   } else {
     selectMarker(d.marker);
     if (gizmo && (gizmo.slot !== d.slot || gizmo.bone !== d.bone)) openGizmo(d.marker, gizmo.mode);
