@@ -12,6 +12,7 @@ import { TemplatePicker } from '../components/TemplatePicker';
 import type { FrameStyle, Page, PageTitle, TemplateId, TitlePos } from '../scene/types';
 import { applyTitle, DEFAULT_TITLE, pageStyle, TITLE_FONTS, TITLE_POS, TITLE_SIZES } from '../scene/title';
 import { Info } from '../components/Info';
+import { ImportPoseDialog } from '../components/ImportPoseDialog';
 import { templateLabel, templateOf } from '../scene/layout';
 import { applySplit } from '../scene/split';
 import { CutDrawDialog } from '../components/CutDrawDialog';
@@ -30,6 +31,7 @@ export function ManuscriptPage() {
   const [workOpen, setWorkOpen] = useState(false);
   const [tplDialog, setTplDialog] = useState<'add' | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   /** 페이지를 추가한 뒤 저장이 반영되면 그 페이지로 이동 */
   const [jumpTo, setJumpTo] = useState<number | null>(null);
   const [note, setNote] = useState('');
@@ -125,6 +127,7 @@ export function ManuscriptPage() {
                 <p className="sub">페이지에서 컷을 골라 주세요.</p>
               </>
             )}
+            <button type="button" className="btn small" style={{ marginTop: 10 }} onClick={() => setImportOpen(true)} disabled={!work}>JSON에서 포즈 가져오기</button>
             {note && <p className="sub" role="status">{note}</p>}
           </section>
 
@@ -236,6 +239,22 @@ export function ManuscriptPage() {
           setExportOpen(false);
         }}
       />
+      {work && (
+        <ImportPoseDialog
+          open={importOpen}
+          manuscript={m}
+          characters={work.characters}
+          scopes={['cut', 'page', 'all']}
+          cutId={sel ? sel.id : null}
+          pageIndex={pageIndex}
+          onClose={() => setImportOpen(false)}
+          onApply={async (fn, sum) => {
+            setImportOpen(false);
+            await update(fn);
+            say(`포즈를 컷 ${sum.applied}개에 가져왔어요${sum.replaced ? ` (${sum.replaced}개 덮어씀)` : ''}. 그림은 컷을 열면 새로 그려져요.`);
+          }}
+        />
+      )}
       {work && <WorkDialog work={work} open={workOpen} onClose={() => setWorkOpen(false)} onSave={w => { updateWork(w); setWorkOpen(false); }} />}
     </>
   );

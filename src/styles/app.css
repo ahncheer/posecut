@@ -398,3 +398,26 @@ dialog.previewdlg { width: min(1040px, calc(100% - 24px)); }
 .pv-cutbox { width: 100%; max-height: 70vh; display: grid; place-items: center; background: var(--bg); border-radius: 8px; overflow: hidden; }
 .pv-cutbox img { width: 100%; height: 100%; object-fit: contain; display: block; }
 @media (max-width: 760px) { .pv { grid-template-columns: 1fr; } }
+
+/* JSON에서 포즈 가져오기 */
+.importdlg .impstep { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+.importdlg .impstep h3 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.importdlg .stepno { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 700; }
+.importdlg .impcount { margin: 0; font-size: 14px; }
+.importdlg .warn { color: var(--danger); }
+.impmap { display: grid; gap: 6px; }
+.impmaprow { display: grid; grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1.3fr); align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }
+.impmaprow[data-dupe="true"] { border-color: var(--danger); }
+.impfrom { display: grid; min-width: 0; }
+.impfrom b, .impfrom .row-desc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imparrow { color: var(--muted, #888); text-align: center; }
+.impmaprow select, .impsel select { width: 100%; min-width: 0; }
+.impsel { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 8px; font-size: 13px; }
+@media (max-width: 520px) { .impmaprow { grid-template-columns: 1fr; } .imparrow { display: none; } }
+
+/* 작은 선택 단추 줄 (제목 넣을 페이지, 가져오기 범위) */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { min-height: 32px; min-width: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+.chip[aria-pressed="true"], .chip[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.chip:disabled { opacity: .45; cursor: default; }
+.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

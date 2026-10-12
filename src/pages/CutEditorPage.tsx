@@ -9,7 +9,8 @@ import { ENGINE_URL, type EngineCast, type RoughEngine, waitForEngine } from '..
 import { loadModelFile } from '../storage/db';
 import { CastDialog } from '../components/CastDialog';
 import { PreviewDialog } from '../components/PreviewDialog';
-import type { Character, SlotId } from '../scene/types';
+import { ImportPoseDialog } from '../components/ImportPoseDialog';
+import type { Character, Cut, SlotId } from '../scene/types';
 import { CUT_LETTERS } from '../scene/types';
 
 type Status = '불러오는 중…' | '자동 저장됨' | '저장 중…' | string;
@@ -23,6 +24,11 @@ export function CutEditorPage() {
   const saveTimer = useRef(0);
   const [status, setStatus] = useState<Status>('불러오는 중…');
   const [castOpen, setCastOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  /** 가져오기 등으로 저장된 장면이 바뀌면 엔진을 다시 띄운다 */
+  const [reload, setReload] = useState(0);
+  /** 가져오기 직후엔 저장소 읽기가 늦을 수 있어서, 막 넣은 컷 내용을 엔진에 바로 넘긴다 */
+  const overrideCut = useRef<{ id: string; cut: Cut } | null>(null);
   const removeRef = useRef<(index: number) => void>(() => {});
   const actionRef = useRef<(type: 'save' | 'preview') => void>(() => {});
   const [preview, setPreview] = useState<{ big: string | null } | null>(null);
@@ -63,9 +69,12 @@ export function CutEditorPage() {
   useEffect(() => {
     const { m: ms, work: w } = latest.current;
     if (!ready || !ms || !w || !cutId) return;
-    const found = findCut(ms, cutId);
+    const found0 = findCut(ms, cutId);
     const frame = frameRef.current;
-    if (!found || !frame) return;
+    if (!found0 || !frame) return;
+    const ov = overrideCut.current;
+    overrideCut.current = null;
+    const found = ov && ov.id === cutId ? { ...found0, cut: ov.cut } : found0;
     engineRef.current = null;
     setStatus('불러오는 중…');
     let cancelled = false;
@@ -87,6 +96,7 @@ export function CutEditorPage() {
         engineRef.current = eng;
         eng.onAction?.(a => {
           if (a.type === 'cast') setCastOpen(true);
+          else if (a.type === 'import') setImportOpen(true);
           else if (a.type === 'save' || a.type === 'preview') actionRef.current(a.type);
           else if (a.type === 'remove') removeRef.current(CUT_LETTERS.indexOf(a.letter as typeof CUT_LETTERS[number]));
         });
@@ -100,7 +110,7 @@ export function CutEditorPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [ready, cutId, modelKey, save]);
+  }, [ready, cutId, modelKey, reload, save]);
 
   // 컷 편집 화면에서 Ctrl+S: 브라우저의 '페이지 저장' 대신 이 컷을 저장 (엔진 안에서 누르면 엔진이 처리)
   useEffect(() => {
@@ -184,7 +194,7 @@ export function CutEditorPage() {
           <span className="sub" role="status">{status}</span>
         </TopBar>
       </div>
-      <iframe key={`${found.cut.id}/${modelKey}`} ref={frameRef} src={ENGINE_URL} title="컷 편집" />
+      <iframe key={`${found.cut.id}/${modelKey}/${reload}`} ref={frameRef} src={ENGINE_URL} title="컷 편집" />
       {preview && (
         <PreviewDialog
           open
@@ -195,6 +205,32 @@ export function CutEditorPage() {
           style={m.style}
           big={preview.big}
           onClose={() => setPreview(null)}
+        />
+      )}
+      {work && (
+        <ImportPoseDialog
+          open={importOpen}
+          manuscript={m}
+          characters={work.characters}
+          scopes={['cut']}
+          cutId={found.cut.id}
+          pageIndex={found.pageIndex}
+          onClose={() => setImportOpen(false)}
+          onApply={async fn => {
+            setImportOpen(false);
+            setApplying(true);
+            try {
+              window.clearTimeout(saveTimer.current);
+              engineRef.current = null; // 덮어쓸 장면이라 지금 장면은 저장하지 않음
+              const cur = latest.current.m;
+              const nextCut = cur ? findCut(fn(cur), found.cut.id)?.cut : null;
+              await update(fn);
+              if (nextCut) overrideCut.current = { id: found.cut.id, cut: nextCut };
+              setReload(r => r + 1);
+            } finally {
+              setApplying(false);
+            }
+          }}
         />
       )}
       {work && (

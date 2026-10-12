@@ -13,7 +13,7 @@ export interface RoughEngine {
   thumbnail(maxWidth?: number): string | null;
   onChange(cb: () => void): void;
   /** 엔진 안 버튼이 앱에 부탁하는 일. 'cast' = 등장인물 창 열기, 'remove' = 그 자리 인물을 이 컷에서 빼기 */
-  onAction?(cb: (a: { type: 'cast' | 'save' | 'preview' } | { type: 'remove'; letter: string }) => void): void;
+  onAction?(cb: (a: { type: 'cast' | 'save' | 'preview' | 'import' } | { type: 'remove'; letter: string }) => void): void;
   /** 엔진 위쪽 안내 줄에 한 줄 띄우기 */
   notice?(text: string): void;
 }

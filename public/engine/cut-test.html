@@ -2616,6 +2616,8 @@ function sceneData() {
   return {
     v: 1,
     slots: JSON.parse(snapshot()).s,
+    // 누가 어느 자리인지 (다른 컷·원고로 포즈를 가져갈 때 짝짓기에 씀)
+    who: slots.map(s => ({ letter: s.letter, name: s.label || s.letter })),
     bubbles: JSON.parse(JSON.stringify(bubbles)),
     bubbleShow: bubShow,
     look: JSON.parse(JSON.stringify(look)),
@@ -2652,7 +2654,7 @@ function saveSceneFile() {
   say('장면 파일을 내려받았어요. "장면 파일 열기"로 다른 컷에도 같은 장면을 불러올 수 있어요.');
 }
 // 아이콘 단추처럼 쓰는 label: 키보드로도 열리게
-$('openScene').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('sceneFile').click(); } });
+$('openScene').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('openScene').click(); } });
 // 저장: 앱 안에서는 앱이 바로 저장 (밖에서는 내보내기 창)
 let saveHook = null;
 function saveNow() { if (saveHook) saveHook(); else openExport(); }
@@ -4520,6 +4522,9 @@ if (EMBED) {
   const ask = (type) => { if (actionCb) actionCb({ type }); };
   $('castAdd').addEventListener('click', () => ask('cast'));
   $('previewBtn').addEventListener('click', () => ask('preview'));
+  // 앱 안에서는 파일 열기 = 앱의 "JSON에서 포즈 가져오기" (인원 확인·모델 짝짓기 후 넣음)
+  $('openScene').addEventListener('click', e => { e.preventDefault(); ask('import'); });
+  $('openScene').dataset.tip = 'JSON에서 포즈 가져오기 · 장면(.json)이나 원고(.rough.json) 파일의 자세를 인물을 짝지어 이 컷에 넣어요';
   saveHook = () => ask('save');
   $('emptyAdd').addEventListener('click', () => ask('cast'));
   castRemoveHook = (letter, label) => {
