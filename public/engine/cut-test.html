@@ -494,7 +494,7 @@ body.embed .top { flex-wrap: nowrap; }
             <div class="field"><label for="comicMin">검정 기준 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="이보다 어두운 곳은 새까맣게 칠해요. (VRoid: Min Threshold)"></span></label><input id="comicMin" type="range" min="0" max="100" step="1"><output for="comicMin" id="comicMino"></output></div>
             <div class="field"><label for="comicMax">흰색 기준 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="이보다 밝은 곳은 하얗게 비워요. 그 사이는 스크린톤이 돼요. (VRoid: Max Threshold)"></span></label><input id="comicMax" type="range" min="0" max="100" step="1"><output for="comicMax" id="comicMaxo"></output></div>
             <div class="field"><label for="comicAngle">톤 각도</label><input id="comicAngle" type="range" min="0" max="180" step="1"><output for="comicAngle" id="comicAngleo"></output></div>
-            <div class="field"><label for="comicSize">톤 크기</label><input id="comicSize" type="range" min="1" max="20" step="0.5"><output for="comicSize" id="comicSizeo"></output></div>
+            <div class="field"><label for="comicSize">톤 크기</label><input id="comicSize" type="range" min="0.5" max="20" step="0.25"><output for="comicSize" id="comicSizeo"></output></div>
             <div class="field"><label for="comicOil">뭉개기 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="0~3. 자잘한 무늬를 뭉개서 붓으로 칠한 듯 단순하게 해요. (VRoid: Oil Painting)"></span></label><input id="comicOil" type="range" min="0" max="3" step="1"><output for="comicOil" id="comicOilo"></output></div>
           </div>
         </details>
@@ -2382,12 +2382,12 @@ function bindRange(id, read, write, commit = true) {
   old.replaceWith(num);
   const clamp = (v) => Math.min(Number(el.max), Math.max(Number(el.min), v));
   el.addEventListener('input', () => { write(Number(el.value)); num.value = el.value; });
-  if (commit) el.addEventListener('change', pushHistory);
+  el.addEventListener('change', () => { if (commit) pushHistory(); notifyChange(); }); // 놓으면 저장(앱 자동 저장)
   const fromNum = (final) => {
-    if (num.value === '' || Number.isNaN(Number(num.value))) { if (final) num.value = Math.round(read()); return; }
+    if (num.value === '' || Number.isNaN(Number(num.value))) { if (final) num.value = round1(read()); return; }
     const v = clamp(Number(num.value));
     el.value = v; write(v);
-    if (final) { num.value = v; if (commit) pushHistory(); }
+    if (final) { num.value = v; if (commit) pushHistory(); notifyChange(); }
   };
   num.addEventListener('input', () => fromNum(false));
   num.addEventListener('change', () => fromNum(true));
@@ -2414,7 +2414,7 @@ function bindRange(id, read, write, commit = true) {
     const d = RESET_TO[id]; const v = clamp(typeof d === 'function' ? d() : (d ?? 0));
     el.value = v; write(v); num.value = round1(v);
     if (commit) pushHistory();
-    syncUI();
+    notifyChange(); syncUI();
   });
   num.after(reset);
   return () => { const v = read(); el.value = v; if (document.activeElement !== num) num.value = round1(v); };
@@ -2446,7 +2446,7 @@ const syncers = [
 ];
 // 앤티앨리어싱 · 전체 조명 UI
 $('aa').value = String(aaLevel);
-$('aa').addEventListener('change', e => { aaLevel = Number(e.target.value); applyAA(); layout(); say(`앤티앨리어싱을 "${e.target.selectedOptions[0].textContent.split(' · ')[0]}"으로 바꿨어요.`); });
+$('aa').addEventListener('change', e => { aaLevel = Number(e.target.value); applyAA(); layout(); notifyChange(); say(`앤티앨리어싱을 "${e.target.selectedOptions[0].textContent.split(' · ')[0]}"으로 바꿨어요.`); });
 // 그림 효과 칸
 const lookSyncers = [
   ['bloomInt', 'bloom', 'int'], ['bloomThr', 'bloom', 'thr'], ['bloomRad', 'bloom', 'rad'],
@@ -2467,8 +2467,8 @@ function syncLookUI() {
   $('bloomOn').checked = look.bloom.on; $('comicOn').checked = look.comic.on; $('lineOnly').checked = look.line.only;
   if ($('bloomColor').value.toLowerCase() !== look.bloom.color.toLowerCase()) $('bloomColor').value = look.bloom.color;
 }
-$('bloomOn').addEventListener('change', e => { look.bloom.on = e.target.checked; });
-$('comicOn').addEventListener('change', e => { look.comic.on = e.target.checked; rememberComic(); });
+$('bloomOn').addEventListener('change', e => { look.bloom.on = e.target.checked; notifyChange(); });
+$('comicOn').addEventListener('change', e => { look.comic.on = e.target.checked; rememberComic(); notifyChange(); });
 // 만화: 마지막 설정 기억 + 내 설정 ① ②
 const COMIC_KEYS = Object.keys(LOOK_DEFAULT.comic);
 const pickComic = (o) => { const r = {}; COMIC_KEYS.forEach(k => { if (o && typeof o[k] === typeof LOOK_DEFAULT.comic[k]) r[k] = o[k]; }); return r; };
@@ -2497,8 +2497,8 @@ document.querySelectorAll('.memslot').forEach(b => {
   b.addEventListener('keydown', e => { if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); saveComicMem(i); } });
 });
 paintComicMem();
-$('lineOnly').addEventListener('change', e => { look.line.only = e.target.checked; });
-$('bloomColor').addEventListener('input', e => { look.bloom.color = e.target.value; if (!look.bloom.on) { look.bloom.on = true; $('bloomOn').checked = true; } });
+$('lineOnly').addEventListener('change', e => { look.line.only = e.target.checked; notifyChange(); });
+$('bloomColor').addEventListener('input', e => { look.bloom.color = e.target.value; if (!look.bloom.on) { look.bloom.on = true; $('bloomOn').checked = true; } notifyChange(); });
 syncLookUI();
 RESET_TO.camRoll = 0;
 chipRow($('rollChips'), [['-45', '↺45°'], ['-15', '↺15°'], ['0', '0°'], ['15', '↻15°'], ['45', '↻45°']], (k) => {
@@ -2523,7 +2523,7 @@ $('filterColor').addEventListener('input', e => {
   filter.tint = e.target.value;
   if (!filter.tintAmt) filter.tintAmt = 40; // 색을 고르면 바로 보이게
   filter.preset = matchFilterPreset();
-  syncUI();
+  syncUI(); notifyChange();
 });
 const HAND_SIDES = [['left', '왼손'], ['right', '오른손']];
 chipRow($('handSide'), HAND_SIDES, (k) => { handSel = k; syncUI(); });
