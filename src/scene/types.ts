@@ -89,8 +89,8 @@ export interface CutPlan {
   chars?: { x?: number; depth?: 'near' | 'mid' | 'far'; facing?: string; pose?: string; emotion?: string; eyes?: 'open' | 'half' | 'closed'; look?: 'camera' | 'other' | 'none' }[];
   bubbles?: { kind?: string; text?: string; x?: number; y?: number; w?: number; h?: number; to?: number; tail?: { x: number; y: number }; rot?: number }[];
   marks?: { kind: string; x?: number; y?: number; size?: number; rot?: number }[];
-  /** 인물에 맞춰 놓는 가구: chair 의자 · counter 카운터 · desk 책상, char = chars 번호 */
-  props?: { type: 'chair' | 'counter' | 'desk'; char: number }[];
+  /** 인물에 맞춰 놓는 가구: chair 의자 · counter 카운터 · desk 책상 · can 음료 캔(color) · shelf 음료 진열대(colors), char = chars 번호 */
+  props?: { type: 'chair' | 'counter' | 'desk' | 'can' | 'shelf' | 'trash'; char: number; color?: string; colors?: string[] }[];
   background?: string;
   note?: string;
 }

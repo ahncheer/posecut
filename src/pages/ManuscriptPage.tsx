@@ -4,7 +4,6 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { TopBar } from '../components/TopBar';
 import { PageView } from '../components/PageView';
 import { WorkDialog } from '../components/WorkDialog';
-import { exportSvgAsPng } from '../components/exportPage';
 import { useManuscript } from '../storage/useManuscript';
 import { addPage, changePageTemplate, clearCut, findCut, pasteScene, previousCut, removePage, scenesLostByTemplate, swapCuts, movePage } from '../scene/manuscript';
 import { PageTemplateDialog } from '../components/PageTemplateDialog';
@@ -15,9 +14,6 @@ import { Info } from '../components/Info';
 import { ImportPoseDialog } from '../components/ImportPoseDialog';
 import { ThumbBaker } from '../components/ThumbBaker';
 import { StoryboardDialog } from '../components/StoryboardDialog';
-import { withHiddenEngine } from '../engine/hiddenEngine';
-import { loadCutIntoEngine } from '../engine/loadCut';
-import { PAGE_W } from '../scene/layout';
 import { updateCut } from '../scene/manuscript';
 import { templateLabel, templateOf } from '../scene/layout';
 import { applySplit } from '../scene/split';
@@ -26,7 +22,10 @@ import { cutRatio } from '../scene/layout';
 import { copyScene, readClip } from '../storage/clipboard';
 import { downloadJSON, toReadableFile } from '../storage/file-io';
 import { deleteManuscript } from '../storage/db';
-import { ExportDialog, type ExportKind } from '../components/ExportDialog';
+import { ExportDialog, type ExportKind, type ExportOptions } from '../components/ExportDialog';
+import { renderPagePng } from '../components/pageExport';
+import { downloadBlob } from '../components/exportPage';
+import { makeZip } from '../storage/zip';
 
 export function ManuscriptPage() {
   const { msId } = useParams();
@@ -86,8 +85,10 @@ export function ManuscriptPage() {
 
   useEffect(() => {
     if (!m || bakeQueue.length) return;
-    const need = m.pages.flatMap(p => p.cuts).filter(c => (c.scene || c.plan) && !c.thumb && !tried.current.has(c.id)).map(c => c.id);
-    if (need.length) { need.forEach(id => tried.current.add(id)); setBakeQueue(need); }
+    // 같은 컷이라도 장면이 바뀌면(불러오기 등) 다시 그린다
+    const key = (c: { id: string; scene: unknown; plan?: unknown }) => `${c.id}:${c.scene ? JSON.stringify(c.scene).length : 0}:${c.plan ? 1 : 0}`;
+    const cuts = m.pages.flatMap(p => p.cuts).filter(c => (c.scene || c.plan) && !c.thumb && !tried.current.has(key(c)));
+    if (cuts.length) { cuts.forEach(c => tried.current.add(key(c))); setBakeQueue(cuts.map(c => c.id)); }
   }, [m, bakeQueue.length]);
   // 지금 페이지가 왼쪽 목록에서 보이도록 (목록이 길어 스크롤될 때)
   useEffect(() => {
@@ -128,7 +129,10 @@ export function ManuscriptPage() {
 
   return (
     <>
-      <TopBar right={<button type="button" className="btn primary" onClick={() => setExportOpen(true)}>내보내기</button>}>
+      <TopBar right={<>
+        <button type="button" className="btn" onClick={() => setImportOpen(true)} disabled={!work} title="장면·원고·그림 콘티 JSON을 이 원고에 불러와요">불러오기</button>
+        <button type="button" className="btn primary" onClick={() => setExportOpen(true)}>내보내기</button>
+      </>}>
         <Link to="/" className="btn small ghost">← 내 원고</Link>
         <TitleInput value={m.title} onSave={title => update(x => ({ ...x, title }))} />
         <span className="sub">{work?.title || '작품 이름 없음'} · 자동 저장됨</span>
@@ -136,7 +140,28 @@ export function ManuscriptPage() {
 
       <div className="msview">
         <aside className="pagelist" aria-label="페이지">
-          <h2>{m.format === 'page' ? '페이지' : '웹툰'}</h2>
+          <div className="pagetools">
+            <h2>{m.format === 'page' ? `페이지 (${m.pages.length})` : '웹툰'}</h2>
+            {m.format === 'page'
+              ? <button type="button" className="btn small" onClick={() => setTplDialog('add')}>+ 페이지 추가</button>
+              : <button type="button" className="btn small" onClick={() => update(x => addPage(x))}>+ 컷 추가</button>}
+            {m.format === 'page' && <button type="button" className="btn small" onClick={() => setSbOpen(true)} disabled={!work}>그림으로 콘티</button>}
+            {m.format === 'page' && m.pages.length > 1 && (
+              <div className="pagemove" role="group" aria-label="페이지 순서">
+                <button type="button" className="btn small" disabled={pageIndex === 0} onClick={() => void reorder(pageIndex, pageIndex - 1)} aria-label={`${pageIndex + 1}페이지를 앞으로`}>↑ 앞으로</button>
+                <button type="button" className="btn small" disabled={pageIndex >= m.pages.length - 1} onClick={() => void reorder(pageIndex, pageIndex + 1)} aria-label={`${pageIndex + 1}페이지를 뒤로`}>↓ 뒤로</button>
+              </div>
+            )}
+            {m.format === 'page' && m.pages.length > 1 && (
+              <button
+                type="button"
+                className="btn small ghost danger"
+                onClick={() => { if (confirm(`${pageIndex + 1}페이지를 지울까요? 안의 장면도 함께 지워져요.`)) update(x => removePage(x, pageIndex)); }}
+              >
+                이 페이지 지우기
+              </button>
+            )}
+          </div>
           {m.pages.map((p, i) => (
             <button
               key={p.id}
@@ -157,25 +182,6 @@ export function ManuscriptPage() {
               <span>{i + 1}</span>
             </button>
           ))}
-          {m.format === 'page'
-            ? <button type="button" className="btn small" onClick={() => setTplDialog('add')}>+ 페이지 추가</button>
-            : <button type="button" className="btn small" onClick={() => update(x => addPage(x))}>+ 컷 추가</button>}
-          {m.format === 'page' && <button type="button" className="btn small" onClick={() => setSbOpen(true)} disabled={!work}>그림으로 콘티</button>}
-          {m.format === 'page' && m.pages.length > 1 && (
-            <div className="pagemove" role="group" aria-label="페이지 순서">
-              <button type="button" className="btn small" disabled={pageIndex === 0} onClick={() => void reorder(pageIndex, pageIndex - 1)} aria-label={`${pageIndex + 1}페이지를 앞으로`}>↑ 앞으로</button>
-              <button type="button" className="btn small" disabled={pageIndex >= m.pages.length - 1} onClick={() => void reorder(pageIndex, pageIndex + 1)} aria-label={`${pageIndex + 1}페이지를 뒤로`}>↓ 뒤로</button>
-            </div>
-          )}
-          {m.format === 'page' && m.pages.length > 1 && (
-            <button
-              type="button"
-              className="btn small ghost danger"
-              onClick={() => { if (confirm(`${pageIndex + 1}페이지를 지울까요? 안의 장면도 함께 지워져요.`)) update(x => removePage(x, pageIndex)); }}
-            >
-              이 페이지 지우기
-            </button>
-          )}
         </aside>
 
         <section className="canvaswrap" ref={canvasRef} aria-label="페이지">
@@ -215,7 +221,6 @@ export function ManuscriptPage() {
                 <p className="sub">페이지에서 컷을 골라 주세요.</p>
               </>
             )}
-            <button type="button" className="btn small" style={{ marginTop: 10 }} onClick={() => setImportOpen(true)} disabled={!work}>JSON에서 포즈 가져오기</button>
             {note && <p className="sub" role="status">{note}{lastSwap && <> <button type="button" className="linkbtn" onClick={() => { const [a, b] = lastSwap; void update(x => swapCuts(x, a, b)); setSelected(a); setLastSwap(null); say('맞바꾼 것을 되돌렸어요.'); }}>되돌리기</button></>}</p>}
           </section>
 
@@ -319,28 +324,26 @@ export function ManuscriptPage() {
         pageNumber={pageIndex + 1}
         onClose={() => setExportOpen(false)}
         busy={exportBusy}
-        onExport={async (kind: ExportKind, width: number) => {
-          if (kind === 'file') { if (work) downloadJSON(`${work.title || '작품'}_${m.title || '원고'}.rough.json`, toReadableFile(work, m)); }
-          else {
-            const svg = canvasRef.current?.querySelector('svg');
-            if (!svg) return;
-            // 컷마다 보이지 않는 엔진으로 크게 다시 그린다 (원고 화면의 작은 그림은 가로 360px라 흐림)
-            const scale = width / PAGE_W, pg = m.pages[pageIndex], images: Record<string, string> = {};
-            const targets = work ? pg.cuts.filter(c => c.scene || c.plan) : [];
-            for (const [i, c] of targets.entries()) {
-              setExportBusy(`고화질로 그리는 중… ${i + 1}/${targets.length}컷`);
-              try {
-                const url = await withHiddenEngine(async eng => {
-                  if (!work || !(await loadCutIntoEngine(eng, m, work.characters, c.id))) return null;
-                  await new Promise(r => setTimeout(r, 150));
-                  return eng.render ? eng.render(Math.round(c.rect.w * scale)) : eng.thumbnail(Math.round(c.rect.w * scale));
-                });
-                if (url) images[c.id] = url;
-              } catch { /* 그 컷은 작은 그림으로 */ }
-            }
-            setExportBusy('그림 합치는 중…');
-            try { await exportSvgAsPng(svg, `${work?.title || '작품'}_${m.title || '원고'}_${pageIndex + 1}페이지.png`, scale, images); }
-            finally { setExportBusy(''); }
+        pageCount={m.pages.length}
+        onExport={async (kind: ExportKind, opt: ExportOptions) => {
+          const base = `${work?.title || '작품'}_${m.title || '원고'}`;
+          if (kind === 'file') { if (work) downloadJSON(`${base}.rough.json`, toReadableFile(work, m)); }
+          else if (work) {
+            // 컷마다 보이지 않는 엔진으로 크게 다시 그려서 합친다 (원고 화면의 작은 그림은 가로 360px라 흐림)
+            const which = kind === 'pagePng' ? [pageIndex] : m.pages.map((_, i) => i);
+            const files: [string, Uint8Array][] = [];
+            try {
+              for (const [n, i] of which.entries()) {
+                const blob = await renderPagePng(m, work.characters, i, opt, (done, total) =>
+                  setExportBusy(`${which.length > 1 ? `${n + 1}/${which.length}페이지 · ` : ''}고화질로 그리는 중… ${Math.min(done + 1, total)}/${total}컷`));
+                if (kind === 'pagePng') downloadBlob(blob, `${base}_${i + 1}페이지.png`);
+                else files.push([`${String(i + 1).padStart(2, '0')}페이지.png`, new Uint8Array(await blob.arrayBuffer())]);
+              }
+              if (kind === 'allPng') { setExportBusy('ZIP으로 묶는 중…'); downloadBlob(makeZip(files), `${base}_전체.zip`); }
+              say(kind === 'allPng' ? `원고 전체 ${which.length}페이지를 ZIP으로 내보냈어요.` : `${pageIndex + 1}페이지를 그림으로 내보냈어요.`);
+            } catch (e) {
+              say(e instanceof Error ? e.message : '그림을 만들지 못했어요.');
+            } finally { setExportBusy(''); }
           }
           setExportOpen(false);
         }}
@@ -350,14 +353,15 @@ export function ManuscriptPage() {
           open={importOpen}
           manuscript={m}
           characters={work.characters}
-          scopes={['cut', 'page', 'all']}
+          scopes={['cut', 'page', 'all', 'whole']}
           cutId={sel ? sel.id : null}
           pageIndex={pageIndex}
           onClose={() => setImportOpen(false)}
           onApply={async (fn, sum) => {
             setImportOpen(false);
             await update(fn);
-            say(`포즈를 컷 ${sum.applied}개에 가져왔어요${sum.replaced ? ` (${sum.replaced}개 덮어씀)` : ''}. 그림은 곧 새로 그려져요.`);
+            setSelected(null);
+            say(`컷 ${sum.applied}개에 불러왔어요${sum.replaced ? ` (장면 ${sum.replaced}개 바뀜)` : ''}. 그림은 곧 새로 그려져요.`);
           }}
         />
       )}

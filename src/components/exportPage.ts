@@ -3,6 +3,19 @@
  * images: 컷 id → 고화질 그림(data URL). 주면 작은 그림 대신 그 그림을 넣는다 (작은 그림이 없던 컷도).
  */
 export async function exportSvgAsPng(svg: SVGSVGElement, fileName: string, scale = 3, images: Record<string, string> = {}): Promise<void> {
+  downloadBlob(await svgToPngBlob(svg, scale, images), fileName);
+}
+
+export function downloadBlob(blob: Blob, fileName: string) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/** 페이지 SVG → PNG Blob (scale배 크기) */
+export async function svgToPngBlob(svg: SVGSVGElement, scale = 3, images: Record<string, string> = {}): Promise<Blob> {
   const vb = svg.viewBox.baseVal;
   // 제목 글자는 웹 글꼴이라 SVG 그림 안에서는 안 보일 수 있어서, 빼고 그린 뒤 캔버스에 같은 글꼴로 다시 쓴다
   const clone = svg.cloneNode(true) as SVGSVGElement;
@@ -50,11 +63,7 @@ export async function exportSvgAsPng(svg: SVGSVGElement, fileName: string, scale
     }
     const blob = await new Promise<Blob | null>(r => canvas.toBlob(r, 'image/png'));
     if (!blob) throw new Error('그림을 만들지 못했어요.');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = fileName;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    return blob;
   } finally {
     URL.revokeObjectURL(url);
   }

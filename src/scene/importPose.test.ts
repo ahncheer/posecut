@@ -78,3 +78,31 @@ describe('그림 콘티도 포즈 가져오기로', () => {
     expect(r.summary.replaced).toBe(1);
   });
 });
+
+describe('원고 전체를 파일대로', () => {
+  it('원고 파일: 페이지·칸·여백을 파일대로, 장면은 짝지은 인물로', async () => {
+    const { applyWhole } = await import('./importPose');
+    const w = work();
+    const src = ms(w);
+    src.pages[0].cuts[0] = { ...src.pages[0].cuts[0], scene: scene(2, 'f'), cast: ['A', 'B'] };
+    const file = JSON.stringify({ kind: 'rough-manuscript', version: 1, work: w, manuscript: { ...src, style: { ...src.style, gutter: 20 } } });
+    const s = parsePoseSource(file);
+    const target = newManuscript({ title: 't', work: w, format: 'page', template: 'one', style: DEFAULT_STYLE, pageRatio: DEFAULT_PAGE_RATIO });
+    const r = applyWhole(target, s, { A: 'B', B: 'C' }, w.characters);
+    expect(r.manuscript.pages.length).toBe(2);
+    expect(r.manuscript.style.gutter).toBe(20);
+    expect(r.manuscript.pages[0].cuts.length).toBe(4);
+    expect(r.manuscript.pages[0].cuts[0].cast).toEqual(['B', 'C']);
+    expect(r.manuscript.pages[0].cuts[0].thumb).toBeNull();
+    expect(r.summary.applied).toBe(1);
+  });
+  it('그림 콘티: 콘티 페이지로 바꾼다', async () => {
+    const { applyWhole } = await import('./importPose');
+    const w = work();
+    const s = parsePoseSource(sbSample);
+    const r = applyWhole(ms(w), s, { A: 'A', B: 'B' }, w.characters);
+    expect(r.manuscript.pages.length).toBe(1);
+    expect(r.manuscript.pages[0].title?.text).toBe('1화. 취향');
+    expect(r.summary.applied).toBe(4);
+  });
+});

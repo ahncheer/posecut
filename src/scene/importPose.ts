@@ -1,11 +1,11 @@
 // JSON에서 포즈 가져오기: 장면 파일(컷 하나) 또는 원고 파일(.rough.json)을 읽어
 // 등장인물을 지금 작품의 인물에 짝지은 뒤, 컷·페이지·원고 전체에 자세를 옮긴다.
 // 그림 콘티(rough-storyboard)도 받는다: 컷마다 콘티(plan)를 넣고, 장면은 엔진이 콘티대로 만든다.
-import type { Character, EngineScene, Manuscript, SlotId } from './types';
+import type { Character, EngineScene, FrameStyle, Manuscript, Page, SlotId } from './types';
 import { MAX_IN_CUT } from './types';
 import { castForCut, updateCut } from './manuscript';
 import { stripNotes } from '../storage/readableJson';
-import { looseJSON, panelToCut, parseStoryboard, type SbPanel } from './storyboard';
+import { looseJSON, pageFromStoryboard, panelToCut, parseStoryboard, type SbPanel, type Storyboard } from './storyboard';
 
 /** 가져온 파일 속 인물 한 명 */
 export interface SrcPerson { key: string; label: string; model: string | null }
@@ -18,6 +18,10 @@ export interface PoseSource {
   people: SrcPerson[];
   /** 페이지 → 컷 (장면 파일이면 [[컷 하나]]) */
   pages: SrcCut[][];
+  /** 원고 파일: 페이지·칸 모양 그대로 (원고 전체를 파일대로 바꿀 때) */
+  raw?: { pages: Page[]; style: FrameStyle; pageRatio: [number, number] };
+  /** 그림 콘티 */
+  storyboard?: Storyboard;
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -33,6 +37,7 @@ export function parsePoseSource(text: string, fileName = ''): PoseSource {
       kind: 'storyboard', title: fileName || '그림 콘티',
       people: sb.characters.map(c => ({ key: c.id, label: c.name, model: c.desc ?? null })),
       pages: sb.pages.map(p => p.panels.map(panel => ({ scene: null, people: (panel.chars ?? []).map(c => c.id), panel }))),
+      storyboard: sb,
     };
   }
   if (isScene(data)) {
@@ -61,7 +66,9 @@ export function parsePoseSource(text: string, fileName = ''): PoseSource {
       model: c.model ? (c.model.kind === 'sample' ? '기본 모델' : c.model.name) : null,
     }));
     const title = [isObj(data.work) && typeof data.work.title === 'string' ? data.work.title : '', typeof ms.title === 'string' ? ms.title : ''].filter(Boolean).join(' · ');
-    return { kind: 'manuscript', title: title || fileName || '원고 파일', people, pages };
+    const ok = (p: unknown): p is Page => isObj(p) && Array.isArray(p.cuts) && typeof p.height === 'number' && (p.cuts as unknown[]).every(c => isObj(c) && typeof c.id === 'string' && isObj(c.rect));
+    const raw = ms.pages.every(ok) && isObj(ms.style) && Array.isArray(ms.pageRatio) ? { pages: ms.pages, style: ms.style, pageRatio: ms.pageRatio } : undefined;
+    return { kind: 'manuscript', title: title || fileName || '원고 파일', people, pages, raw };
   }
   throw new Error('러프 도구에서 저장한 장면(.json)·원고(.rough.json)·그림 콘티(.json) 파일이 아니에요.');
 }
@@ -110,7 +117,7 @@ export function remapCut(src: SrcCut, mapping: Record<string, SlotId | ''>): { s
   return { scene, cast: kept.map(p => p.slot) };
 }
 
-export type ImportScope = 'cut' | 'page' | 'all';
+export type ImportScope = 'cut' | 'page' | 'all' | 'whole';
 export interface ImportPlan {
   scope: ImportScope;
   /** 이 컷 (scope=cut) */
@@ -166,4 +173,34 @@ export function applyImport(m: Manuscript, pairs: ImportPair[], mapping: Record<
     if (had) summary.replaced++;
   }
   return { manuscript: out, summary };
+}
+
+/**
+ * 원고 전체를 파일대로: 페이지·칸·제목까지 파일 모양으로 바꾼다.
+ * 원고 파일이면 칸 모양·여백을 그대로, 그림 콘티면 콘티의 칸대로. 인물은 짝지은 대로, 작은 그림은 새로 그린다.
+ */
+export function applyWhole(m: Manuscript, src: PoseSource, mapping: Record<string, SlotId | ''>, characters: Character[]): { manuscript: Manuscript; summary: ImportSummary } {
+  const had = m.pages.reduce((n, p) => n + p.cuts.filter(c => c.scene).length, 0);
+  if (src.storyboard) {
+    const sb = src.storyboard;
+    const pages = sb.pages.map(p => pageFromStoryboard(p, m, mapping, characters));
+    const applied = pages.reduce((n, p) => n + p.cuts.filter(c => c.plan && c.cast?.length).length, 0);
+    return { manuscript: { ...m, pages }, summary: { applied, replaced: had, skipped: 0, empty: 0 } };
+  }
+  if (src.raw) {
+    let applied = 0, empty = 0;
+    const pages: Page[] = src.raw.pages.map((p, pi) => ({
+      ...JSON.parse(JSON.stringify(p)) as Page,
+      cuts: p.cuts.map((c, ci) => {
+        const sc = src.pages[pi]?.[ci];
+        const base = { id: c.id, rect: c.rect, ...(c.poly ? { poly: c.poly } : {}), scene: null, thumb: null };
+        const r = sc ? remapCut(sc, mapping) : null;
+        if (r) { applied++; return { ...base, scene: r.scene, cast: r.cast }; }
+        if (sc?.scene) empty++;
+        return base;
+      }),
+    }));
+    return { manuscript: { ...m, style: { ...src.raw.style }, pageRatio: [src.raw.pageRatio[0], src.raw.pageRatio[1]], pages }, summary: { applied, replaced: had, skipped: 0, empty } };
+  }
+  return { manuscript: m, summary: { applied: 0, replaced: 0, skipped: 0, empty: 0 } };
 }

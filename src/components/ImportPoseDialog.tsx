@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Character, Manuscript, SlotId } from '../scene/types';
 import { MAX_IN_CUT } from '../scene/types';
 import {
-  applyImport, defaultMapping, duplicateTargets, parsePoseSource, planPairs, sceneCount,
+  applyImport, applyWhole, defaultMapping, duplicateTargets, parsePoseSource, planPairs, sceneCount,
   type ImportScope, type ImportSummary, type PoseSource,
 } from '../scene/importPose';
 import { modelName } from './CharacterEditor';
@@ -24,7 +24,7 @@ interface Props {
   onApply: (fn: (m: Manuscript) => Manuscript, summary: ImportSummary) => void;
 }
 
-const SCOPE_LABEL: Record<ImportScope, string> = { cut: '이 컷', page: '이 페이지', all: '원고 전체' };
+const SCOPE_LABEL: Record<ImportScope, string> = { cut: '이 컷', page: '이 페이지', all: '원고 전체 (지금 칸에)', whole: '원고 전체를 파일대로 (페이지·칸까지)' };
 
 export function ImportPoseDialog({ open, manuscript: m, characters, scopes, cutId, pageIndex, onClose, onApply }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -57,6 +57,9 @@ export function ImportPoseDialog({ open, manuscript: m, characters, scopes, cutI
       setSrcCut(here && (s.pages[here[0]]?.[here[1]]?.scene || s.pages[here[0]]?.[here[1]]?.panel) ? here : firstFilled);
       setSrcPage(s.pages[pageIndex] ? pageIndex : 0);
       if (s.kind === 'scene') setScope(scopes.includes('cut') ? 'cut' : scopes[0]);
+      // 여러 페이지짜리 파일은 원고 전체로 (콘티는 칸 모양까지, 원고 파일은 지금 칸에)
+      else if (s.kind === 'storyboard' && scopes.includes('whole')) setScope('whole');
+      else if (s.pages.length > 1 && scopes.includes('all')) setScope('all');
     } catch (e) {
       setSrc(null); setErr(e instanceof Error ? e.message : '파일을 읽지 못했어요.');
     } finally {
@@ -64,20 +67,21 @@ export function ImportPoseDialog({ open, manuscript: m, characters, scopes, cutI
     }
   };
 
-  const allowed = src?.kind === 'scene' ? scopes.filter(s => s === 'cut') : scopes;
+  const allowed = src?.kind === 'scene' ? scopes.filter(s => s === 'cut') : scopes.filter(s => s !== 'whole' || (src && (src.raw || src.storyboard)));
   const pairs = useMemo(() => (src ? planPairs(m, src, { scope, targetCutId: cutId ?? undefined, targetPage: pageIndex, srcCut, srcPage, skipFilled }) : []),
     [m, src, scope, cutId, pageIndex, srcCut, srcPage, skipFilled]);
   const dupes = duplicateTargets(mapping);
-  const preview = useMemo(() => (src ? applyImport(m, pairs, mapping, skipFilled, characters).summary : null), [m, src, pairs, mapping, skipFilled, characters]);
+  const run = (x: Manuscript) => (scope === 'whole' && src ? applyWhole(x, src, mapping, characters) : applyImport(x, pairs, mapping, skipFilled, characters));
+  const preview = useMemo(() => (src ? run(m).summary : null), [m, src, pairs, mapping, skipFilled, characters, scope]); // eslint-disable-line react-hooks/exhaustive-deps
   const mappedCount = Object.values(mapping).filter(Boolean).length;
   const canApply = !!src && !dupes.length && mappedCount > 0 && !!preview?.applied && (scope !== 'cut' || !!cutId);
   const withModel = characters.filter(c => c.model);
 
   return (
     <dialog ref={ref} onClose={onClose} aria-labelledby="impTitle">
-      <form className="dlg importdlg" method="dialog" onSubmit={e => { if (!canApply || !src) { e.preventDefault(); return; } const r = applyImport(m, pairs, mapping, skipFilled, characters); const pp = pairs, mp = mapping, sk = skipFilled; onApply(x => applyImport(x, pp, mp, sk, characters).manuscript, r.summary); }}>
+      <form className="dlg importdlg" method="dialog" onSubmit={e => { if (!canApply || !src) { e.preventDefault(); return; } const r = run(m); if (scope === 'whole' && r.summary.replaced && !confirm(`지금 원고의 장면 ${r.summary.replaced}개가 사라지고 파일 내용으로 바뀌어요. 계속할까요?`)) { e.preventDefault(); return; } const go = run; onApply(x => go(x).manuscript, r.summary); }}>
         <div className="dlg-head">
-          <h2 id="impTitle">JSON에서 포즈 가져오기</h2>
+          <h2 id="impTitle">JSON 불러오기</h2>
           <Info text="러프 도구에서 저장한 장면 파일(.json, 컷 편집 → 내보내기)·원고 파일(.rough.json, 원고 → 내보내기)·그림 콘티(.json)에서 자세·표정·카메라를 가져와요. 파일 속 인물을 지금 작품의 인물(모델)에 짝지어 넣어요." />
           <span className="spacer" />
           <button type="button" className="btn small ghost" onClick={onClose} aria-label="닫기">✕</button>
@@ -131,7 +135,7 @@ export function ImportPoseDialog({ open, manuscript: m, characters, scopes, cutI
               ))}
             </div>
             {src.kind === 'scene' && scopes.length > 1 && <p className="sect-note">장면 파일은 컷 하나 분량이라 "이 컷"에만 넣을 수 있어요. 페이지·원고 전체는 원고 파일(.rough.json)로 가져와 주세요.</p>}
-            {src.kind === 'storyboard' && <p className="sect-note">그림 콘티예요. 컷마다 포즈·방향·샷·말풍선·기호를 콘티대로 새로 놓아요 (지금 장면은 바뀌어요). 컷 칸 모양까지 그림처럼 만들려면 원고 화면의 "그림으로 콘티"를 쓰세요.</p>}
+            {src.kind === 'storyboard' && <p className="sect-note">그림 콘티예요. 컷마다 포즈·방향·샷·말풍선·기호를 콘티대로 새로 놓아요 (지금 장면은 바뀌어요). 컷 칸 모양·제목까지 콘티대로 바꾸려면 "원고 전체를 파일대로"를 고르세요.</p>}
             {scope === 'cut' && src.kind !== 'scene' && (
               <label className="impsel">가져올 컷
                 <select value={srcCut.join(',')} onChange={e => setSrcCut(e.target.value.split(',').map(Number) as [number, number])}>
@@ -151,13 +155,14 @@ export function ImportPoseDialog({ open, manuscript: m, characters, scopes, cutI
             <p className="sect-note">
               {scope === 'cut' && (cutId ? '고른 컷 하나에 넣어요.' : '원고에서 컷을 먼저 골라 주세요.')}
               {scope === 'page' && `파일의 ${srcPage + 1}페이지 컷들을 지금 ${pageIndex + 1}페이지 컷에 순서대로 넣어요.`}
-              {scope === 'all' && '파일의 페이지·컷 순서 그대로 원고 전체에 넣어요. 컷 수가 다르면 남는 컷은 그대로 둬요.'}
+              {scope === 'all' && '지금 페이지·칸은 그대로 두고, 파일의 페이지·컷 순서대로 장면만 넣어요. 컷 수가 다르면 남는 컷은 그대로 둬요.'}
+              {scope === 'whole' && `원고의 페이지 ${m.pages.length}개를 지우고, 파일의 페이지 ${src.pages.length}개로 바꿔요 (칸 모양·제목·여백까지). 작품 등장인물은 그대로예요.`}
             </p>
-            <label className="check"><input type="checkbox" checked={skipFilled} onChange={e => setSkipFilled(e.target.checked)} />이미 장면이 있는 컷은 건너뛰기</label>
+            {scope !== 'whole' && <label className="check"><input type="checkbox" checked={skipFilled} onChange={e => setSkipFilled(e.target.checked)} />이미 장면이 있는 컷은 건너뛰기</label>}
             {preview && (
               <p className="impcount" role="status">
                 컷 {preview.applied}개에 넣어요
-                {preview.replaced > 0 && <span className="warn"> · 그중 {preview.replaced}개는 지금 장면을 덮어써요</span>}
+                {preview.replaced > 0 && <span className="warn"> · {scope === 'whole' ? `지금 장면 ${preview.replaced}개가 사라져요` : `그중 ${preview.replaced}개는 지금 장면을 덮어써요`}</span>}
                 {preview.skipped > 0 && ` · ${preview.skipped}개 건너뜀`}
                 {preview.empty > 0 && ` · 짝지은 인물이 없는 컷 ${preview.empty}개`}
               </p>

@@ -1311,6 +1311,7 @@ function cleanProp(p) {
     rot: clampN(p.rot, -180, 180, 0), tilt: clampN(p.tilt, -90, 90, 0),
     color: /^#[0-9a-f]{6}$/i.test(p.color) ? p.color : '#d9d4c7',
     ...(typeof p.name === 'string' && p.name.trim() ? { name: p.name.trim().slice(0, 20) } : {}),
+    ...(typeof p.owner === 'string' ? { owner: p.owner.slice(0, 4) } : {}),
   };
 }
 function applyProp(p) {
@@ -1352,7 +1353,7 @@ const propRay = new THREE.Raycaster(), _ndcP = new THREE.Vector2();
  * 인물에 맞춰 가구 놓기 (상자 도형으로): chair 의자(좌석 + 등받이) · counter 카운터 · desk 책상.
  * 인물의 엉덩이·팔꿈치 실제 위치와 몸 방향(rot)을 읽어 높이·자리를 정한다. 만든 도형 목록을 돌려준다.
  */
-function furnish(s, type) {
+function furnish(s, type, opt = {}) {
   if (!s || !s.vrm) return [];
   s.vrm.humanoid.update(); s.vrm.scene.updateMatrixWorld(true);
   const W = (b) => { const n = s.vrm.humanoid.getRawBoneNode(b); return n ? n.getWorldPosition(new THREE.Vector3()) : null; };
@@ -1376,6 +1377,42 @@ function furnish(s, type) {
     const depth = type === 'counter' ? 0.6 : 0.65, near = sitting ? 0.14 : 0.2;
     put({ kind: 'box', name: type === 'counter' ? '카운터' : '책상', x: (chest.x + fx * (near + depth / 2)) * 100, z: (chest.z + fz * (near + depth / 2)) * 100, y: 0,
       w: type === 'counter' ? 160 : 120, d: depth * 100, h: top * 100, rot, color: '#d9d4c7' });
+  } else if (type === 'can') {
+    // 음료 캔(원기둥): 이 인물에게 가장 가까운 카운터·책상 위, 인물 쪽 가장자리에 나란히. 없으면 인물 앞 손 높이에
+    const rx = Math.cos(a), rz = -Math.sin(a); // 인물 기준 오른쪽
+    const color = /^#[0-9a-f]{6}$/i.test(opt.color) ? opt.color : '#c8c2b4';
+    const tables = props.filter(p => p.name === '카운터' || p.name === '책상');
+    const tb = tables.sort((p, q) => Math.hypot(p.x / 100 - hips.x, p.z / 100 - hips.z) - Math.hypot(q.x / 100 - hips.x, q.z / 100 - hips.z))[0];
+    const n = props.filter(p => p.name === '음료' && p.owner === s.letter).length;
+    const side = (n % 2 ? 1 : -1) * Math.ceil(n / 2) * 0.085 + 0.04;
+    let x, z, y;
+    if (tb) {
+      const ta = THREE.MathUtils.degToRad(tb.rot), tfx = Math.sin(ta), tfz = Math.cos(ta);
+      // 카운터 가운데에서 인물 쪽으로 (깊이의 절반 - 12cm)
+      const toward = Math.sign((hips.x - tb.x / 100) * tfx + (hips.z - tb.z / 100) * tfz) || -1;
+      const k = toward * (tb.d / 200 - 0.12);
+      x = tb.x / 100 + tfx * k + rx * side; z = tb.z / 100 + tfz * k + rz * side; y = (tb.y + tb.h) / 100;
+    } else {
+      x = chest.x + fx * 0.32 + rx * side; z = chest.z + fz * 0.32 + rz * side; y = Math.max(0, hips.y + 0.1);
+    }
+    put({ kind: 'cylinder', name: '음료', owner: s.letter, x: x * 100, z: z * 100, y: y * 100, w: 6.6, d: 6.6, h: 12.5, rot: 0, color });
+  } else if (type === 'trash') {
+    // 쓰레기통: 인물 오른쪽 옆 바닥 (카운터가 있으면 그 옆)
+    const rx = Math.cos(a), rz = -Math.sin(a);
+    put({ kind: 'cylinder', name: '쓰레기통', x: (hips.x + rx * 0.55 + fx * 0.25) * 100, z: (hips.z + rz * 0.55 + fz * 0.25) * 100, y: 0, w: 32, d: 32, h: 58, rot: 0, color: /^#[0-9a-f]{6}$/i.test(opt.color) ? opt.color : '#8f9296' });
+  } else if (type === 'shelf') {
+    // 음료 진열대: 인물이 바라보는 쪽 옆(화면 좌우)에 카메라를 향해 세운다 — 인물 얼굴과 진열대가 함께 보이게.
+    // 뒤판 + 선반 3칸 + 칸마다 캔 6개 (colors를 돌려 가며)
+    const colors = (Array.isArray(opt.colors) && opt.colors.length ? opt.colors : ['#6B4226', '#F2D35B', '#F28CB0', '#B07A4A']).filter(c => /^#[0-9a-f]{6}$/i.test(c));
+    const side = fx >= 0 ? 1 : -1, cx = hips.x + side * 0.7, cz = hips.z - 0.25;
+    put({ kind: 'box', name: '진열대', x: cx * 100, z: (cz - 0.16) * 100, y: 0, w: 100, h: 160, d: 3, rot: 0, color: '#e9e5dc' });
+    [0.38, 0.78, 1.18].forEach((h, row) => {
+      put({ kind: 'box', name: '진열대', x: cx * 100, z: cz * 100, y: (h - 0.03) * 100, w: 100, h: 3, d: 35, rot: 0, color: '#e9e5dc' });
+      for (let i = 0; i < 6; i++) {
+        const c = colors[(i + row) % colors.length];
+        put({ kind: 'cylinder', name: '음료', x: (cx + (i - 2.5) * 0.15) * 100, z: (cz + 0.08) * 100, y: h * 100, w: 6.6, d: 6.6, h: 12.5, rot: 0, color: c });
+      }
+    });
   }
   renderPropUI();
   return made;
@@ -4954,11 +4991,11 @@ function applyPlan(plan) {
     s.look = c.look === 'camera' ? 'camera' : c.look === 'other' && live.length > 1 ? 'other' : 'manual';
     applyPlacement(s); applyPose(s); groundSlot(s); applyLook(s); settleSprings(s);
   });
-  // 콘티의 가구: { type: chair·counter·desk, char: 인물 번호 }
+  // 콘티의 가구: { type: chair·counter·desk·can(color)·shelf(colors), char: 인물 번호 } — 적힌 순서대로 (캔은 카운터 다음에)
   setProps([]);
   (Array.isArray(plan.props) ? plan.props : []).slice(0, 12).forEach(pp => {
     const who = live[Number.isInteger(pp.char) ? pp.char : 0];
-    if (who && ['chair', 'counter', 'desk'].includes(pp.type)) furnish(who, pp.type);
+    if (who && ['chair', 'counter', 'desk', 'can', 'shelf', 'trash'].includes(pp.type)) furnish(who, pp.type, pp);
   });
   shot(kind);
   controls.update(); camera.updateMatrixWorld(true);

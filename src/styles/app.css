@@ -258,7 +258,7 @@ input.namein:focus { background: var(--bg); outline: 2px solid var(--accent); ou
   background: var(--ink); color: var(--surface); font: 400 12.5px/1.5 system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; font-style: normal;
   opacity: 0; visibility: hidden; transition: opacity .12s; pointer-events: none; text-align: left;
 }
-.info:hover .info-tip, .info:focus .info-tip { opacity: 1; visibility: visible; }
+.info:hover .info-tip, .info:focus-visible .info-tip { opacity: 1; visibility: visible; }
 .sect-head .info-tip { left: 0; transform: none; }
 .sect-head .spacer { flex: 1; }
 .sect-head { align-items: center; }
@@ -313,7 +313,7 @@ textarea.rowarea.field-solo { margin: 0; padding: 10px 12px; font-size: 15px; bo
 
 /* 숨긴 설명은 자리를 차지하지 않게 (휴대폰 가로 스크롤 방지) */
 .info-tip { display: none; }
-.info:hover .info-tip, .info:focus .info-tip { display: block; }
+.info:hover .info-tip, .info:focus-visible .info-tip { display: block; }
 @media (max-width: 600px) {
   .info-tip { position: fixed; left: 16px !important; right: 16px; bottom: auto; top: auto; transform: none !important; max-width: none; width: auto; margin-top: 28px; }
 }
@@ -462,3 +462,18 @@ dialog.sbdlg { width: min(1080px, calc(100% - 24px)); }
 .sbprompt pre { max-height: 220px; overflow: auto; white-space: pre-wrap; font-size: 11.5px; background: var(--bg); padding: 8px; border-radius: 6px; }
 .sbtext { width: 100%; font-family: ui-monospace, monospace; font-size: 12px; }
 @media (max-width: 760px) { .sbgrid, .sbways { grid-template-columns: minmax(0, 1fr); } .sbleft { position: static; } }
+
+/* 내보내기 창 옵션 */
+.expopts { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.expopts > label:first-child { font-size: 14px; font-weight: 500; }
+.expopts select { width: 100%; min-width: 0; }
+.expopts .expnum { grid-column: 1 / -1; }
+.exp-busy { margin-right: auto; }
+
+/* 페이지 목록 위 도구 (목록이 길어도 늘 보이게) */
+.pagetools { position: sticky; top: 0; z-index: 2; display: grid; gap: 6px; padding-bottom: 8px; background: var(--bg); border-bottom: 1px solid var(--line); }
+.pagetools h2 { margin: 0 0 2px; }
+.later-slot { visibility: hidden; }
+.pagethumb { scroll-margin-top: 210px; }
+/* 터치 화면은 누르면(focus) 설명이 보이게 — 마우스 화면은 올렸을 때·키보드로 골랐을 때만 */
+@media (hover: none) { .info:focus .info-tip { display: block; opacity: 1; visibility: visible; } }
