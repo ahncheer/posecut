@@ -104,7 +104,8 @@ label.field { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
 .msview { display: grid; grid-template-columns: 140px minmax(0, 1fr) 280px; gap: 16px; padding: 16px; align-items: start; }
 .pagelist { display: grid; gap: 8px; align-content: start; }
 /* 왼쪽 페이지 목록·오른쪽 패널은 화면 높이에 맞추고 넘치면 그 안에서 스크롤 */
-.pagelist, .msside { position: sticky; top: 16px; max-height: calc(100dvh - 90px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.pagelist, .msside { position: sticky; top: 16px; max-height: calc(100dvh - 90px); overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.msside > * { min-width: 0; }
 .msside { display: grid; gap: 12px; align-content: start; padding-right: 2px; }
 .pagethumb[draggable="true"] { cursor: grab; }
 .pagethumb[data-drop="before"] { box-shadow: 0 -3px 0 var(--accent); }
@@ -434,3 +435,7 @@ dialog.previewdlg { width: min(1040px, calc(100% - 24px)); }
 /* 컷 맞바꾸기 안내 */
 .swapbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 8px 0 0; padding: 8px 12px; border-radius: 8px; background: var(--accent-soft); color: var(--ink); font-size: 13px; }
 .canvaswrap:has(.swapbar) .cutbox { cursor: copy; }
+
+/* ⓘ 설명 풍선: 위치는 Info.tsx가 화면 기준으로 계산 (패널 스크롤에 잘리지 않게) */
+.info-tip.placed { position: fixed; bottom: auto; right: auto; transform: none !important; margin: 0; width: max-content; z-index: 1000; }
+@media (max-width: 600px) { .info-tip.placed { width: max-content; } }
