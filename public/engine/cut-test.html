@@ -905,6 +905,9 @@ function EXTRA_PRESETS() {
     ['책상에 엎드리기', { leftUpperLeg: R(-88, 0, 0), leftLowerLeg: R(88, 0, 0), rightUpperLeg: R(-88, 0, 0), rightLowerLeg: R(88, 0, 0), spine: R(32, 0, 0), chest: R(26, 0, 0), neck: R(16, 0, 0), head: R(18, 0, 10), leftUpperArm: R(-71, -15, -73), leftLowerArm: R(0, -106, 0), rightUpperArm: R(-72, 14, 72), rightLowerArm: R(0, 115, 0) }, { hands: { left: grip, right: grip } }],
     ['물건 집기', { leftUpperArm: R(0, 0, -72), leftLowerArm: R(0, 0, -6), rightUpperArm: R(-61, 24, 86), rightLowerArm: R(0, 2, 0), spine: R(25, 1, 5), head: R(12, 0, 0), chest: R(-9, 4, -2) }, { hands: { right: grip } }],
     ['가방 끈 잡기', { leftUpperArm: R(0, 0, -72), leftLowerArm: R(0, 0, -6), rightUpperArm: R(13, 24, 73), rightLowerArm: R(0, 110, 0) }, { hands: { right: fist } }],
+    ['물건 들고 보기', { leftUpperArm: R(-23, -22, -80), leftLowerArm: R(0, -85, 0), rightUpperArm: R(-23, 22, 80), rightLowerArm: R(0, 85, 0), spine: R(4, 0, 0), neck: R(8, 0, 0), head: R(16, 0, 0) }, { hands: { left: grip, right: grip } }],
+    ['마시기', { leftUpperArm: R(0, 0, -72), leftLowerArm: R(0, 0, -6), rightUpperArm: R(-70, 19, 112), rightLowerArm: R(0, 112, 0), chest: R(-6, 0, 0), neck: R(-10, 0, 0), head: R(-20, 0, 0) }, { hands: { right: grip } }],
+    ['얼굴 감싸기', { leftUpperArm: R(0, 0, -72), leftLowerArm: R(0, 0, -6), rightUpperArm: R(-78, 18, 115), rightLowerArm: R(0, 112, 0), neck: R(10, 0, 0), head: R(16, 0, 0) }, { hands: { right: { ...open, spread: 15 } } }],
   ];
 }
 const EMOTIONS = [['neutral', '기본'], ['happy', '기쁨'], ['angry', '화남'], ['sad', '슬픔'], ['relaxed', '편안'], ['surprised', '놀람']];
@@ -1398,6 +1401,29 @@ function furnish(s, type, opt = {}) {
       x = chest.x + fx * 0.32 + rx * side; z = chest.z + fz * 0.32 + rz * side; y = Math.max(0, hips.y + 0.1);
     }
     put({ kind: 'cylinder', name: '음료', owner: s.letter, x: x * 100, z: z * 100, y: y * 100, w: 6.6, d: 6.6, h: 12.5, rot: 0, color });
+  } else if (type === 'hold') {
+    // 손에 든 병: hand = right·left·both. 손목에서 손바닥 쪽으로 조금 나간 곳에 세워 쥔다.
+    // 손이 입 가까이 있으면(마시기) 병 입구를 입에 대고 바닥을 들어 올린다
+    const hands = opt.hand === 'left' ? ['left'] : opt.hand === 'both' ? ['right', 'left'] : ['right'];
+    const cols = (Array.isArray(opt.colors) && opt.colors.length ? opt.colors : [opt.color]).map(c => (/^#[0-9a-f]{6}$/i.test(c || '') ? c : '#3a3a3a'));
+    const head = W('head');
+    hands.forEach((h, i) => {
+      const hand = W(h + 'Hand'), elbow = W(h + 'LowerArm'); if (!hand || !elbow) return;
+      const dir = hand.clone().sub(elbow).normalize();
+      const c = hand.clone().addScaledVector(dir, 0.06);
+      const len = 0.15, color = cols[i % cols.length];
+      let tilt = 0, prot = 0;
+      if (head && hand.distanceTo(head) < 0.3) {
+        // 입에서 손을 지나 뻗게: 병 입구는 입, 몸통은 손 안
+        const mouth = head.clone().add(new THREE.Vector3(fx * 0.09, 0, fz * 0.09));
+        const t = mouth.clone().sub(c).normalize();
+        c.copy(mouth).addScaledVector(t, -len / 2);
+        // 원기둥은 위아래가 같아서 축을 뒤집어(-t) 기울기를 -90~90 안에 둔다
+        tilt = THREE.MathUtils.radToDeg(Math.acos(-t.y)); prot = THREE.MathUtils.radToDeg(Math.atan2(-t.x, -t.z));
+      }
+      // 도형은 (x, y + 높이/2, z)가 가운데라서 y만 반만큼 내린다
+      put({ kind: 'cylinder', name: '손에 든 병', owner: s.letter, x: c.x * 100, z: c.z * 100, y: c.y * 100 - len * 50, w: 6, d: 6, h: len * 100, rot: Math.round(prot), tilt: Math.round(tilt), color });
+    });
   } else if (type === 'trash') {
     // 쓰레기통: 인물 오른쪽 옆 바닥 (카운터가 있으면 그 옆)
     const rx = Math.cos(a), rz = -Math.sin(a);
@@ -3131,10 +3157,10 @@ const BUB_SHAPE_GROUPS = [
   ['마음의 소리', [['thought', '생각'], ['dotBubble', '생각(매끈)'], ['flash', '플래시'], ['uniflash', '우니 플래시'], ['swirl', '소용돌이'], ['darkFlash', '검은 플래시'], ['softGlow', '몽글 빛'], ['whiteFlash', '흰 섬광']]],
   ['특수', [['hexTech', '육각(SF)'], ['hexFrame', '육각 틀']]],
   ['만화 기호', [['markHeart', '하트'], ['markSparkle', '반짝'], ['markSweat', '땀방울'], ['markFluster', '당황'], ['markAnger', '빡침'], ['markScribble', '엉킨 낙서'],
-    ['markGloom', '우울 세로줄'], ['markBlush', '홍조 빗금'], ['markEmph', '강조선'], ['markMusic', '음표'], ['markSigh', '한숨'], ['markExclaim', '!'], ['markQuestion', '?']]],
+    ['markGloom', '우울 세로줄'], ['markBlush', '홍조 빗금'], ['markEmph', '강조선'], ['markMusic', '음표'], ['markSigh', '한숨'], ['markExclaim', '!'], ['markQuestion', '?'], ['markIdea', '전구']]],
 ];
 // 만화 기호: 말풍선과 같은 칸(옮기기·크기·돌리기·저장)을 쓰지만 몸·꼬리·글자 없이 기호만 그린다. 색 = 글자 색(color)
-const MARK_SHAPES = new Set(['markHeart', 'markSparkle', 'markSweat', 'markFluster', 'markAnger', 'markScribble', 'markGloom', 'markBlush', 'markEmph', 'markMusic', 'markSigh', 'markExclaim', 'markQuestion']);
+const MARK_SHAPES = new Set(['markHeart', 'markSparkle', 'markSweat', 'markFluster', 'markAnger', 'markScribble', 'markGloom', 'markBlush', 'markEmph', 'markMusic', 'markSigh', 'markExclaim', 'markQuestion', 'markIdea']);
 const isMark = (b) => MARK_SHAPES.has(b.shape);
 const BUB_SHAPES = BUB_SHAPE_GROUPS.flatMap(([, list]) => list);
 const BUB_SHAPE_TIP = {
@@ -3149,7 +3175,7 @@ const BUB_SHAPE_TIP = {
   markHeart: '하트 — 설렘·호감', markSparkle: '반짝임 — 기대·감탄', markSweat: '땀방울 — 곤란·민망', markFluster: '당황선(〃) — 놀람·당황, 머리 옆에',
   markAnger: '빡침 마크 — 짜증·화남, 이마 옆에', markScribble: '엉킨 낙서 — 혼란·답답함, 머리 위에', markGloom: '우울 세로줄 — 실망·풀 죽음, 머리 위에',
   markBlush: '홍조 빗금 — 부끄러움, 볼 위에', markEmph: '강조선 — 시선 집중·번뜩', markMusic: '음표 — 콧노래·기분 좋음', markSigh: '한숨 김 — 안도·피곤',
-  markExclaim: '느낌표 — 놀람', markQuestion: '물음표 — 의문',
+  markExclaim: '느낌표 — 놀람', markQuestion: '물음표 — 의문', markIdea: '전구 — 번뜩 떠오름',
 };
 const DARK_SHAPES = new Set(['blackBurst', 'darkFlash']);
 const BUB_THEMES = {
@@ -3459,6 +3485,17 @@ function drawMark(ctx, kind, cx, cy, rx, ry, color, seed) {
       const c = new Path2D();
       [[-0.35, 0.1, 0.38], [0.05, -0.15, 0.45], [0.42, 0.12, 0.36]].forEach(([dx, dy, r]) => { c.moveTo(cx + dx * rx + r * m, cy + dy * ry); c.arc(cx + dx * rx, cy + dy * ry, r * m, 0, Math.PI * 2); });
       ctx.lineWidth = lw * 1.8; ctx.stroke(c); ctx.fillStyle = '#FFFFFF'; ctx.fill(c); break; // 굵게 그린 뒤 속을 칠해 겹친 안쪽 선을 지움
+    }
+    case 'markIdea': { // 전구 + 빛 선
+      const br = m * 0.42, bx = cx, by = cy - ry * 0.12;
+      P.arc(bx, by, br, Math.PI * 0.78, Math.PI * 0.22);
+      P.lineTo(bx + br * 0.42, by + br * 1.25); P.lineTo(bx - br * 0.42, by + br * 1.25); P.closePath();
+      P.moveTo(bx - br * 0.38, by + br * 1.48); P.lineTo(bx + br * 0.38, by + br * 1.48);
+      P.moveTo(bx - br * 0.26, by + br * 1.7); P.lineTo(bx + br * 0.26, by + br * 1.7);
+      P.moveTo(bx - br * 0.25, by + br * 0.2); P.lineTo(bx, by - br * 0.15); P.lineTo(bx + br * 0.25, by + br * 0.2); // 필라멘트
+      for (let i = 0; i < 5; i++) { const a = -Math.PI * 0.95 + (i / 4) * Math.PI * 0.9; P.moveTo(bx + Math.cos(a) * br * 1.45, by + Math.sin(a) * br * 1.45); P.lineTo(bx + Math.cos(a) * br * 2.0, by + Math.sin(a) * br * 2.0); }
+      ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = lw * 1.1; ctx.stroke(P); break;
     }
     case 'markExclaim': case 'markQuestion':
       ctx.font = `800 ${Math.round(ry * 1.9)}px "Black Han Sans", "Noto Sans KR", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -4964,7 +5001,7 @@ const PLAN_SPAN = { full: 260, bust: 150, close: 90, low: 220, high: 220 };
 const PLAN_DEPTH = { near: 70, mid: 0, far: -240 };
 const PLAN_BUBBLE = { speech: 'oval', thought: 'thought', narration: 'box', caption: 'box', shout: 'shout', whisper: 'whisper', sfx: 'none', monologue: 'double', phone: 'electric', flash: 'flash', small: 'oval' };
 const PLAN_MARK = { heart: 'markHeart', sparkle: 'markSparkle', sweat: 'markSweat', fluster: 'markFluster', anger: 'markAnger', scribble: 'markScribble', gloom: 'markGloom',
-  blush: 'markBlush', emphasis: 'markEmph', music: 'markMusic', sigh: 'markSigh', exclaim: 'markExclaim', question: 'markQuestion' };
+  blush: 'markBlush', emphasis: 'markEmph', music: 'markMusic', sigh: 'markSigh', exclaim: 'markExclaim', question: 'markQuestion', idea: 'markIdea' };
 const clamp01 = (v, d) => (Number.isFinite(Number(v)) ? Math.min(1, Math.max(0, Number(v))) : d);
 function findPreset(name) {
   if (typeof name !== 'string' || !name.trim()) return null;
@@ -4997,7 +5034,7 @@ function applyPlan(plan) {
   setProps([]);
   (Array.isArray(plan.props) ? plan.props : []).slice(0, 12).forEach(pp => {
     const who = live[Number.isInteger(pp.char) ? pp.char : 0];
-    if (who && ['chair', 'counter', 'desk', 'can', 'shelf', 'trash'].includes(pp.type)) furnish(who, pp.type, pp);
+    if (who && ['chair', 'counter', 'desk', 'can', 'shelf', 'trash', 'hold'].includes(pp.type)) furnish(who, pp.type, pp);
   });
   // 누구를 기준으로 잡을지 (cam.focus = 인물 번호): 그 사람 머리 높이·가로 위치에 맞춘다
   const camIn = plan.cam && typeof plan.cam === 'object' ? plan.cam : {};
@@ -5060,7 +5097,9 @@ function applyPlan(plan) {
     const text = String(pb.text ?? '').slice(0, 400);
     const lines = text.split('\n');
     b.shape = PLAN_BUBBLE[k]; b.theme = 'basic'; b.text = text;
-    b.size = k === 'sfx' ? 76 : k === 'narration' || k === 'caption' ? 40 : k === 'small' ? 40 : 46;
+    // 글자 크기는 컷 높이 기준이라 가로로 긴 칸에선 너무 작아져서, 칸 가로:세로에 맞춰 키운다 (정사각형 1배 ~ 아주 긴 칸 1.8배)
+    const kScale = Math.min(1.8, Math.max(1, Math.sqrt(W / H)));
+    b.size = Math.round((k === 'sfx' ? 76 : k === 'narration' || k === 'caption' ? 40 : k === 'small' ? 40 : 46) * kScale);
     // 말풍선 모양마다 글자가 들어가는 안쪽 비율(TEXT_BOX)로 나눠서, 줄이 엉뚱하게 꺾이지 않을 만큼 넉넉히
     const [tfw, tfh] = TEXT_BOX[b.shape] || TEXT_BOX.oval;
     // 실제 글자 폭을 재서 (drawBubble과 같은 글꼴·크기)
@@ -5142,6 +5181,20 @@ function avoidFaces(heads, sizes) {
     }
     b.x = best ? best.x : ox; b.y = best ? best.y : oy;
     b.tail = { ...b.tail };
+  });
+  // 기호(땀·강조선 등)가 말풍선 글자 위에 겹치면 가까운 빈자리로
+  const talk = bubbles.filter(o => !isMark(o) && o.shape !== 'none');
+  bubbles.forEach(m => {
+    if (!isMark(m) || !talk.some(o => overlap(o, m))) return;
+    const ox = m.x, oy = m.y; let best = null;
+    for (let gx = 0; gx <= 24; gx++) for (let gy = 0; gy <= 24; gy++) {
+      const x = m.w / 2 + 0.01 + (1 - m.w - 0.02) * gx / 24, y = m.h / 2 + 0.01 + (1 - m.h - 0.02) * gy / 24;
+      m.x = x; m.y = y;
+      if (talk.some(o => overlap(o, m))) continue;
+      const d = Math.hypot(x - ox, (y - oy) * H / W);
+      if (!best || d < best.d) best = { x, y, d };
+    }
+    m.x = best ? best.x : ox; m.y = best ? best.y : oy;
   });
   // 꼬리 끝이 얼굴 위에 오면 얼굴 테두리 밖에서 멈춘다 (말하는 쪽은 그대로 가리키게)
   bubbles.forEach(b => {

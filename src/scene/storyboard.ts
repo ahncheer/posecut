@@ -9,19 +9,19 @@ import { newId } from './id';
 import { stripNotes } from '../storage/readableJson';
 
 export const POSE_NAMES = ['차렷', '손 흔들기', '만세', '걷기', '고개 숙이기', '팔짱', '허리에 손', '가리키기', '생각하기', '전화하기', '손 내밀기', '놀람', '인사', '기지개',
-  '뒤돌아보기', '뛰기', '의자에 앉기', '쪼그려 앉기', '무릎 꿇기', '한쪽 무릎', '턱 괴기', '책상에 엎드리기', '물건 집기', '가방 끈 잡기'];
+  '뒤돌아보기', '뛰기', '의자에 앉기', '쪼그려 앉기', '무릎 꿇기', '한쪽 무릎', '턱 괴기', '책상에 엎드리기', '물건 집기', '가방 끈 잡기', '물건 들고 보기', '마시기', '얼굴 감싸기'];
 export const SHOT_KINDS = ['full', 'bust', 'close', 'low', 'high'] as const;
 export const FACINGS = ['camera', 'left', 'right', 'three-quarter-left', 'three-quarter-right', 'back', 'back-left', 'back-right'];
 export const BUBBLE_KINDS = ['speech', 'thought', 'narration', 'shout', 'whisper', 'sfx', 'monologue', 'phone', 'small'];
-export const MARK_KINDS = ['heart', 'sparkle', 'sweat', 'fluster', 'anger', 'scribble', 'gloom', 'blush', 'emphasis', 'music', 'sigh', 'exclaim', 'question'];
+export const MARK_KINDS = ['heart', 'sparkle', 'sweat', 'fluster', 'anger', 'scribble', 'gloom', 'blush', 'emphasis', 'music', 'sigh', 'exclaim', 'question', 'idea'];
 export const EMOTIONS = ['neutral', 'happy', 'angry', 'sad', 'relaxed', 'surprised'];
-export const FURNITURE = ['chair', 'counter', 'desk', 'can', 'shelf', 'trash'] as const;
+export const FURNITURE = ['chair', 'counter', 'desk', 'can', 'shelf', 'trash', 'hold'] as const;
 
 export interface SbChar { id: string; name: string; desc?: string }
 export interface SbPanelChar { id: string; x?: number; depth?: 'near' | 'mid' | 'far'; facing?: string; pose?: string; emotion?: string; eyes?: 'open' | 'half' | 'closed'; look?: 'camera' | 'other' | 'none' }
 export interface SbBubble { kind?: string; text?: string; x?: number; y?: number; w?: number; h?: number; to?: string; rot?: number }
 export interface SbMark { kind: string; x?: number; y?: number; size?: number; rot?: number }
-export interface SbProp { type: typeof FURNITURE[number]; for?: string; color?: string; colors?: string[] }
+export interface SbProp { type: typeof FURNITURE[number]; for?: string; color?: string; colors?: string[]; /** hold: 어느 손에 (right·left·both) */ hand?: 'right' | 'left' | 'both' }
 export const BG_FX = ['none', 'focus', 'speed', 'sparkle', 'gradient', 'tone', 'solid'] as const;
 export const LOOKS = ['manga', 'line', 'none'] as const;
 export interface SbPanel { box: [number, number, number, number]; shot?: string; chars?: SbPanelChar[]; bubbles?: SbBubble[]; marks?: SbMark[]; props?: SbProp[]; cam?: { yaw?: number; pitch?: number; zoom?: number; roll?: number; dx?: number; dy?: number; focus?: string; at?: 'can' }; bg?: string; bgColor?: string; look?: typeof LOOKS[number]; background?: string; note?: string }
@@ -96,7 +96,7 @@ export function parseStoryboard(text: string): Storyboard {
         const type = oneOf(r.type, FURNITURE);
         const hex = (v: unknown) => (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v : undefined);
         const colors = Array.isArray(r.colors) ? r.colors.map(hex).filter((c): c is string => !!c).slice(0, 8) : undefined;
-        return type ? [{ type, for: str(r.for, 20), color: hex(r.color), colors: colors?.length ? colors : undefined }] : [];
+        return type ? [{ type, for: str(r.for, 20), color: hex(r.color), colors: colors?.length ? colors : undefined, ...(type === 'hold' ? { hand: oneOf(r.hand, ['right', 'left', 'both'] as const) ?? 'right' } : {}) }] : [];
       });
       const cq = q.cam && typeof q.cam === 'object' ? q.cam as Record<string, unknown> : null;
       const cam = cq ? { yaw: num(cq.yaw, 0, -170, 170), pitch: num(cq.pitch, 0, -60, 60), zoom: num(cq.zoom, 1, 0.4, 3), roll: num(cq.roll, 0, -45, 45), dx: num(cq.dx, 0, -2, 2), dy: num(cq.dy, 0, -2, 2), ...(typeof cq.focus === 'string' ? { focus: str(cq.focus, 20) } : {}), ...(cq.at === 'can' ? { at: 'can' as const } : {}) } : undefined;
@@ -163,7 +163,7 @@ export function panelToCut(panel: SbPanel, mapping: Record<string, SlotId | ''>,
       chars: kept.map(({ c }) => ({ x: c.x, depth: c.depth, facing: c.facing, pose: c.pose, emotion: c.emotion, eyes: c.eyes, look: c.look })),
       bubbles: (panel.bubbles ?? []).map(b => ({ kind: b.kind, text: b.text, x: b.x, y: b.y, w: b.w, h: b.h, to: index(b.to), rot: b.rot })),
       marks: panel.marks ?? [],
-      props: (panel.props ?? []).flatMap(p => { const i = index(p.for) ?? (kept.length ? 0 : undefined); return i === undefined ? [] : [{ type: p.type, char: i, color: p.color, colors: p.colors }]; }),
+      props: (panel.props ?? []).flatMap(p => { const i = index(p.for) ?? (kept.length ? 0 : undefined); return i === undefined ? [] : [{ type: p.type, char: i, color: p.color, colors: p.colors, ...(p.hand ? { hand: p.hand } : {}) }]; }),
       cam: panel.cam ? { ...panel.cam, focus: index(panel.cam.focus) } : undefined, bg: panel.bg, bgColor: panel.bgColor, look: panel.look ?? defaultLook,
       background: panel.background,
       note: panel.note,
@@ -246,12 +246,12 @@ export const STORYBOARD_PROMPT = `첨부한 만화 페이지 그림을 3D 콘티
         "to": "A"                   // 말하는 인물 id (꼬리 방향). 내레이션·효과음은 빼기
       } ],
       "marks": [ {
-        "kind": "${MARK_KINDS.join(' | ')}",  // 하트·반짝·땀·당황선·빡침·엉킨 낙서·우울 세로줄·홍조 빗금·강조선·음표·한숨·!·?
+        "kind": "${MARK_KINDS.join(' | ')}",  // 하트·반짝·땀·당황선·빡침·엉킨 낙서·우울 세로줄·홍조 빗금·강조선·음표·한숨·!·?·전구(번뜩)
         "x": 0.2, "y": 0.2, "size": 0.06, "rot": 0   // 컷 기준 위치, size = 컷 가로 대비 크기, rot = 기울기(도)
       } ],
-      "props": [ { "type": "chair | counter | desk | can | shelf | trash", "for": "A", "color": "#6B4226", "colors": ["#6B4226", "#F2D35B"] } ],
+      "props": [ { "type": "chair | counter | desk | can | shelf | trash | hold", "for": "A", "color": "#6B4226", "colors": ["#6B4226", "#F2D35B"], "hand": "right | left | both" } ],
         // 그 인물에 맞춰 놓을 것: 앉아 있으면 chair, 앞 계산대 counter, 책상 desk,
-        // can = 음료 캔(원기둥, color = 음료 대표색, 카운터 다음에 적으면 카운터 위에), shelf = 음료 진열대(인물 앞, colors = 캔 색들), trash = 쓰레기통(인물 옆)
+        // can = 음료 캔(원기둥, color = 음료 대표색, 카운터 다음에 적으면 카운터 위에), shelf = 음료 진열대(인물 앞, colors = 캔 색들), trash = 쓰레기통(인물 옆), hold = 손에 든 병(hand 손, colors 두 손 색 — 포즈 '물건 들고 보기'·'마시기'와 함께)
       "cam": { "yaw": 0, "pitch": 0, "zoom": 1, "roll": 0, "dx": 0, "dy": 0, "focus": "A", "at": "can" },
         // (선택) shot에서 카메라를 더 돌리기: yaw 좌우(도, -170~170) · pitch 위아래(+면 내려다봄) · zoom(>1 가까이) · roll 기울임(도)
         // dx·dy 화면 오른쪽·위로 옮기기(미터, 인물을 한쪽에 두고 여백 만들기) · focus 기준 인물 id · at "can" = 계산대 위 캔 클로즈업

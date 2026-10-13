@@ -49,3 +49,20 @@ describe('그림 콘티 → 원고', () => {
     expect(replaced.pages[0].id).toBe(page.id);
   });
 });
+
+describe('storyboard extras', () => {
+  it('keeps hand-held props, idea marks and camera focus', () => {
+    const sb = parseStoryboard(JSON.stringify({
+      kind: 'rough-storyboard', version: 1, characters: [{ id: 'A' }, { id: 'B' }],
+      pages: [{ panels: [{ box: [0, 0, 1, 1], chars: [{ id: 'A', pose: '얼굴 감싸기' }, { id: 'B', pose: '마시기' }],
+        props: [{ type: 'hold', for: 'B', hand: 'both', colors: ['#112233', '#445566'] }, { type: 'hold', for: 'B', hand: 'nope' }],
+        marks: [{ kind: 'idea', x: 0.1, y: 0.2 }], cam: { focus: 'B', dx: 9, at: 'can' } }] }],
+    }));
+    const p = sb.pages[0].panels[0];
+    expect(p.props?.[0]).toMatchObject({ type: 'hold', hand: 'both', colors: ['#112233', '#445566'] });
+    expect(p.props?.[1].hand).toBe('right');
+    expect(p.marks?.[0].kind).toBe('idea');
+    expect(p.cam).toMatchObject({ focus: 'B', dx: 2, at: 'can' });
+    expect(p.chars?.map(c => c.pose)).toEqual(['얼굴 감싸기', '마시기']);
+  });
+});

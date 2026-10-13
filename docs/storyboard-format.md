@@ -58,16 +58,16 @@
 | 항목 | 쓸 수 있는 값 |
 |---|---|
 | `facing` (화면 기준 몸 방향) | `camera` 정면 · `left` · `right` · `three-quarter-left` · `three-quarter-right` · `back` 뒷모습 · `back-left` · `back-right` |
-| `pose` | 차렷 · 손 흔들기 · 만세 · 걷기 · 고개 숙이기 · 팔짱 · 허리에 손 · 가리키기 · 생각하기 · 전화하기 · 손 내밀기 · 놀람 · 인사 · 기지개 · 뒤돌아보기 · 뛰기 · 의자에 앉기 · 쪼그려 앉기 · 무릎 꿇기 · 한쪽 무릎 · 턱 괴기 · 책상에 엎드리기 · 물건 집기 · 가방 끈 잡기 |
+| `pose` | 차렷 · 손 흔들기 · 만세 · 걷기 · 고개 숙이기 · 팔짱 · 허리에 손 · 가리키기 · 생각하기 · 전화하기 · 손 내밀기 · 놀람 · 인사 · 기지개 · 뒤돌아보기 · 뛰기 · 의자에 앉기 · 쪼그려 앉기 · 무릎 꿇기 · 한쪽 무릎 · 턱 괴기 · 책상에 엎드리기 · 물건 집기 · 가방 끈 잡기 · 물건 들고 보기 · 마시기 · 얼굴 감싸기 |
 | `bubbles[].kind` | `speech` 대사 · `thought` 생각(구름) · `narration` 네모 설명 · `shout` 외침 · `whisper` 속삭임 · `sfx` 효과음 글자 · `monologue` 독백 · `phone` 전화·기계 · `small` 작은 말풍선(…) |
-| `marks[].kind` | `heart` 하트 · `sparkle` 반짝 · `sweat` 땀방울 · `fluster` 당황선 · `anger` 빡침 · `scribble` 엉킨 낙서 · `gloom` 우울 세로줄 · `blush` 홍조 빗금 · `emphasis` 강조선 · `music` 음표 · `sigh` 한숨 · `exclaim` ! · `question` ? |
+| `marks[].kind` | `heart` 하트 · `sparkle` 반짝 · `sweat` 땀방울 · `fluster` 당황선 · `anger` 빡침 · `scribble` 엉킨 낙서 · `gloom` 우울 세로줄 · `blush` 홍조 빗금 · `emphasis` 강조선 · `music` 음표 · `sigh` 한숨 · `exclaim` ! · `question` ? · `idea` 전구(번뜩) |
 | `cam` | `yaw` 좌우 회전(도, -170~170, +면 인물 오른쪽에서) · `pitch` 위아래(도, -60~60, +면 내려다봄 / -면 올려다봄) · `zoom` 0.4~3 (>1 가까이) · `roll` 화면 기울임(도, -45~45, 긴장·코미디에) |
 | `cam` (구도) | `focus` 기준 인물 id (그 사람 머리·가로 위치에 맞춤 — 어깨 너머 컷은 멀리 있는 사람) · `dx`·`dy` 화면 오른쪽·위로 옮기기(미터, -2~2, 인물을 한쪽에 두고 여백 만들기) · `at: "can"` 계산대 위 캔 클로즈업(물건 컷) |
 | `bg` | `none` · `focus` 집중선 · `speed` 속도선 · `sparkle` 반짝 · `gradient` 그라데이션 · `tone` 망점 · `solid` 단색 — `bgColor`로 색. 개그 펀치라인·감정 컷에 |
 | `look` | `manga` 만화 톤(흑백 톤·외곽선) · `line` 선화만 · `none` 3D 그대로 |
 | `marks[].size` | 컷 가로 대비 크기 (0.02~0.5) |
 | `props[].type` | `chair` 의자(앉은 자리에 좌석+등받이) · `counter` 카운터(앞에, 앉아 있으면 팔꿈치 높이) · `desk` 책상 — 상자 도형으로 놓이고 컷 편집에서 고칠 수 있어요 |
-| `props[].type` (소품) | `can` 음료 캔 — 원기둥, `color`(#rrggbb, 음료 대표색). 그 인물에게 가까운 카운터 위 인물 쪽에 나란히 (카운터보다 뒤에 적기) · `shelf` 음료 진열대 — 인물 앞 90cm, 선반 3칸에 `colors` 색 캔 · `trash` 쓰레기통 — 인물 오른쪽 옆 |
+| `props[].type` (소품) | `can` 음료 캔 — 원기둥, `color`(#rrggbb, 음료 대표색). 그 인물에게 가까운 카운터 위 인물 쪽에 나란히 (카운터보다 뒤에 적기) · `shelf` 음료 진열대 — 인물 앞 90cm, 선반 3칸에 `colors` 색 캔 · `trash` 쓰레기통 — 인물 오른쪽 옆 · `hold` 손에 든 병 — `hand`(right·left·both), 색은 `color` 또는 두 손이면 `colors`. 손이 입 가까이면(포즈 `마시기`) 병을 기울여 입에 댐 |
 
 ## 바꿀 때의 규칙 (코드)
 
