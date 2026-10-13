@@ -91,6 +91,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(248, 247, 242, .85); color: #1D1F22; font-size: 14px; }
 .drop { position: absolute; inset: 8px; border: 2px dashed #2F5FBF; border-radius: 10px; display: grid; place-items: center; background: rgba(228, 236, 250, .85); color: #1D1F22; font-weight: 500; }
 .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+/* 편집 패널 위쪽(누구에게 적용 · 탭)은 내려도 늘 위에 붙어 있게 */
+aside.panel > .tabs { position: sticky; top: -14px; z-index: 5; margin: -14px -14px 0; padding: 14px 14px 12px; background: var(--surface); border-radius: 12px 12px 0 0; }
 /* 탭: 두 묶음(선택한 인물 / 컷 전체)을 색으로 구분. 묶음마다 이름표 + 같은 모양의 분할 단추 */
 .tabgroup { display: grid; gap: 5px; min-width: 0; }
 .tg-label { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); padding-left: 2px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -589,6 +591,14 @@ body.embed .top { flex-wrap: nowrap; }
         <p class="sub" id="bubEmpty">말풍선이 없어요. "+ 말풍선"을 누르면 컷에 생겨요.</p>
         <p class="sub" id="bubNone" hidden>목록이나 컷에서 말풍선을 누르면 고칠 수 있어요.</p>
         <div id="bubEdit" hidden>
+          <details class="fold" id="foldBubText" open>
+            <summary><h2>텍스트</h2><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="Enter로 줄을 바꿀 수 있어요. 말풍선 폭에 맞춰 자동으로 줄이 넘어가요."></span></summary>
+            <div class="foldbody">
+              <label class="vh" for="bubText">말풍선 글</label>
+              <textarea id="bubText" class="txt" rows="3" placeholder="대사를 입력하세요"></textarea>
+              <div class="field"><label for="bubSize">글자 크기</label><input id="bubSize" type="range" min="20" max="140" step="1"><output for="bubSize" id="bubSizeo"></output></div>
+            </div>
+          </details>
           <details class="fold" id="foldBubShape" open>
             <summary><h2>말풍선 모양</h2><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="컷에서 말풍선을 끌면 옮겨지고, 오른쪽 아래 네모로 크기를, 주황 점으로 꼬리 끝을 바꿔요. 두 번 누르면 글을 고칠 수 있어요. Delete 키로 지워요."></span></summary>
             <div class="foldbody">
@@ -602,13 +612,6 @@ body.embed .top { flex-wrap: nowrap; }
             <div class="foldbody">
               <div class="btiles" id="bubThemes"></div>
               <div class="field" id="bubBgRow" hidden><label for="bubBg">바탕색</label><input id="bubBg" type="color" value="#bfe3ff" class="colorin"><span></span></div>
-            </div>
-          </details>
-          <details class="fold" id="foldBubText" open>
-            <summary><h2>텍스트</h2><span class="info" tabindex="0" role="img" aria-label="설명" data-tip="Enter로 줄을 바꿀 수 있어요. 말풍선 폭에 맞춰 자동으로 줄이 넘어가요."></span></summary>
-            <div class="foldbody">
-              <label class="vh" for="bubText">말풍선 글</label>
-              <textarea id="bubText" class="txt" rows="3" placeholder="대사를 입력하세요"></textarea>
             </div>
           </details>
           <details class="fold" id="foldBubTfx" open>
@@ -633,7 +636,6 @@ body.embed .top { flex-wrap: nowrap; }
               <label class="check"><input type="checkbox" id="bubMatch" checked>말풍선 색에 맞추기 <span class="info" tabindex="0" role="img" aria-label="설명" data-tip="켜 두면 말풍선 색에 어울리는 글꼴·글자색으로 자동으로 바뀌어요. 아래에서 하나라도 바꾸면 꺼져요."></span></label>
               <label class="sub" for="bubFont">글꼴</label>
               <select id="bubFont"></select>
-              <div class="field"><label for="bubSize">크기</label><input id="bubSize" type="range" min="20" max="140" step="1"><output for="bubSize" id="bubSizeo"></output></div>
               <div class="btnrow">
                 <button class="chip" id="bubBold" type="button" aria-pressed="false" style="font-weight: 700">굵게</button>
                 <button class="chip" id="bubItalic" type="button" aria-pressed="false" style="font-style: italic">기울임</button>
