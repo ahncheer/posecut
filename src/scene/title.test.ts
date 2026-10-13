@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newManuscript, newWork, addPage } from './manuscript';
-import { applyTitle, titleReserve } from './title';
-import { DEFAULT_STYLE, DEFAULT_PAGE_RATIO } from './layout';
+import { applyTitle, changePageRatio, titleReserve } from './title';
+import { DEFAULT_STYLE, DEFAULT_PAGE_RATIO, pageHeightFor } from './layout';
 import { applySplit, splitFromTemplate } from './split';
 import type { PageTitle } from './types';
 
@@ -48,5 +48,37 @@ describe('page title', () => {
     expect(m2.pages[3].title?.font).toBe('Gaegu');
     expect(m2.pages[3].title?.text).toBe('');
     expect(m2.pages[3].cuts[0].rect.y).toBeCloseTo(m.pages[0].cuts[0].rect.y, 5);
+  });
+});
+
+describe('page ratio change', () => {
+  it('stretches template cuts to the new height, keeps scenes and ids, clears thumbs', () => {
+    const m0 = applyTitle(ms(), [0], 0, T);
+    const scene = { v: 1 } as unknown as import('./types').EngineScene;
+    const m = { ...m0, pages: m0.pages.map(p => ({ ...p, cuts: p.cuts.map((c, i) => (i === 1 ? { ...c, scene, thumb: 'data:x' } : c)) })) };
+    const next = changePageRatio(m, [1, 3]);
+    const p = next.pages[0], before = m.pages[0];
+    expect(next.pageRatio).toEqual([1, 3]);
+    expect(p.height).toBe(pageHeightFor([1, 3]));
+    expect(p.cuts.map(c => c.id)).toEqual(before.cuts.map(c => c.id));
+    expect(p.cuts[1].scene).toBe(scene);
+    expect(p.cuts[1].thumb).toBeNull();
+    // 제목 자리(위)는 그대로, 마지막 컷 아래 끝은 새 높이 - 여백
+    expect(p.cuts[0].rect.y).toBeCloseTo(before.cuts[0].rect.y, 5);
+    const last = p.cuts[p.cuts.length - 1];
+    expect(last.rect.y + last.rect.h).toBeCloseTo(p.height - m.style.margin, 0);
+    expect(p.cuts[0].rect.w).toBeCloseTo(before.cuts[0].rect.w, 5);
+  });
+  it('moves hand-drawn lines with the height', () => {
+    const m = ms();
+    const root = splitFromTemplate('four', m.style, m.pageRatio, m.pages[0].cuts.map(c => c.id));
+    const drawn = applySplit(m.pages[0], root, m.style, m.pageRatio)!;
+    const m2 = { ...m, pages: [drawn] };
+    const next = changePageRatio(m2, [3, 4]);
+    const p = next.pages[0];
+    expect(p.split).toBeTruthy();
+    expect(p.cuts.map(c => c.id)).toEqual(drawn.cuts.map(c => c.id));
+    const bottom = Math.max(...p.cuts.map(c => c.rect.y + c.rect.h));
+    expect(bottom).toBeCloseTo(pageHeightFor([3, 4]) - m.style.margin, 0);
   });
 });

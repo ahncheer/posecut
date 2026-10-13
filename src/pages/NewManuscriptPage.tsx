@@ -140,7 +140,7 @@ export function NewManuscriptPage() {
               <section className="sect" aria-labelledby="sFormat">
                 <div className="sect-head">
                   <h2 className="sect-title" id="sFormat">형식</h2>
-                  <span className="notice-blue" id="formatNote">만든 뒤에는 형식과 페이지 비율을 바꿀 수 없어요</span>
+                  <span className="notice-blue" id="formatNote">만든 뒤에는 형식을 바꿀 수 없어요 (페이지 비율은 원고 화면에서 바꿀 수 있어요)</span>
                 </div>
                 <div className="grouped">
                   <div className="row">

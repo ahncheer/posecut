@@ -9,13 +9,13 @@ import { addPage, changePageTemplate, clearCut, findCut, pasteScene, previousCut
 import { PageTemplateDialog } from '../components/PageTemplateDialog';
 import { TemplatePicker } from '../components/TemplatePicker';
 import type { FrameStyle, Page, PageTitle, TemplateId, TitlePos } from '../scene/types';
-import { applyTitle, DEFAULT_TITLE, pageStyle, TITLE_FONTS, TITLE_POS, TITLE_SIZES } from '../scene/title';
+import { applyTitle, changePageRatio, DEFAULT_TITLE, pageStyle, TITLE_FONTS, TITLE_POS, TITLE_SIZES } from '../scene/title';
 import { Info } from '../components/Info';
 import { ImportPoseDialog } from '../components/ImportPoseDialog';
 import { ThumbBaker } from '../components/ThumbBaker';
 import { StoryboardDialog } from '../components/StoryboardDialog';
 import { updateCut } from '../scene/manuscript';
-import { templateLabel, templateOf } from '../scene/layout';
+import { DEFAULT_PAGE_RATIO, templateLabel, templateOf } from '../scene/layout';
 import { applySplit } from '../scene/split';
 import { CutDrawDialog } from '../components/CutDrawDialog';
 import { cutRatio } from '../scene/layout';
@@ -278,6 +278,21 @@ export function ManuscriptPage() {
               />
             )}
           </details>
+
+          {m.format === 'page' && (
+            <details className="panel fold" aria-label="페이지 비율">
+              <summary><h2>페이지 비율</h2><span className="fold-sum">{fmtRatio(m.pageRatio)}</span></summary>
+              <RatioChanger
+                key={m.pageRatio.join(':')}
+                current={m.pageRatio}
+                pageCount={m.pages.length}
+                onApply={async r => {
+                  await update(x => changePageRatio(x, r));
+                  say(`페이지 비율을 ${fmtRatio(r)}(으)로 바꿨어요. 컷 그림은 차례로 다시 그려져요.`);
+                }}
+              />
+            </details>
+          )}
         </aside>
       </div>
 
@@ -430,6 +445,45 @@ function TemplateChanger({ pageNumber, current, style, ratio, lostFor, onApply, 
         onClick={() => { if (!lost || confirm(`장면 ${lost}개가 사라져요. 바꿀까요?`)) onApply(value); }}
       >
         {lost ? `장면 ${lost}개 지우고 ${pageNumber}페이지에 적용` : `${pageNumber}페이지에 적용`}
+      </button>
+    </div>
+  );
+}
+
+const fmtRatio = (r: [number, number]) => `${+r[0].toFixed(2)}:${+r[1].toFixed(2)}`;
+const RATIO_PRESETS: { r: [number, number]; label: string }[] = [
+  { r: DEFAULT_PAGE_RATIO, label: '기본' },
+  { r: [4, 5], label: '인스타' },
+  { r: [1, 3], label: '세로 4컷' },
+  { r: [1, 1], label: '정사각형' },
+  { r: [3, 4], label: '3:4' },
+  { r: [5, 7], label: '종이책' },
+  { r: [9, 16], label: '스토리' },
+];
+
+/** 오른쪽 "페이지 비율": 원고 전체 페이지의 가로:세로를 바꾼다. 칸은 새 높이에 맞춰 늘고 장면은 그대로 */
+function RatioChanger({ current, pageCount, onApply }: { current: [number, number]; pageCount: number; onApply: (r: [number, number]) => void }) {
+  const [r, setR] = useState<[number, number]>(current);
+  const num = (v: string) => Math.min(50, Math.max(1, Number(v) || 1));
+  const eq = (a: [number, number], b: [number, number]) => Math.abs(a[0] / a[1] - b[0] / b[1]) < 1e-6;
+  const same = eq(r, current);
+  return (
+    <div className="ratiochange">
+      <div className="chips" role="radiogroup" aria-label="자주 쓰는 비율">
+        {RATIO_PRESETS.map(p => (
+          <button key={p.label} type="button" role="radio" className="chip" aria-checked={eq(r, p.r)} onClick={() => setR(p.r)}>
+            {p.label}{p.label.includes(':') ? '' : ` ${fmtRatio(p.r)}`}
+          </button>
+        ))}
+      </div>
+      <span className="ratio" role="group" aria-label="페이지 비율 (가로:세로)">
+        <input className="num" type="number" min={1} max={50} step={0.1} aria-label="가로" value={r[0]} onChange={e => setR([num(e.target.value), r[1]])} />
+        <span className="ratio-sep" aria-hidden="true">:</span>
+        <input className="num" type="number" min={1} max={50} step={0.1} aria-label="세로" value={r[1]} onChange={e => setR([r[0], num(e.target.value)])} />
+      </span>
+      <p className="sect-note">모든 페이지({pageCount})에 적용돼요. 가로는 그대로, 칸이 새 높이에 맞춰 늘거나 줄고 장면·제목은 그대로 남아요. 컷 그림은 새 비율로 다시 그려져요.</p>
+      <button type="button" className="btn small primary" disabled={same} onClick={() => onApply(r)}>
+        {same ? '지금 비율이에요' : `${fmtRatio(r)}(으)로 바꾸기`}
       </button>
     </div>
   );

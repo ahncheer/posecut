@@ -191,6 +191,7 @@ input.num:focus { background: var(--surface); }
 .ratio { display: inline-flex; align-items: center; gap: 6px; }
 .ratio input.num { width: 52px; text-align: center; }
 .ratio-sep { color: var(--muted); }
+.ratiochange { display: grid; gap: 10px; justify-items: start; }
 .linkbtn { background: none; border: 0; padding: 0 6px; font: inherit; font-size: 13px; color: var(--accent); cursor: pointer; }
 
 /* 컷 틀: 작은 예시 + 라디오 */

@@ -79,3 +79,38 @@ export function applyTitle(m: Manuscript, pageIndexes: number[], current: number
   };
 }
 
+
+/**
+ * 원고 전체의 페이지 비율 바꾸기 (페이지 만화만). 가로는 그대로, 세로를 새 높이에 맞춰 칸을 늘이거나 줄인다.
+ * 직접 그린 선도 같은 비율로 옮기고, 장면·컷 id·제목은 그대로. 장면이 있는 컷은 작은 그림을 다시 그리게 비운다.
+ */
+export function changePageRatio(m: Manuscript, ratio: [number, number]): Manuscript {
+  if (m.format !== 'page') return m;
+  const r: [number, number] = [ratio[0], ratio[1]];
+  const oldH = pageHeightFor(m.pageRatio), newH = pageHeightFor(r);
+  if (oldH === newH) return { ...m, pageRatio: r };
+  const mg = m.style.margin;
+  const pages = m.pages.map(p => {
+    const st = pageStyle(m.style, p), y0 = mg + (st.padTop ?? 0);
+    // 안쪽 칸 위쪽(제목 자리 아래)은 그대로 두고, 아래쪽 끝만 새 높이로
+    const fy = (y: number) => y0 + ((y - y0) * (newH - mg - y0)) / Math.max(1, oldH - mg - y0);
+    let out: Page | null = null;
+    if (p.split) out = applySplit(p, mapSplit(p.split, x => x, fy), st, r);
+    else {
+      const { height, rects } = pageLayout(templateOf(p, m.template), st, r);
+      if (rects.length === p.cuts.length) out = { ...p, height, cuts: p.cuts.map((c, i) => ({ ...c, rect: rects[i] })) };
+    }
+    // 틀로 다시 못 만들면(칸이 너무 작아지는 등) 칸 위치를 그대로 늘인다
+    if (!out) {
+      out = {
+        ...p, height: newH,
+        cuts: p.cuts.map(c => {
+          const top = fy(c.rect.y), bottom = fy(c.rect.y + c.rect.h);
+          return { ...c, rect: { ...c.rect, y: top, h: bottom - top }, ...(c.poly ? { poly: c.poly.map(([x, y]) => [x, fy(y)] as [number, number]) } : {}) };
+        }),
+      };
+    }
+    return { ...out, cuts: out.cuts.map(c => (c.scene ? { ...c, thumb: null } : c)) };
+  });
+  return { ...m, pageRatio: r, pages };
+}
