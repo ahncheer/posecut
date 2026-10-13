@@ -24,7 +24,7 @@ export interface SbMark { kind: string; x?: number; y?: number; size?: number; r
 export interface SbProp { type: typeof FURNITURE[number]; for?: string; color?: string; colors?: string[] }
 export const BG_FX = ['none', 'focus', 'speed', 'sparkle', 'gradient', 'tone', 'solid'] as const;
 export const LOOKS = ['manga', 'line', 'none'] as const;
-export interface SbPanel { box: [number, number, number, number]; shot?: string; chars?: SbPanelChar[]; bubbles?: SbBubble[]; marks?: SbMark[]; props?: SbProp[]; cam?: { yaw?: number; pitch?: number; zoom?: number; roll?: number }; bg?: string; bgColor?: string; look?: typeof LOOKS[number]; background?: string; note?: string }
+export interface SbPanel { box: [number, number, number, number]; shot?: string; chars?: SbPanelChar[]; bubbles?: SbBubble[]; marks?: SbMark[]; props?: SbProp[]; cam?: { yaw?: number; pitch?: number; zoom?: number; roll?: number; dx?: number; dy?: number; focus?: string; at?: 'can' }; bg?: string; bgColor?: string; look?: typeof LOOKS[number]; background?: string; note?: string }
 export interface SbPage { title?: string; panels: SbPanel[] }
 export interface Storyboard { kind: 'rough-storyboard'; version: 1; characters: SbChar[]; pages: SbPage[]; /** 페이지 가로:세로 (예: [3, 4]) */ pageRatio?: [number, number]; /** 모든 컷의 기본 그림 느낌 */ look?: typeof LOOKS[number] }
 
@@ -99,7 +99,7 @@ export function parseStoryboard(text: string): Storyboard {
         return type ? [{ type, for: str(r.for, 20), color: hex(r.color), colors: colors?.length ? colors : undefined }] : [];
       });
       const cq = q.cam && typeof q.cam === 'object' ? q.cam as Record<string, unknown> : null;
-      const cam = cq ? { yaw: num(cq.yaw, 0, -170, 170), pitch: num(cq.pitch, 0, -60, 60), zoom: num(cq.zoom, 1, 0.4, 3), roll: num(cq.roll, 0, -45, 45) } : undefined;
+      const cam = cq ? { yaw: num(cq.yaw, 0, -170, 170), pitch: num(cq.pitch, 0, -60, 60), zoom: num(cq.zoom, 1, 0.4, 3), roll: num(cq.roll, 0, -45, 45), dx: num(cq.dx, 0, -2, 2), dy: num(cq.dy, 0, -2, 2), ...(typeof cq.focus === 'string' ? { focus: str(cq.focus, 20) } : {}), ...(cq.at === 'can' ? { at: 'can' as const } : {}) } : undefined;
       const hex = (v: unknown) => (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v : undefined);
       return [{ box, shot: oneOf(q.shot, SHOT_KINDS), chars: pchars, bubbles, marks, props, cam, bg: oneOf(q.bg, BG_FX), bgColor: hex(q.bgColor), look: oneOf(q.look, LOOKS), background: str(q.background, 200), note: str(q.note, 300) }];
     });
@@ -164,7 +164,7 @@ export function panelToCut(panel: SbPanel, mapping: Record<string, SlotId | ''>,
       bubbles: (panel.bubbles ?? []).map(b => ({ kind: b.kind, text: b.text, x: b.x, y: b.y, w: b.w, h: b.h, to: index(b.to), rot: b.rot })),
       marks: panel.marks ?? [],
       props: (panel.props ?? []).flatMap(p => { const i = index(p.for) ?? (kept.length ? 0 : undefined); return i === undefined ? [] : [{ type: p.type, char: i, color: p.color, colors: p.colors }]; }),
-      cam: panel.cam, bg: panel.bg, bgColor: panel.bgColor, look: panel.look ?? defaultLook,
+      cam: panel.cam ? { ...panel.cam, focus: index(panel.cam.focus) } : undefined, bg: panel.bg, bgColor: panel.bgColor, look: panel.look ?? defaultLook,
       background: panel.background,
       note: panel.note,
     },
@@ -252,8 +252,9 @@ export const STORYBOARD_PROMPT = `첨부한 만화 페이지 그림을 3D 콘티
       "props": [ { "type": "chair | counter | desk | can | shelf | trash", "for": "A", "color": "#6B4226", "colors": ["#6B4226", "#F2D35B"] } ],
         // 그 인물에 맞춰 놓을 것: 앉아 있으면 chair, 앞 계산대 counter, 책상 desk,
         // can = 음료 캔(원기둥, color = 음료 대표색, 카운터 다음에 적으면 카운터 위에), shelf = 음료 진열대(인물 앞, colors = 캔 색들), trash = 쓰레기통(인물 옆)
-      "cam": { "yaw": 0, "pitch": 0, "zoom": 1, "roll": 0 },
+      "cam": { "yaw": 0, "pitch": 0, "zoom": 1, "roll": 0, "dx": 0, "dy": 0, "focus": "A", "at": "can" },
         // (선택) shot에서 카메라를 더 돌리기: yaw 좌우(도, -170~170) · pitch 위아래(+면 내려다봄) · zoom(>1 가까이) · roll 기울임(도)
+        // dx·dy 화면 오른쪽·위로 옮기기(미터, 인물을 한쪽에 두고 여백 만들기) · focus 기준 인물 id · at "can" = 계산대 위 캔 클로즈업
       "bg": "none | focus | speed | sparkle | gradient | tone | solid",
         // (선택) 효과 배경: focus 집중선 · speed 속도선 · sparkle 반짝 · gradient 그라데이션 · tone 망점 · solid 단색 (bgColor = "#rrggbb")
       "background": "배경 한 줄 (예: 편의점 카운터, 밤)"

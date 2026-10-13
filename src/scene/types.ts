@@ -92,7 +92,8 @@ export interface CutPlan {
   /** 인물에 맞춰 놓는 가구: chair 의자 · counter 카운터 · desk 책상 · can 음료 캔(color) · shelf 음료 진열대(colors), char = chars 번호 */
   props?: { type: 'chair' | 'counter' | 'desk' | 'can' | 'shelf' | 'trash'; char: number; color?: string; colors?: string[] }[];
   /** 카메라 손보기: yaw 좌우 돌기(도), pitch 위(+)·아래(-)에서(도), zoom 거리 배수, roll 화면 기울기(도) */
-  cam?: { yaw?: number; pitch?: number; zoom?: number; roll?: number };
+  /** 카메라: 각도(도)·당기기·기울임, dx·dy 화면 기준 옮기기(미터), focus 기준 인물 번호, at 'can' = 계산대 위 캔 클로즈업 */
+  cam?: { yaw?: number; pitch?: number; zoom?: number; roll?: number; dx?: number; dy?: number; focus?: number; at?: 'can' };
   /** 배경 효과: focus 집중선 · speed 속도선 · sparkle 반짝이 · gradient · tone 스크린톤 · solid 단색 */
   bg?: string;
   bgColor?: string;

@@ -4997,7 +4997,22 @@ function applyPlan(plan) {
     const who = live[Number.isInteger(pp.char) ? pp.char : 0];
     if (who && ['chair', 'counter', 'desk', 'can', 'shelf', 'trash'].includes(pp.type)) furnish(who, pp.type, pp);
   });
+  // 누구를 기준으로 잡을지 (cam.focus = 인물 번호): 그 사람 머리 높이·가로 위치에 맞춘다
+  const camIn = plan.cam && typeof plan.cam === 'object' ? plan.cam : {};
+  const fi = Number.isInteger(camIn.focus) && live[camIn.focus] ? slots.indexOf(live[camIn.focus]) : -1;
+  if (fi >= 0) sel = fi;
   shot(kind);
+  if (fi >= 0) { const dx = slots[fi].x / 100 - controls.target.x; controls.target.x += dx; camera.position.x += dx; }
+  // cam.at = 'can': 계산대 위 캔(물건) 클로즈업 — 지금 보는 방향 그대로 캔 쪽으로 다가간다
+  if (camIn.at === 'can') {
+    const cans = props.filter(q => q.kind === 'cylinder' && q.h <= 30);
+    if (cans.length) {
+      const c = cans.reduce((a, q) => a.add(new THREE.Vector3(q.x / 100, q.y / 100 + q.h / 200, q.z / 100)), new THREE.Vector3()).multiplyScalar(1 / cans.length);
+      const dir = camera.position.clone().sub(controls.target).normalize();
+      dir.y = Math.max(dir.y, 0.45); dir.normalize();
+      controls.target.copy(c); camera.position.copy(c).addScaledVector(dir, 1.25 / Math.max(0.4, Math.min(3, Number(camIn.zoom) || 1)));
+    }
+  }
   // 카메라 각도 손보기: yaw 좌우로 돌아가기, pitch 위(+)·아래(-)에서 보기, zoom 1보다 크면 가까이·작으면 멀리, roll 화면 기울기 (모두 도·배수)
   const cam = plan.cam && typeof plan.cam === 'object' ? plan.cam : null;
   if (cam) {
@@ -5007,6 +5022,14 @@ function applyPlan(plan) {
     sp.radius /= Math.max(0.4, Math.min(3, Number(cam.zoom) || 1));
     camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(sp));
     camRoll = Math.max(-45, Math.min(45, Number(cam.roll) || 0));
+    // dx·dy: 화면 기준 오른쪽·위로 카메라를 옮기기 (미터). 인물을 한쪽으로 치우쳐 여백을 만들 때
+    const dx = Math.max(-2, Math.min(2, Number(cam.dx) || 0)), dy = Math.max(-2, Math.min(2, Number(cam.dy) || 0));
+    if (dx || dy) {
+      controls.update(); camera.updateMatrixWorld(true);
+      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0), up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+      const mv = right.multiplyScalar(dx).add(up.multiplyScalar(dy));
+      camera.position.add(mv); controls.target.add(mv);
+    }
     updateClip();
   }
   // 배경 효과: focus 집중선 · speed 속도선 · sparkle 반짝이 · gradient · tone 스크린톤 · solid 단색
