@@ -183,9 +183,11 @@ export function applyWhole(m: Manuscript, src: PoseSource, mapping: Record<strin
   const had = m.pages.reduce((n, p) => n + p.cuts.filter(c => c.scene).length, 0);
   if (src.storyboard) {
     const sb = src.storyboard;
-    const pages = sb.pages.map(p => pageFromStoryboard(p, m, mapping, characters));
+    // 콘티에 페이지 비율이 있으면 원고 비율도 그대로 (예: 4컷 연재 3:4)
+    const mm: Manuscript = sb.pageRatio ? { ...m, pageRatio: [sb.pageRatio[0], sb.pageRatio[1]] } : m;
+    const pages = sb.pages.map(p => pageFromStoryboard(p, mm, mapping, characters, undefined, sb.look));
     const applied = pages.reduce((n, p) => n + p.cuts.filter(c => c.plan && c.cast?.length).length, 0);
-    return { manuscript: { ...m, pages }, summary: { applied, replaced: had, skipped: 0, empty: 0 } };
+    return { manuscript: { ...mm, pages }, summary: { applied, replaced: had, skipped: 0, empty: 0 } };
   }
   if (src.raw) {
     let applied = 0, empty = 0;

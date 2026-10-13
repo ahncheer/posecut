@@ -19,6 +19,8 @@
 {
   "kind": "rough-storyboard",
   "version": 1,
+  "pageRatio": [3, 4],                           // (선택) 페이지 가로:세로 — "원고 전체를 파일대로"일 때 원고 비율도 이렇게
+  "look": "manga",                               // (선택) 모든 컷 기본 그림 느낌: manga 만화 톤 · line 선화 · none 그대로
   "characters": [ { "id": "A", "name": "알바생", "desc": "검은 머리, 안경, 후드티" } ],
   "pages": [ {
     "title": "1화. 취향",                       // 페이지 제목 (있으면 위 가운데에)
@@ -44,6 +46,9 @@
       } ],
       "marks": [ { "kind": "fluster", "x": 0.12, "y": 0.45, "size": 0.05, "rot": -10 } ],
       "props": [ { "type": "chair", "for": "A" }, { "type": "counter", "for": "A" } ],  // 그 인물에 맞춰 놓는 가구
+      "cam": { "yaw": 25, "pitch": -12, "zoom": 1.2, "roll": 6 },  // (선택) shot 뒤 카메라 더 돌리기
+      "bg": "focus", "bgColor": "#ffffff",         // (선택) 효과 배경
+      "look": "manga",                           // (선택) 이 컷만 다른 그림 느낌
       "background": "편의점 카운터, 밤"            // 메모 (지금은 장면에 쓰지 않음)
     } ]
   } ]
@@ -56,6 +61,9 @@
 | `pose` | 차렷 · 손 흔들기 · 만세 · 걷기 · 고개 숙이기 · 팔짱 · 허리에 손 · 가리키기 · 생각하기 · 전화하기 · 손 내밀기 · 놀람 · 인사 · 기지개 · 뒤돌아보기 · 뛰기 · 의자에 앉기 · 쪼그려 앉기 · 무릎 꿇기 · 한쪽 무릎 · 턱 괴기 · 책상에 엎드리기 · 물건 집기 · 가방 끈 잡기 |
 | `bubbles[].kind` | `speech` 대사 · `thought` 생각(구름) · `narration` 네모 설명 · `shout` 외침 · `whisper` 속삭임 · `sfx` 효과음 글자 · `monologue` 독백 · `phone` 전화·기계 · `small` 작은 말풍선(…) |
 | `marks[].kind` | `heart` 하트 · `sparkle` 반짝 · `sweat` 땀방울 · `fluster` 당황선 · `anger` 빡침 · `scribble` 엉킨 낙서 · `gloom` 우울 세로줄 · `blush` 홍조 빗금 · `emphasis` 강조선 · `music` 음표 · `sigh` 한숨 · `exclaim` ! · `question` ? |
+| `cam` | `yaw` 좌우 회전(도, -170~170, +면 인물 오른쪽에서) · `pitch` 위아래(도, -60~60, +면 내려다봄 / -면 올려다봄) · `zoom` 0.4~3 (>1 가까이) · `roll` 화면 기울임(도, -45~45, 긴장·코미디에) |
+| `bg` | `none` · `focus` 집중선 · `speed` 속도선 · `sparkle` 반짝 · `gradient` 그라데이션 · `tone` 망점 · `solid` 단색 — `bgColor`로 색. 개그 펀치라인·감정 컷에 |
+| `look` | `manga` 만화 톤(흑백 톤·외곽선) · `line` 선화만 · `none` 3D 그대로 |
 | `marks[].size` | 컷 가로 대비 크기 (0.02~0.5) |
 | `props[].type` | `chair` 의자(앉은 자리에 좌석+등받이) · `counter` 카운터(앞에, 앉아 있으면 팔꿈치 높이) · `desk` 책상 — 상자 도형으로 놓이고 컷 편집에서 고칠 수 있어요 |
 | `props[].type` (소품) | `can` 음료 캔 — 원기둥, `color`(#rrggbb, 음료 대표색). 그 인물에게 가까운 카운터 위 인물 쪽에 나란히 (카운터보다 뒤에 적기) · `shelf` 음료 진열대 — 인물 앞 90cm, 선반 3칸에 `colors` 색 캔 · `trash` 쓰레기통 — 인물 오른쪽 옆 |
@@ -65,4 +73,5 @@
 - 읽기·정리: `src/scene/storyboard.ts` `parseStoryboard` — 모르는 값은 빼고, 범위를 넘는 숫자는 잘라 냅니다. ```` ```json ```` 로 감싼 답이나 `$` 설명 항목도 받습니다.
 - 컷 칸: `splitFromBoxes` — 칸들을 가로·세로 선으로 차례로 나눕니다(네모 칸만, 사선 칸은 네모로 바뀜).
 - 컷 장면: 컷마다 `plan`(엔진용 콘티)이 저장되고, 엔진(`public/engine/cut-test.html`의 `applyPlan`)이 장면이 없을 때 한 번 장면으로 만든 뒤 `plan`은 지워집니다.
+- 말풍선이 인물 얼굴에 겹치면 엔진이 가까운 빈 곳으로 조금 옮깁니다(`avoidFaces`).
 - 포즈 이름을 늘리면 `POSE_NAMES`(앱)와 엔진 `PRESETS`를 같이 고칩니다.

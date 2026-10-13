@@ -4998,6 +4998,25 @@ function applyPlan(plan) {
     if (who && ['chair', 'counter', 'desk', 'can', 'shelf', 'trash'].includes(pp.type)) furnish(who, pp.type, pp);
   });
   shot(kind);
+  // 카메라 각도 손보기: yaw 좌우로 돌아가기, pitch 위(+)·아래(-)에서 보기, zoom 1보다 크면 가까이·작으면 멀리, roll 화면 기울기 (모두 도·배수)
+  const cam = plan.cam && typeof plan.cam === 'object' ? plan.cam : null;
+  if (cam) {
+    const off = camera.position.clone().sub(controls.target), sp = new THREE.Spherical().setFromVector3(off);
+    sp.theta += THREE.MathUtils.degToRad(Math.max(-170, Math.min(170, Number(cam.yaw) || 0)));
+    sp.phi = Math.min(Math.PI * 0.95, Math.max(0.1, sp.phi - THREE.MathUtils.degToRad(Math.max(-60, Math.min(60, Number(cam.pitch) || 0)))));
+    sp.radius /= Math.max(0.4, Math.min(3, Number(cam.zoom) || 1));
+    camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(sp));
+    camRoll = Math.max(-45, Math.min(45, Number(cam.roll) || 0));
+    updateClip();
+  }
+  // 배경 효과: focus 집중선 · speed 속도선 · sparkle 반짝이 · gradient · tone 스크린톤 · solid 단색
+  // (같은 창에서 컷을 이어 만들 때 앞 컷 배경·선화가 남지 않게, 없으면 기본으로)
+  restoreBackground(plan.bg && FX_NAME[plan.bg] ? { kind: 'fx', type: plan.bg, color: /^#[0-9a-f]{6}$/i.test(plan.bgColor) ? plan.bgColor : undefined } : null);
+  // 그림 느낌: manga 흑백 만화(톤+선) · line 선화만 · none 그대로 · 없으면 마지막에 쓴 만화 설정
+  look.line.only = plan.look === 'line';
+  if (plan.look === 'manga') { look.comic.on = true; look.line.inner = Math.max(look.line.inner, 35); }
+  else if (plan.look === 'none') look.comic.on = false;
+  syncLookUI();
   controls.update(); camera.updateMatrixWorld(true);
   const W = Math.max(1, frameRect.w), H = Math.max(1, frameRect.h);
   // 실제로 놓인 인물 머리가 컷 틀 안 어디에 보이는지 (말풍선 꼬리를 그쪽으로)
@@ -5018,11 +5037,15 @@ function applyPlan(plan) {
     b.shape = PLAN_BUBBLE[k]; b.theme = 'basic'; b.text = text;
     b.size = k === 'sfx' ? 80 : k === 'narration' || k === 'caption' ? 46 : k === 'small' ? 44 : 52;
     const em = (b.size * H / 1000) / W; // 글자 하나 너비(컷 가로 비율)
-    b.w = Number.isFinite(pb.w) ? clamp01(pb.w, 0.3) : Math.min(0.6, Math.max(0.1, longest * em * 1.05 + (k === 'narration' || k === 'caption' ? 0.04 : 0.09)));
-    b.h = Number.isFinite(pb.h) ? clamp01(pb.h, 0.2) : Math.min(0.8, Math.max(0.12, (lines.length * em * 1.35 * W) / H + (k === 'narration' || k === 'caption' ? 0.06 : 0.14)));
-    // 말풍선이 컷 밖으로 나가지 않게
-    b.x = Math.min(1 - b.w / 2 - 0.01, Math.max(b.w / 2 + 0.01, clamp01(pb.x, 0.5)));
-    b.y = Math.min(1 - b.h / 2 - 0.01, Math.max(b.h / 2 + 0.01, clamp01(pb.y, 0.25)));
+    // 말풍선 모양마다 글자가 들어가는 안쪽 비율(TEXT_BOX)로 나눠서, 줄이 엉뚱하게 꺾이지 않을 만큼 넉넉히
+    const [tfw, tfh] = TEXT_BOX[b.shape] || TEXT_BOX.oval;
+    b.w = Number.isFinite(pb.w) ? clamp01(pb.w, 0.3) : Math.min(0.9, Math.max(0.12, (longest * em * 1.08) / tfw + 0.03));
+    b.h = Number.isFinite(pb.h) ? clamp01(pb.h, 0.2) : Math.min(0.8, Math.max(0.1, (lines.length * em * 1.3 * W) / H / tfh + 0.03));
+    // 너무 납작하면 구름·타원이 띠처럼 보이니 가로:세로를 2.4:1 안쪽으로
+    if (!Number.isFinite(pb.h) && k !== 'narration' && k !== 'caption' && k !== 'sfx') b.h = Math.min(0.8, Math.max(b.h, (b.w * W) / H / 2.4));
+    // 말풍선이 컷 밖으로 나가지 않게 (테두리·컷 번호와 조금 띄워서)
+    b.x = Math.min(1 - b.w / 2 - 0.02, Math.max(b.w / 2 + 0.02, clamp01(pb.x, 0.5)));
+    b.y = Math.min(1 - b.h / 2 - 0.02, Math.max(b.h / 2 + 0.025, clamp01(pb.y, 0.25)));
     const who = Number.isInteger(pb.to) ? chars[pb.to] : null;
     const head = Number.isInteger(pb.to) ? headAt(live[pb.to]) : null;
     if (pb.tail && Number.isFinite(pb.tail.x) && Number.isFinite(pb.tail.y)) b.tail = { x: clamp01(pb.tail.x, 0.5), y: clamp01(pb.tail.y, 0.6) };
@@ -5047,8 +5070,57 @@ function applyPlan(plan) {
     b.x = clamp01(pm.x, 0.5); b.y = clamp01(pm.y, 0.3); b.rot = Number.isFinite(pm.rot) ? pm.rot : 0;
     bubbles.push(b);
   });
+  avoidFaces(live.map(headAt).filter(Boolean), live.map(s => headSize(s, W, H)));
   bubShow = true; selBub = null;
   drawBubbleLayer(); renderBubUI(); syncUI();
+}
+/** 머리(얼굴) 크기: 컷 가로 비율로 (머리 관절에서 위로 20cm를 화면에 비춘 거리) */
+function headSize(s, W, H) {
+  if (!s || !s.vrm) return 0.06;
+  const n = s.vrm.humanoid.getRawBoneNode('head'); if (!n) return 0.06;
+  const a = n.getWorldPosition(new THREE.Vector3()), b = a.clone().add(new THREE.Vector3(0, 0.2, 0));
+  const vh = viewport.clientHeight;
+  const pa = a.clone().project(camera), pb = b.project(camera);
+  return Math.max(0.03, Math.min(0.5, (Math.abs(pa.y - pb.y) / 2 * vh) / H));
+}
+/**
+ * 말풍선이 얼굴을 가리지 않게: 얼굴(머리 관절 조금 위, 반지름 r)과 겹치는 말풍선을 옆으로(안 되면 위로) 비킨다.
+ * 꼬리 끝은 그대로 두어 말하는 사람을 계속 가리킨다. 기호(mark)와 효과음은 그대로.
+ */
+function avoidFaces(heads, sizes) {
+  const W = Math.max(1, frameRect.w), H = Math.max(1, frameRect.h);
+  const faces = heads.map((h, i) => ({ x: h.x, y: h.y - sizes[i] * 0.45, r: sizes[i] * 0.75 }));
+  const hits = (b) => faces.some(f => {
+    const dx = (f.x - b.x) / (b.w / 2 + f.r * H / W), dy = (f.y - b.y) / (b.h / 2 + f.r);
+    return dx * dx + dy * dy < 1;
+  });
+  const inside = (b) => b.x - b.w / 2 >= 0.01 && b.x + b.w / 2 <= 0.99 && b.y - b.h / 2 >= 0.01 && b.y + b.h / 2 <= 0.99;
+  const overlap = (o, b) => o !== b && !isMark(o) && Math.abs(o.x - b.x) < (o.w + b.w) / 2 && Math.abs(o.y - b.y) < (o.h + b.h) / 2;
+  const others = (b) => bubbles.some(o => overlap(o, b));
+  // 얼굴을 가리거나, 앞에 놓인 말풍선·효과음과 겹치면 비킨다
+  bubbles.forEach((b, i) => {
+    if (isMark(b) || b.shape === 'none' || (!hits(b) && !bubbles.slice(0, i).some(o => overlap(o, b)))) return;
+    const ox = b.x, oy = b.y, tries = [];
+    for (let k = 1; k <= 12; k++) { const d = k * 0.035; tries.push([d, 0], [-d, 0], [0, -d], [d, -d], [-d, -d], [0, d]); }
+    // 가까운 자리부터: 원래 있던 쪽 방향을 먼저
+    tries.sort((p, q) => Math.hypot(...p) - Math.hypot(...q));
+    for (const [dx, dy] of tries) {
+      b.x = ox + dx; b.y = oy + dy;
+      if (inside(b) && !hits(b) && !others(b)) { b.tail = { ...b.tail }; return; }
+    }
+    b.x = ox; b.y = oy;
+  });
+  // 꼬리 끝이 얼굴 위에 오면 얼굴 테두리 밖에서 멈춘다 (말하는 쪽은 그대로 가리키게)
+  bubbles.forEach(b => {
+    if (isMark(b) || !b.tailOn || !b.tail) return;
+    faces.forEach(f => {
+      const ax = (b.tail.x - f.x) * W / H, ay = b.tail.y - f.y, d = Math.hypot(ax, ay);
+      if (d >= f.r) return;
+      // 말풍선 쪽으로 얼굴 테두리까지 되돌리기
+      let vx = (b.x - f.x) * W / H, vy = b.y - f.y; const vl = Math.hypot(vx, vy) || 1; vx /= vl; vy /= vl;
+      b.tail = { x: f.x + (vx * f.r * 1.05) * H / W, y: f.y + vy * f.r * 1.05 };
+    });
+  });
 }
 
 // ---------- 앱 연결 (주소에 ?embed 가 있을 때: 러프 도구 앱의 컷 편집 화면 안에서 실행) ----------

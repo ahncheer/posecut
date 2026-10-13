@@ -74,7 +74,7 @@ export function StoryboardDialog({ open, manuscript: m, characters, pageIndex, o
     if (replaceFilled && !confirm(`지금 있는 장면 ${replaceFilled}개가 콘티로 바뀌어요. 계속할까요?`)) return;
     const first = mode === 'append' ? m.pages.length : pageIndex;
     const sbx = sb, mp = mapping, md = mode, at = pageIndex;
-    onApply(x => applyStoryboard(x, sbx.pages.map(p => pageFromStoryboard(p, x, mp, characters)), md, at), first,
+    onApply(x => applyStoryboard(x, sbx.pages.map(p => pageFromStoryboard(p, x, mp, characters, undefined, sbx.look)), md, at), first,
       `콘티 ${sbx.pages.length}페이지(컷 ${panels}개)를 ${md === 'append' ? '뒤에 새 페이지로' : `${at + 1}페이지부터`} 넣었어요. 장면은 자동으로 만들어져요.`);
   };
 

@@ -91,6 +91,13 @@ export interface CutPlan {
   marks?: { kind: string; x?: number; y?: number; size?: number; rot?: number }[];
   /** 인물에 맞춰 놓는 가구: chair 의자 · counter 카운터 · desk 책상 · can 음료 캔(color) · shelf 음료 진열대(colors), char = chars 번호 */
   props?: { type: 'chair' | 'counter' | 'desk' | 'can' | 'shelf' | 'trash'; char: number; color?: string; colors?: string[] }[];
+  /** 카메라 손보기: yaw 좌우 돌기(도), pitch 위(+)·아래(-)에서(도), zoom 거리 배수, roll 화면 기울기(도) */
+  cam?: { yaw?: number; pitch?: number; zoom?: number; roll?: number };
+  /** 배경 효과: focus 집중선 · speed 속도선 · sparkle 반짝이 · gradient · tone 스크린톤 · solid 단색 */
+  bg?: string;
+  bgColor?: string;
+  /** 그림 느낌: manga 흑백 만화 · line 선화 · none */
+  look?: 'manga' | 'line' | 'none';
   background?: string;
   note?: string;
 }

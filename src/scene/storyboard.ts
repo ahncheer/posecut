@@ -22,9 +22,11 @@ export interface SbPanelChar { id: string; x?: number; depth?: 'near' | 'mid' | 
 export interface SbBubble { kind?: string; text?: string; x?: number; y?: number; w?: number; h?: number; to?: string; rot?: number }
 export interface SbMark { kind: string; x?: number; y?: number; size?: number; rot?: number }
 export interface SbProp { type: typeof FURNITURE[number]; for?: string; color?: string; colors?: string[] }
-export interface SbPanel { box: [number, number, number, number]; shot?: string; chars?: SbPanelChar[]; bubbles?: SbBubble[]; marks?: SbMark[]; props?: SbProp[]; background?: string; note?: string }
+export const BG_FX = ['none', 'focus', 'speed', 'sparkle', 'gradient', 'tone', 'solid'] as const;
+export const LOOKS = ['manga', 'line', 'none'] as const;
+export interface SbPanel { box: [number, number, number, number]; shot?: string; chars?: SbPanelChar[]; bubbles?: SbBubble[]; marks?: SbMark[]; props?: SbProp[]; cam?: { yaw?: number; pitch?: number; zoom?: number; roll?: number }; bg?: string; bgColor?: string; look?: typeof LOOKS[number]; background?: string; note?: string }
 export interface SbPage { title?: string; panels: SbPanel[] }
-export interface Storyboard { kind: 'rough-storyboard'; version: 1; characters: SbChar[]; pages: SbPage[] }
+export interface Storyboard { kind: 'rough-storyboard'; version: 1; characters: SbChar[]; pages: SbPage[]; /** 페이지 가로:세로 (예: [3, 4]) */ pageRatio?: [number, number]; /** 모든 컷의 기본 그림 느낌 */ look?: typeof LOOKS[number] }
 
 const num = (v: unknown, d: number, lo = 0, hi = 1) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
 const str = (v: unknown, max = 400) => (typeof v === 'string' ? v.slice(0, max) : undefined);
@@ -96,12 +98,16 @@ export function parseStoryboard(text: string): Storyboard {
         const colors = Array.isArray(r.colors) ? r.colors.map(hex).filter((c): c is string => !!c).slice(0, 8) : undefined;
         return type ? [{ type, for: str(r.for, 20), color: hex(r.color), colors: colors?.length ? colors : undefined }] : [];
       });
-      return [{ box, shot: oneOf(q.shot, SHOT_KINDS), chars: pchars, bubbles, marks, props, background: str(q.background, 200), note: str(q.note, 300) }];
+      const cq = q.cam && typeof q.cam === 'object' ? q.cam as Record<string, unknown> : null;
+      const cam = cq ? { yaw: num(cq.yaw, 0, -170, 170), pitch: num(cq.pitch, 0, -60, 60), zoom: num(cq.zoom, 1, 0.4, 3), roll: num(cq.roll, 0, -45, 45) } : undefined;
+      const hex = (v: unknown) => (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v : undefined);
+      return [{ box, shot: oneOf(q.shot, SHOT_KINDS), chars: pchars, bubbles, marks, props, cam, bg: oneOf(q.bg, BG_FX), bgColor: hex(q.bgColor), look: oneOf(q.look, LOOKS), background: str(q.background, 200), note: str(q.note, 300) }];
     });
     return { title: str(p.title, 40), panels };
   }).filter(p => p.panels.length);
   if (!pages.length) throw new Error('콘티에 컷(panels)이 하나도 없어요.');
-  return { kind: 'rough-storyboard', version: 1, characters: chars, pages };
+  const pr = Array.isArray(o.pageRatio) && o.pageRatio.length === 2 ? [num(o.pageRatio[0], 0, 1, 40), num(o.pageRatio[1], 0, 1, 80)] : null;
+  return { kind: 'rough-storyboard', version: 1, characters: chars, pages, ...(pr && pr[0] && pr[1] ? { pageRatio: [pr[0], pr[1]] as [number, number] } : {}), ...(oneOf(o.look, LOOKS) ? { look: oneOf(o.look, LOOKS) } : {}) };
 }
 
 /** 콘티 인물 → 작품 인물 처음 짝: 이름이 같으면 그 인물, 아니면 모델 있는 인물 순서대로 */
@@ -144,7 +150,7 @@ export function splitFromBoxes(boxes: Box[]): SplitNode {
 }
 
 /** 콘티 컷 하나 → 이 컷의 출연 인물(cast)과 엔진용 콘티(plan) */
-export function panelToCut(panel: SbPanel, mapping: Record<string, SlotId | ''>, characters: Character[]): { cast: SlotId[]; plan: CutPlan } {
+export function panelToCut(panel: SbPanel, mapping: Record<string, SlotId | ''>, characters: Character[], defaultLook?: SbPanel['look']): { cast: SlotId[]; plan: CutPlan } {
   const withModel = new Set(characters.filter(c => c.model).map(c => c.slot));
   const used: { slot: SlotId; c: SbPanelChar }[] = [];
   (panel.chars ?? []).forEach(c => { const s = mapping[c.id]; if (s && withModel.has(s) && !used.some(u => u.slot === s)) used.push({ slot: s, c }); });
@@ -158,6 +164,7 @@ export function panelToCut(panel: SbPanel, mapping: Record<string, SlotId | ''>,
       bubbles: (panel.bubbles ?? []).map(b => ({ kind: b.kind, text: b.text, x: b.x, y: b.y, w: b.w, h: b.h, to: index(b.to), rot: b.rot })),
       marks: panel.marks ?? [],
       props: (panel.props ?? []).flatMap(p => { const i = index(p.for) ?? (kept.length ? 0 : undefined); return i === undefined ? [] : [{ type: p.type, char: i, color: p.color, colors: p.colors }]; }),
+      cam: panel.cam, bg: panel.bg, bgColor: panel.bgColor, look: panel.look ?? defaultLook,
       background: panel.background,
       note: panel.note,
     },
@@ -165,7 +172,7 @@ export function panelToCut(panel: SbPanel, mapping: Record<string, SlotId | ''>,
 }
 
 /** 콘티 한 페이지 → 원고 페이지 (컷 칸은 그림의 칸 위치대로, 제목이 있으면 위 가운데에) */
-export function pageFromStoryboard(sbPage: SbPage, m: Pick<Manuscript, 'style' | 'pageRatio'>, mapping: Record<string, SlotId | ''>, characters: Character[], titleStyle: Omit<PageTitle, 'text'> = DEFAULT_TITLE): Page {
+export function pageFromStoryboard(sbPage: SbPage, m: Pick<Manuscript, 'style' | 'pageRatio'>, mapping: Record<string, SlotId | ''>, characters: Character[], titleStyle: Omit<PageTitle, 'text'> = DEFAULT_TITLE, defaultLook?: SbPanel['look']): Page {
   const title: PageTitle | undefined = sbPage.title ? { ...titleStyle, text: sbPage.title } : undefined;
   const st = pageStyle(m.style, title ? { title } : undefined);
   const height = pageHeightFor(m.pageRatio);
@@ -194,7 +201,7 @@ export function pageFromStoryboard(sbPage: SbPage, m: Pick<Manuscript, 'style' |
   const cuts: Cut[] = laid.cuts.map(c => {
     const panel = byId.get(c.id);
     if (!panel) return c;
-    const { cast, plan } = panelToCut(panel, mapping, characters);
+    const { cast, plan } = panelToCut(panel, mapping, characters, defaultLook);
     return { ...c, cast, plan, scene: null, thumb: null };
   });
   return { ...laid, cuts };
@@ -214,6 +221,8 @@ export const STORYBOARD_PROMPT = `첨부한 만화 페이지 그림을 3D 콘티
 형식:
 {
   "kind": "rough-storyboard", "version": 1,
+  "pageRatio": [3, 4],              // (선택) 페이지 가로:세로. 그림 비율과 비슷하게
+  "look": "manga | line | none",    // (선택) 그림 느낌: 만화 톤 · 선화 · 그대로
   "characters": [ { "id": "A", "name": "인물 이름(모르면 역할: 알바생 등)", "desc": "겉모습 한 줄" } ],
   "pages": [ {
     "title": "페이지 맨 위 제목 글자 (없으면 빼기)",
@@ -240,11 +249,15 @@ export const STORYBOARD_PROMPT = `첨부한 만화 페이지 그림을 3D 콘티
         "kind": "${MARK_KINDS.join(' | ')}",  // 하트·반짝·땀·당황선·빡침·엉킨 낙서·우울 세로줄·홍조 빗금·강조선·음표·한숨·!·?
         "x": 0.2, "y": 0.2, "size": 0.06, "rot": 0   // 컷 기준 위치, size = 컷 가로 대비 크기, rot = 기울기(도)
       } ],
-      "props": [ { "type": "chair | counter | desk | can | shelf", "for": "A", "color": "#6B4226", "colors": ["#6B4226", "#F2D35B"] } ],
+      "props": [ { "type": "chair | counter | desk | can | shelf | trash", "for": "A", "color": "#6B4226", "colors": ["#6B4226", "#F2D35B"] } ],
         // 그 인물에 맞춰 놓을 것: 앉아 있으면 chair, 앞 계산대 counter, 책상 desk,
         // can = 음료 캔(원기둥, color = 음료 대표색, 카운터 다음에 적으면 카운터 위에), shelf = 음료 진열대(인물 앞, colors = 캔 색들), trash = 쓰레기통(인물 옆)
+      "cam": { "yaw": 0, "pitch": 0, "zoom": 1, "roll": 0 },
+        // (선택) shot에서 카메라를 더 돌리기: yaw 좌우(도, -170~170) · pitch 위아래(+면 내려다봄) · zoom(>1 가까이) · roll 기울임(도)
+      "bg": "none | focus | speed | sparkle | gradient | tone | solid",
+        // (선택) 효과 배경: focus 집중선 · speed 속도선 · sparkle 반짝 · gradient 그라데이션 · tone 망점 · solid 단색 (bgColor = "#rrggbb")
       "background": "배경 한 줄 (예: 편의점 카운터, 밤)"
     } ]
   } ]
 }
-규칙: 컷은 읽는 순서대로. 같은 인물은 모든 컷에서 같은 id. 숫자는 소수 둘째 자리까지.`;
+규칙: 컷은 읽는 순서대로. 말풍선은 얼굴을 가리지 않는 빈 곳에. 같은 인물은 모든 컷에서 같은 id. 숫자는 소수 둘째 자리까지.`;
